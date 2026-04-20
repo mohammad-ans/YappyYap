@@ -1,8 +1,7 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
-from database import session, VoiceMsgs, Users, Msgs, Msg_return
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, Cookie, status, HTTPException
+from database import session, VoiceMsgs, Base, engine
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
-from auth import verify_session_token
 from sqlalchemy import select
 from tempfile import NamedTemporaryFile
 from subprocess import run, PIPE
@@ -13,12 +12,55 @@ import os
 from json import loads
 from struct import pack
 from coolname import generate_slug
-from auth import verify_session_token
-router = APIRouter(prefix="/voice")
+import httpx
+from typing import Annotated
+import jwt
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+origins=[
+     "http://localhost:5173"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+Base.metadata.create_all(bind=engine)
+ALGORITHM = "HS256"
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
 
 def get_db():
     with session() as db:
         yield db
+
+client = httpx.AsyncClient(timeout=5.0)
+
+
+async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
+    payload = {"username" : "NA", "type" : "admin", "exp" : 0}
+    return payload
+
+# async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
+#     if not session_token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
+#     try:
+#         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
+#         if not payload:
+#             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Payload not found"}])
+#         if not payload["username"]:
+#             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Username Not found"}])
+#     except jwt.InvalidTokenError:
+#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Invalid Token"}])
+#     except jwt.ExpiredSignatureError:
+#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg" : "Expired Token"}])
+#     return payload
+     
 
 class Connection_Manager:
     def __init__(self):
@@ -36,10 +78,11 @@ class Connection_Manager:
 manager = Connection_Manager()
 
 
-@router.websocket("/ws")
+@app.websocket("/voice/ws")
 async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), db : Session = Depends(get_db)):
     username = payload["username"]
     await manager.add_connection(user, username)
+    senderName = username
     try:
         expiry_seconds = 0
         while True:
@@ -69,14 +112,14 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
                         payload = return_file.read()
                         expiry = VoiceMsgs.get_expiry(expiry_seconds)
                         voicemsg = VoiceMsgs(
-                             username = username,
+                             username = senderName,
                              msg = payload,
                              time_sent = time,
                              expiry = expiry
                         )
                         db.add(voicemsg)
                         db.commit()
-                        username_payload = username.encode("utf-8")
+                        username_payload = senderName.encode("utf-8")
                         username_length = len(username_payload)
                         time_sent = pack(">d", time.timestamp())
                         expiry_time = pack(">d", expiry.timestamp())
@@ -91,7 +134,7 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
                         await user.send_text("An error occured")
                     except:
                          pass
-                    break
+                #     break
                 finally:
                     os.remove(temp_input.name)
                     os.remove(output_tmp.name)
@@ -99,11 +142,14 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
             elif "text" in data:
                 js = loads(data["text"])
                 if "anonymity" in js:
-                     while True:
-                        username = generate_slug(2)
-                        already_exists = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
-                        if not already_exists:
-                             break
+                    while True:
+                        senderName = generate_slug(2)
+                        response_username = await client.get(f"http://auth:8000/userCheck/{username}")
+                        if response_username.json()["msg"] == False:
+                            break
+                        # already_exists = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
+                        # if not already_exists:
+                        #      break
                 expiry_seconds = int(js["expiry"])
     except WebSocketDisconnect:
          print("closed")
@@ -114,9 +160,10 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
                     except:
                          pass
     finally:
+         print("Disconnet")
          manager.disconnect(username)
 
-@router.get("/getmsgs")
+@app.get("/voice/getmsgs")
 async def get_msgs(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
     db_data = db.execute(select(VoiceMsgs).where(VoiceMsgs.expiry > time)).scalars().all()
@@ -131,21 +178,21 @@ async def get_msgs(db : Session = Depends(get_db), payload = Depends(verify_sess
     return StreamingResponse(zip_file)
 
 
-@router.get("/accountmsgs")
-def account_msgs(db : Session = Depends(get_db), pd = Depends(verify_session_token)):
-    time = datetime.now(timezone.utc) + timedelta(seconds=2)
-    msgs = db.execute(select(VoiceMsgs).where(VoiceMsgs.expiry > time)).scalars().all()
-    payload = []
-    for msg in msgs:
-         temp = {"expiry" : msg.expiry, "time_sent" : msg.time_sent, "type" : "Voice"}
-         payload.append(temp)
-    msgs = db.execute(select(Msgs).where(Msgs.expiry > time)).scalars().all()
-    for msg in msgs:
-         payload.append(Msg_return.from_orm(msg))
-    return {"msgs" : payload}
+# @app.get("/accountmsgs")
+# def account_msgs(db : Session = Depends(get_db), pd = Depends(verify_session_token)):
+#     time = datetime.now(timezone.utc) + timedelta(seconds=2)
+#     msgs = db.execute(select(VoiceMsgs).where(VoiceMsgs.expiry > time)).scalars().all()
+#     payload = []
+#     for msg in msgs:
+#          temp = {"expiry" : msg.expiry, "time_sent" : msg.time_sent, "type" : "Voice"}
+#          payload.append(temp)
+#     msgs = db.execute(select(Msgs).where(Msgs.expiry > time)).scalars().all()
+#     for msg in msgs:
+#          payload.append(Msg_return.from_orm(msg))
+#     return {"msgs" : payload}
 
 
-@router.get("/livecount")
+@app.get("/voice/livecount")
 def total_active(payload = Depends(verify_session_token)):
     return {
         "msg" : "Success",

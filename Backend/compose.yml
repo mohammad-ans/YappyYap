@@ -1,0 +1,85 @@
+services:
+  auth:
+    build: ./auth
+    ports:
+     - "8001:8000"
+    depends_on:
+     - auth-db
+    environment:
+     DATABASE_URL: ${AUTH_DATABASE_URL}
+     WATCHFILES_FORCE_POLLING: true
+    volumes:
+     - ./auth:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  tchat:
+    build: ./textChat
+    ports:
+     - "8002:8000"
+    depends_on:
+      - tchat-db
+      - auth
+    environment:
+     DATABASE_URL: ${TCHAT_DATABASE_URL}
+     AUTH_URL: http://auth:8000
+     WATCHFILES_FORCE_POLLING: true
+    volumes:
+     - ./textChat:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  vchat:
+    build: ./voiceChat
+    ports:
+     - "8003:8000"
+    depends_on:
+      - vchat-db
+      - auth
+    environment:
+     DATABASE_URL: ${TCHAT_DATABASE_URL}
+     AUTH_URL: http://auth:8000
+     WATCHFILES_FORCE_POLLING: true
+    volumes:
+     - ./voiceChat:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  auth-db:
+    image: postgres:17
+    container_name: auth_db
+    environment:
+      POSTGRES_USER: ${AUTH_USER}
+      POSTGRES_PASSWORD: ${AUTH_PASS}
+      POSTGRES_DB: authdb
+    ports:
+      - "5433:5432"
+    volumes:
+     - auth_data:/var/lib/postgres/data
+
+  tchat-db:
+    image: postgres:17
+    container_name: tchat-db
+    environment:
+      POSTGRES_USER: ${TCHAT_USER}
+      POSTGRES_PASSWORD: ${TCHAT_PASS} 
+      POSTGRES_DB: tchatdb
+    ports:
+      - "5434:5432"
+    volumes:
+     - tchat_data:/var/lib/postgres/data
+
+  vchat-db:
+      image: postgres:17
+      container_name: vchat-db
+      environment:
+        POSTGRES_USER: ${TCHAT_USER}
+        POSTGRES_PASSWORD: ${TCHAT_PASS} 
+        POSTGRES_DB: vchatdb
+      ports:
+        - "5435:5432"
+      volumes:
+      - vchat_data:/var/lib/postgres/data
+
+volumes:
+  auth_data:
+  tchat_data:
+  vchat_data:
+

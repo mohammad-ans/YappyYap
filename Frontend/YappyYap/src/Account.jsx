@@ -44,8 +44,8 @@ export default function Account() {
         <div className="account-area">
             <div className="account-details">
                 <img src={defaultImg} alt="UserPic" />
-                <p className="account-username"></p>
-                <p className="account-type"></p>
+                <p className="account-username">Hi</p>
+                <p className="account-type">Guesr</p>
             </div>
             <h2>Active Messages: </h2>
             <div className="active-messages">

@@ -32,7 +32,7 @@ export default function Global(props){
         const axios = useAxios()
         async function getMessages () {
             try{
-                const messages = await axios.get("/getchatmsgs")
+                const messages = await axios.get("http://localhost:8002/getchatmsgs")
                 if (messages.data.msg == "Success") {
                     const response = messages.data.msgs;
                     const parent_element = document.querySelector(".msgs");
@@ -69,8 +69,8 @@ export default function Global(props){
     const interval3 = setInterval(()=>msgDisplay(-2), 1000);
     let webreconInterval  = 2000;
     function connect() {
-        // ws.current = new WebSocket(`wss://api.muhammadans.com/ws`);
-        ws.current = new WebSocket(`wss://api.yappyyap.xyz/ws`);
+        // ws.current = new WebSocket(`wss://api.yappyyap.xyz/ws`);
+        ws.current = new WebSocket("ws://localhost:8002/ws")
         ws.current.onopen = () => {
             getMessages()
         }

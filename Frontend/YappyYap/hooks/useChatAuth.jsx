@@ -14,7 +14,7 @@ export function ChatAuthProvider({children}){
         async function makereq() {
             const axios = useAxios();
             try{
-                const response = await axios.get("/logincheck");
+                const response = await axios.get("http://localhost:8001/logincheck");
                 if (response.data.msg == "Success") {
                     setLogged(true)
                     setUsername(response.data.username);
@@ -23,6 +23,7 @@ export function ChatAuthProvider({children}){
             catch{}
             finally{
                 setLoading(false);
+                    setLogged(true)
             }
         }
         makereq();

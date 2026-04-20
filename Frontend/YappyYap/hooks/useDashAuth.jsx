@@ -11,7 +11,7 @@ export function DashboardAuthProvider({children}){
         async function adminCheck() {
             try{
                 const axios = useAxios();
-                const response = await axios.get("/admincheck");
+                const response = await axios.get("http://localhost:8001", "/admincheck");
                 if (response.data.msg == "Success") {
                     setIsAdmin(true);
                 }

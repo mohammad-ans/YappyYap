@@ -15,7 +15,7 @@ export default function SignIn(props) {
         setLoading(true);
         e.preventDefault()
         try{
-            const resp = await axios.post("/signin", {
+            const resp = await axios.post("http://localhost:8001", "/signin", {
                 email: email
             })
             if (resp.data.msg == "Success"){

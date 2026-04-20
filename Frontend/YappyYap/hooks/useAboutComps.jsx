@@ -15,13 +15,14 @@ export function AboutCompsProvider({children}) {
         try{
             const response = await axios.get("/get/aboutcomps");
             if (response.data.msg == "Success") {
-                setContents(pre=> response.data.content);
+                // setContents(pre=> response.data.content);
             }
         }
         catch{
 
         }
         finally{
+            setContents(["hi", "by"]);
             setLoading(false)
         }
     }

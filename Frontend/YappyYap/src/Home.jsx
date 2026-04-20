@@ -190,6 +190,7 @@ export default function Home(props) {
                     headings.map((heading, index) => <BoxMain key={heading} heading={heading} content={contents[index]} display_stuff={urls[index]}/>)
                 }</>)}
             </div>
+            <BoxMain key={"hi"} heading = {"fjaeoifjaoijfa"} content = {"wfajoeiwjfwejfo"} display_stuff={img1}/>
             {/* <div className="scroll-pin">
                 <p className="scroll-pin-text">Chat in an environment with no restrictions and anonymity.</p>
             </div> */}

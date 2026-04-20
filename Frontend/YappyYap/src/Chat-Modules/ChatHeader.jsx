@@ -10,11 +10,11 @@ export default function ChatHeader(props) {
     const navigate = useNavigate();
     const getOnline = useCallback(async ()=> {
         try{
-            let initialPath = "global";
+            let initialPath = "2/global";
             if (props.realm == "voice-realm") {
-                initialPath = "voice";
+                initialPath = "3/voice";
             }
-            const response = await axios.get(`${initialPath}/livecount`);
+            const response = await axios.get(`http://localhost:800${initialPath}/livecount`);
             if (response.data.msg === "Success") {
                 setOnline(response.data.total)
             }

@@ -1,5 +1,5 @@
 from database import Base, engine, session, Guest_login, Email_signin, Email_signup, OTP_entry, Users, OTP_verification, Pending_users, Guests, Admins
-from fastapi import APIRouter, Depends, HTTPException, Cookie, Response, status
+from fastapi import FastAPI, Depends, HTTPException, Cookie, Response, status
 from send_email import send_otp
 import random
 import jwt
@@ -11,8 +11,22 @@ import time
 from coolname import generate_slug
 from dotenv import load_dotenv
 from typing import Annotated
+from fastapi.middleware.cors import CORSMiddleware
+
 load_dotenv()
-router = APIRouter()
+app = FastAPI()
+
+origins=[
+    "http://localhost:5173"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 Base.metadata.create_all(bind=engine)
 ALGORITHM = "HS256"
@@ -43,7 +57,7 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 
 
-@router.post("/signup") 
+@app.post("/signup") 
 async def signup(data : Email_signup, db : Session = Depends(get_db)):
     random_otp = str(random.randint(10, 99)) + chr(65 + random.randint(0, 26)) + str(random.randint(10, 99)) + chr(65 + random.randint(0, 26))
     already_exists = db.execute(select(Users).where(Users.email == data.email)).scalar_one_or_none()
@@ -84,7 +98,7 @@ async def signup(data : Email_signup, db : Session = Depends(get_db)):
     db.commit()
     return {"msg" : "Success"}
 
-@router.post("/acc-create")
+@app.post("/acc-create")
 async def acc_create(verification_data : OTP_verification, response: Response, db : Session = Depends(get_db)):
     # otp_entry = db.query(OTP_entry).filter_by(email=verification_data.email, otp=verification_data.otp).first()
     otp_entry = db.execute(select(OTP_entry).where((OTP_entry.email == verification_data.email) & (OTP_entry.otp == verification_data.otp))).scalar_one_or_none()
@@ -117,7 +131,7 @@ async def acc_create(verification_data : OTP_verification, response: Response, d
 
 
 
-@router.post("/signin") 
+@app.post("/signin") 
 async def signin(data : Email_signin, db : Session = Depends(get_db)):
     random_otp = str(random.randint(10, 99)) + chr(65 + random.randint(0, 26)) + str(random.randint(10, 99)) + chr(65 + random.randint(0, 26))
     # user = db.query(Users).filter_by(email = data.email).first()
@@ -145,7 +159,7 @@ async def signin(data : Email_signin, db : Session = Depends(get_db)):
         
     return {"msg" : "Success"}
 
-@router.post("/acc-verify")
+@app.post("/acc-verify")
 async def verify(verification_data : OTP_verification, response: Response, db : Session = Depends(get_db)):
     # otp_entry = db.query(OTP_entry).filter_by(email=verification_data.email, otp=verification_data.otp).first()   #.order_by(OTP_entry.creation_time.desc())
     otp_entry = db.execute(select(OTP_entry).where((OTP_entry.email == verification_data.email) & (OTP_entry.otp == verification_data.otp))).scalar_one_or_none()
@@ -178,14 +192,26 @@ async def verify(verification_data : OTP_verification, response: Response, db : 
 
 
 
-@router.get("/logincheck")
+@app.get("/logincheck")
 async def logincheck(message = Depends(verify_session_token), db : Session = Depends(get_db)):
     username = message["username"]
     return {
         "msg" : "Success",
         "username" : username
     }
-# @router.get("/logincheck")
+
+@app.get("/userCheck/{user}")
+async def userCheck(user : str, db : Session = Depends(get_db)):
+    try:
+        already_exists = db.execute(select(Users).where(Users.username == user)).scalar_one_or_none()
+        if already_exists:
+            return {"msg" : True}
+        else:
+            return {"msg" : False}
+                
+    except:
+        return {"msg" : True}
+# @app.get("/logincheck")
 # async def logincheck():
 #     username = "ans"
 #     return {
@@ -193,7 +219,7 @@ async def logincheck(message = Depends(verify_session_token), db : Session = Dep
 #         "username" : username
 #     }
     
-@router.get("/guestlogin")
+@app.get("/guestlogin")
 async def guest_login(response: Response, db : Session = Depends(get_db)):
     username = generate_slug(2)
     # already_exists = db.query(Users).filter(username = request.username).first()
@@ -223,12 +249,12 @@ async def guest_login(response: Response, db : Session = Depends(get_db)):
     )
     return {"msg" : "Success", "username" : username}
     
-@router.get("/signout")
+@app.get("/signout")
 async def signout(response: Response):
     response.delete_cookie(key="session_token")
     return {"msg" : "Success"}
 
-@router.post("/delete")
+@app.post("/delete")
 async def delete_acc(request: Email_signin, response: Response, db: Session = Depends(get_db), msg = Depends(verify_session_token)):
     response.delete_cookie(key="session_token")
     # del_user = db.query(Users).filter(email=request.email).first()
@@ -237,7 +263,7 @@ async def delete_acc(request: Email_signin, response: Response, db: Session = De
     db.commit()
     return {"msg" : "Success"}
 
-@router.post("/signoutguest")
+@app.post("/signoutguest")
 async def guest_logout(request: Guest_login, response : Response, db : Session= Depends(get_db), msg = Depends(verify_session_token)):
     response.delete_cookie(key="session_token")
     # del_user_signout = db.query(Guests).filter(username = request.username).first()
@@ -246,7 +272,7 @@ async def guest_logout(request: Guest_login, response : Response, db : Session= 
     db.commit()
     return {"msg" : "Success"}
 
-@router.get("/admincheck")
+@app.get("/admincheck")
 async def adminAuthentication(payload = Depends(verify_session_token)):
     if (not payload["type"]) or (payload["type"] != "admin"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Not an admin"}])

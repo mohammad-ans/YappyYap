@@ -48,7 +48,7 @@ export default function Voice(props) {
         const axios = useAxios();
         async function getmsgs() {
             try{
-                const response = await axios.get("/voice/getmsgs", {
+                const response = await axios.get("http://localhost:8003/voice/getmsgs", {
                     responseType : "arraybuffer"
                 })
                 const zip = new Uint8Array(response.data)
@@ -96,7 +96,8 @@ export default function Voice(props) {
         msgRemoverInterval.current = setInterval(removeMsg, 1000);
         let webreconInterval  = 2000;
         function connect() {
-            websocket.current = new WebSocket("wss://api.yappyyap.xyz/voice/ws")
+            // websocket.current = new WebSocket("wss://api.yappyyap.xyz/voice/ws")
+            websocket.current = new WebSocket("ws://localhost:8003/voice/ws")
             websocket.current.binaryType = "arraybuffer"
             websocket.current.onopen = () => {
                 getmsgs()
@@ -139,7 +140,7 @@ export default function Voice(props) {
                 websocket.current.close();
             }
             reconnect()
-            console.warn("An error occured");
+            console.warn("An error occured, websocket connection failed");
         }
         }
         connect();
