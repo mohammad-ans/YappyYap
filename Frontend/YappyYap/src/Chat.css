@@ -447,7 +447,7 @@ flex-direction: row-reverse;
     }
 }
 .instructions-overlay{
-    z-index: 11;
+    z-index: 4;
     position: fixed;
     width: 100vw;
     height: 100vh;

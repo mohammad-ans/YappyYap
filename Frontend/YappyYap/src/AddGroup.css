@@ -1,0 +1,28 @@
+.add-groupoverlay{
+    background-color: rgba(0, 0, 0, 0.6);
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    z-index: 5;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.group-add{
+    background-color: rgb(30, 30, 30);
+    padding: 25px 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 6px;
+    gap: 12px;
+    position: relative;
+    /* width: ; */
+}
+.cancel-cross{
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    cursor: pointer;
+}

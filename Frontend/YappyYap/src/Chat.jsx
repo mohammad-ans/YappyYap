@@ -7,15 +7,19 @@ import ChatHeader from "./Chat-Modules/ChatHeader"
 import useChatAuth from "../hooks/useChatAuth"
 import Global from "./Global"
 import Voice from "./Voice"
+import AddGroup from "./AddGroup"
 export default function Chat(props) {
     const {username} = useChatAuth();
     const [realm, setRealm] = useState("global-realm");
     const [navOpen, setNavopen] = useState(false);
     const [theme, setTheme ] = useState("blue");
+    const [addArea, setAddArea] = useState(false);
     useEffect(()=>{
         let temp = localStorage.getItem("theme");
-        if (temp)
+        if (temp){
             setTheme(pre => temp);
+            props.setChatInstructions(false);
+        }
     }, [])
     function removeInstructionsHeader() {
         props.setChatInstructions(pre => false);
@@ -53,7 +57,8 @@ export default function Chat(props) {
                     </div>
                 </div>
             </div> : (<></>)}
-                <ChatSideBar username = {username} realm={realm} setRealm={setRealm} navOpen={navOpen} setNavopen={setNavopen}/>
+                {addArea && <AddGroup setAddArea={setAddArea}/>} 
+                <ChatSideBar username = {username} realm={realm} setRealm={setRealm} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea}/>
                 <div className="chat-mainarea">
                     <ChatHeader realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme}/>
                     <Routes>
