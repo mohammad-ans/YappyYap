@@ -1,6 +1,7 @@
 import {useState} from "react"
 import useAxios from "../hooks/useAxios";
 import "./AddGroup.css"
+import useChatAuth from "../hooks/useChatAuth";
 export default function AddGroup(props){
     const [name, setName] = useState("");
     const [grpType, setGrpType] = useState("text");
@@ -11,13 +12,22 @@ export default function AddGroup(props){
     const [grpSize, setSize] = useState("");
     const [maxDuration, setMaxDuration] = useState("");
     const [minDuration, setMinDuration] = useState("");
+    const {username} = useChatAuth();
     const axios = useAxios()
     async function addGroup(e) {
         e.preventDefault();
         try{
             const response = await axios.post("http://localhost:8004/addgroup", {
                 name : name,
-                grpType : grpType
+                owner : props.username,
+                liveCount : liveCount,
+                anonymity : anonymity,
+                maxGrpSize : grpSize,
+                maxDuration : maxDuration,
+                minDuration : minDuration,
+                guestsAllowed : guestsAllowed,
+                grpType : grpType,
+                inviteType : inviteType
             })
         }
         catch{}

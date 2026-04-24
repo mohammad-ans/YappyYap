@@ -1,10 +1,11 @@
 .background-signin{
     width: 100vw;
-    height: 100vh;
     display: flex;
     align-items: center;
-    justify-content: center;
     flex-direction: column;
+    padding-bottom: 100px;
+    padding-top: 80px;
+    box-sizing: border-box;
 }
 .sign-form{
     display: flex;
@@ -83,4 +84,62 @@ hr{
 }
 .margin-10px{
     margin-bottom: 10px;
+}
+.authentication-divider{
+    margin: 15px 0px;
+    width: 210px;
+    position: relative;
+    right: 7.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.authentication-divider span{
+    background-color: #0e100f;
+    z-index: 1;
+    padding: 0rem 0.5rem;
+}
+.authentication-divider::after{
+    content: "";
+    background-color: #3d444d;
+    left: 0;
+    right: 0;
+    height: 1px;
+    position: absolute;
+}
+.google-signin{
+    position: relative;
+    right: 7.5px;
+    height: calc(2.5rem + 5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+.add-username{
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    background-color: #3d444d;
+    padding: 40px 70px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.addusername{
+    margin-bottom: 20px;
+}
+.addusername:focus{
+    outline: none;
+    border: 2px solid rgb(89, 221, 89);
+}
+.add-username-coverarea{
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    width: 100vw;
+    position: absolute;
+    z-index: 5;
+    top: 0px;
+    overflow: hidden;
 }

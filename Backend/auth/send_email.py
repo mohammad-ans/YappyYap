@@ -4,7 +4,7 @@ import os
 load_dotenv()
 
 api_key = os.getenv("API_KEY")
-email = os.getenv("EMAIL")
+email = "email@yappyyap.xyz"
 
 async def send_otp(email_receiver, random_otp):
     url = "https://api.resend.com/emails"

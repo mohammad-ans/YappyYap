@@ -1,5 +1,5 @@
 from database import Base, engine, session, Guest_login, Email_signin, Email_signup, OTP_entry, Users, OTP_verification, Pending_users, Guests, Admins
-from fastapi import FastAPI, Depends, HTTPException, Cookie, Response, status
+from fastapi import FastAPI, Depends, HTTPException, Cookie, Response, status, Request
 from send_email import send_otp
 import random
 import jwt
@@ -12,6 +12,10 @@ from coolname import generate_slug
 from dotenv import load_dotenv
 from typing import Annotated
 from fastapi.middleware.cors import CORSMiddleware
+from authlib.integrations.starlette_client import OAuth
+from starlette.responses import RedirectResponse
+from starlette.middleware.sessions import SessionMiddleware
+import secrets
 
 load_dotenv()
 app = FastAPI()
@@ -21,11 +25,29 @@ origins=[
 ]
 
 app.add_middleware(
+    SessionMiddleware,
+    secret_key="123"   
+)
+
+app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
+)
+
+CLIENT_ID = os.getenv("GOOGLE_CLIENT")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+oauth = OAuth()
+
+oauth.register(
+    name = "google",
+    client_id = CLIENT_ID,
+    client_secret = CLIENT_SECRET,
+    server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs = {"scope" : "openid email profile"} 
+
 )
 
 Base.metadata.create_all(bind=engine)
@@ -79,7 +101,7 @@ async def signup(data : Email_signup, db : Session = Depends(get_db)):
         db.add(pending_user_data)
     try:
         email_response = await send_otp(data.email, random_otp)
-    except:
+    except Exception as ex:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=[{"msg" : "Service not available. Try Again."}])
     # already_exists = db.query(OTP_entry).filter_by(email = data.email).update({"otp":random_otp})
     already_exists = db.execute(select(OTP_entry).where(OTP_entry.email == data.email)).scalar_one_or_none()
@@ -193,7 +215,7 @@ async def verify(verification_data : OTP_verification, response: Response, db : 
 
 
 @app.get("/logincheck")
-async def logincheck(message = Depends(verify_session_token), db : Session = Depends(get_db)):
+async def logincheck(message = Depends(verify_session_token)):
     username = message["username"]
     return {
         "msg" : "Success",
@@ -236,7 +258,7 @@ async def guest_login(response: Response, db : Session = Depends(get_db)):
     )
     db.add(guest_data)
     db.commit()
-    token = await create_session_token({"username" : guest_data.username, "type": "Guest", "exp": int(time.time()) + 300})
+    token = await create_session_token({"username" : guest_data.username, "type": "Guest", "exp": int(time.time()) + 600})
     response.set_cookie(
         key="session_token",
         value = token,
@@ -277,3 +299,41 @@ async def adminAuthentication(payload = Depends(verify_session_token)):
     if (not payload["type"]) or (payload["type"] != "admin"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Not an admin"}])
     return {"msg" : "Success"}
+
+@app.get("/auth/g")
+async def google_login(request : Request):
+    try:
+        redirect_url = request.url_for("auth_callback")
+        return await oauth.google.authorize_redirect(request, redirect_url)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=[{"msg" : "Could not verify identity"}])
+
+@app.get("/auth/google")
+async def auth_callback(request : Request, db : Session = Depends(get_db)):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+
+        user = token.get("userinfo")
+        email = user["email"]
+        username = db.execute(select(Users.username).where(Users.email == email)).mappings().one_or_none()
+        if not username:
+            return RedirectResponse(url=f"http://localhost:5173/signup?email={email}")
+        response = RedirectResponse(url=f"http://localhost:5173/chat")
+        username = username["username"]
+
+        token = await create_session_token({"username" : username, "type": "a", "exp": int(time.time()) + 1800})
+        response.set_cookie(
+        key="session_token",
+        value = token,
+        httponly = True,
+        secure = True,
+        samesite="none",
+        max_age=1800,
+        path="/",
+        domain=".yappyyap.xyz"
+        )
+        print(user)
+        return response
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=[{"msg" : "Could not verify identity"}])

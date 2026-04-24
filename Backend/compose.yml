@@ -8,6 +8,10 @@ services:
     environment:
      DATABASE_URL: ${AUTH_DATABASE_URL}
      WATCHFILES_FORCE_POLLING: true
+     GOOGLE_CLIENT: ${GOOGLE_CLIENT}
+     CLIENT_SECRET : ${CLIENT_SECRET}
+     API_KEY: ${API_KEY}
+     EMAIL: ${EMAIL}
     volumes:
      - ./auth:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
@@ -40,6 +44,36 @@ services:
      WATCHFILES_FORCE_POLLING: true
     volumes:
      - ./voiceChat:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  groups:
+    build: ./groups
+    ports:
+     - "8004:8000"
+    depends_on:
+     - groups-db
+     - auth
+    environment:
+      DATABASE_URL: ${GROUPS_DATABASE_URL}
+      AUTH_URL: http://auth:8000
+      WATCHFILES_FORCE_POLLING: true
+    volumes:
+     - ./groups:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  personal-chats:
+    build: ./personalChats
+    ports:
+     - "8005:8000"
+    depends_on:
+     - auth
+     - personal-db
+    environment:
+      DATABASE_URL: ${PERSONAL_DATABASE_URL}
+      AUTH_URL: http://auth:8000
+      WATCHFILES_FORCE_POLLING: true
+    volumes:
+     - ./personalChats:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   auth-db:
@@ -78,8 +112,34 @@ services:
       volumes:
       - vchat_data:/var/lib/postgres/data
 
+  groups-db:
+      image: postgres:17
+      container_name: groups-db
+      environment:
+        POSTGRES_USER: ${TCHAT_USER}
+        POSTGRES_PASSWORD: ${TCHAT_PASS}
+        POSTGRES_DB: groupsdb
+      ports:
+       - "5436:5432"
+      volumes:
+       - grps_data:/var/lib/postgres/data
+
+  personal-db:
+      image: postgres:17
+      container_name: personal-db
+      environment:
+        POSTGRES_USER: ${TCHAT_USER}
+        POSTGRES_PASSWORD: ${TCHAT_PASS}
+        POSTGRES_DB: personaldb
+      ports:
+       - "5437:5432"
+      volumes:
+       - personal_data:/var/lib/postgres/data
+
 volumes:
   auth_data:
   tchat_data:
   vchat_data:
+  grps_data:
+  personal_data:
 

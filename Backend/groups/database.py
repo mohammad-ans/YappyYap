@@ -1,5 +1,5 @@
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy import create_engine, Column, String, Integer, Boolean, LargeBinary, DateTime
+from sqlalchemy import create_engine, Column, String, Integer, Boolean, LargeBinary, DateTime, ForeignKey
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 import os
@@ -17,6 +17,7 @@ class Group(Base):
     __tablename__ = "groups"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
+    owner = Column(String)
     liveCount = Column(Boolean)
     anyonymity = Column(Boolean)
     maxGrpSize = Column(Integer)
@@ -25,6 +26,15 @@ class Group(Base):
     guestsAllowed = Column(Boolean)
     grpType = Column(String)
     inviteType = Column(String)
+
+class Members(Base):
+    __tablename__ = "members"
+    name = Column(String, primary_key=True)
+    grpName = Column(String, ForeignKey("groups.name"), primary_key=True)
+
+class MemberData(BaseModel):
+    name : str
+    grpName : str
 
 class grpMsgBase:
     @staticmethod
@@ -43,8 +53,9 @@ class grpsMsgsV(Base, grpMsgBase):
     __tablename__ = "voices"
     msg = Column(LargeBinary)
 
-class grpAdd(BaseModel):
+class GrpAdd(BaseModel):
     name : str
+    owner : str
     liveCount : bool
     anyonymity : bool
     maxGrpSize : int

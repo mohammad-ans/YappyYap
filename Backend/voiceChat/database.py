@@ -3,7 +3,6 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime, timedelta, timezone
 import os
 from dotenv import load_dotenv
-from pydantic import BaseModel, EmailStr
 
 load_dotenv()
 DB_URL = "postgresql://myuser:pswd@tchat-db:5432/tchatdb"
