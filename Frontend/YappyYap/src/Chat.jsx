@@ -8,12 +8,18 @@ import useChatAuth from "../hooks/useChatAuth"
 import Global from "./Global"
 import Voice from "./Voice"
 import AddGroup from "./AddGroup"
+import useAxios from "../hooks/useAxios"
+import Personal from "./Personal"
 export default function Chat(props) {
     const {username} = useChatAuth();
     const [realm, setRealm] = useState("global-realm");
     const [navOpen, setNavopen] = useState(false);
     const [theme, setTheme ] = useState("blue");
     const [addArea, setAddArea] = useState(false);
+    const [groups, setGroups] = useState({"Realms" : [{"name" : "global", "grpType" : "text", "url" : "localhost:8002"}, {"name": "voice", "grpType" : "voice", "url" : "localhost:8003/voice"}]})
+    const [user, setUser] = useState("");
+    const ws = useRef();
+    const axios = useAxios();
     useEffect(()=>{
         let temp = localStorage.getItem("theme");
         if (temp){
@@ -21,6 +27,96 @@ export default function Chat(props) {
             props.setChatInstructions(false);
         }
     }, [])
+    useEffect(()=>{
+        async function getGroups(){
+            try{
+                const response = await axios.get("http://localhost:8004/groups")
+                console.log(response.data)
+                const tempGroups = response.data;
+                tempGroups.map((element)=> {
+                    if (element.grpType == "text")
+                        element["url"] = "localhost:8004"
+                    else
+                        element["url"] = "localhost:8004/voice"
+
+                    return element
+                })
+                const realms = [...groups["Realms"]].concat(tempGroups)
+                const realms2 = groups["Realms"].concat(response.data)
+                console.log(realms)
+                console.log(realms2)
+                setGroups((pre) => {
+                    return {...pre, "Realms" : realms}
+                })
+            }
+            catch(err){
+                console.log(err)
+            }
+        }
+        getGroups()
+    }, [])
+    useEffect(()=>{
+    },[])
+    useEffect(()=>{
+        let isMounted = true;
+        
+    let webreconInterval  = 2000;
+        async function getDms() {
+            try{
+                const response = await axios.get("http://localhost:8005/dms")
+                setGroups((pre) => {
+                    return {...pre, "Direct Messages" : response.data}
+                })
+            }
+            catch{
+                setGroups((pre) => {
+                    return {...pre, "Direct Messages" : {"A" : ["msg1", "msg2"], "B" : ["msg"] } }
+                })
+            }
+        }
+
+        function connect(){
+
+            try{
+                ws.current = new WebSocket("ws://localhost:8005/ws");
+                ws.current.onopen = () => {
+                    getDms();
+                }
+                ws.current.onclose = () => {
+                    if(ws.current.readyState == 0 && isMounted){
+
+                    }
+                        
+                }
+                ws.current.onmessage = (e) => {
+                    try{
+                        let res = JSON.parse(e.data)
+                    }
+                    catch{
+    
+                    }
+                }
+                ws.current.onerror = (e) => {   
+                    if(ws.current && ws.current.readyState == WebSocket.OPEN){
+                        ws.current.close();
+                    }
+                }
+            }
+            catch{
+    
+            }
+        }
+        
+        connect();
+        function reconnect() {
+        setTimeout(connect, webreconInterval);
+        webreconInterval += 1000;
+        }
+
+        return ()=>{
+            isMounted = false
+        }
+    }, []) 
     function removeInstructionsHeader() {
         props.setChatInstructions(pre => false);
         // const element = document.querySelector(".instructions-overlay");
@@ -58,13 +154,19 @@ export default function Chat(props) {
                 </div>
             </div> : (<></>)}
                 {addArea && <AddGroup setAddArea={setAddArea}/>} 
-                <ChatSideBar username = {username} realm={realm} setRealm={setRealm} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea}/>
+                <ChatSideBar groups = {groups} username = {username} realm={realm} setRealm={setRealm} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea}/>
                 <div className="chat-mainarea">
-                    <ChatHeader realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme}/>
+                    <ChatHeader realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user}/>
                     <Routes>
-                        <Route path="/" element={<DefaultRoot/>}/>
-                        <Route path="/global" element={<Global setRealm={setRealm}/>} />
-                        <Route path="/voice" element={<Voice setRealm={setRealm}/>} />
+                        {("Direct Messages" in groups) ?(
+                            groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser = {element} setUser={setUser}/>} />)
+                        ) : (<></>)}
+                        {
+                            groups["Realms"].map(element => <Route 
+                                key={`${element["name"]}-realm`} path={`/${element["name"]}`} element={element["grpType"] == "text" ? (<Global key={`${element["name"]}-realm`} url={element["url"]} setRealm={setRealm} realm={element["name"]}/>) : (<Voice key={`${element["name"]}-realm`} url={element["url"]} setRealm={setRealm} realm={element["name"]}/>)}
+                            />)
+                        }
+                        <Route path="*" element={<DefaultRoot/>}/>
                     </Routes>
                     {/* {realm === "global-realm" ? <Global/> : <Voice/>} */}
                 </div>

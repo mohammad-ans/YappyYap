@@ -27,8 +27,8 @@ export default function App() {
     const [footerEmail, setFooterEmail] = useState("");
     const [chatInstructions, setChatInstructions] = useState(true);
     const loc = useLocation();
-    const hidePaths = ["/chat/global", "/chat/voice", "/chat"];
-    const hidePathBoolean = hidePaths.includes(loc.pathname);
+    const location = loc.pathname;
+    const hidePathBoolean = /\/chat\/*/.test(location)
     return (
         <ChatAuthProvider>
         <div>

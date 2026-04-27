@@ -4,10 +4,9 @@ import useAxios from "../hooks/useAxios"
 import default_image from "./assets/default_img.png"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
-export default function Global(props){
+export default function GrpTypeArea(props){
     const [msg, setMsg] = useState("");
     const textArea = useRef();
-    const ws = useRef(null);
     const [bold, setBold] = useState(false);
     const [italic, setItalic] = useState(false);
     const [strike, setStrike] = useState(false);
@@ -25,106 +24,6 @@ export default function Global(props){
             textArea.current.style.height = "400px";
         }
     }, [msg])
-    useEffect(() => {
-        let isMounted = true;
-        const element = document.querySelector(`.${props.realm}-realm`);
-        props.setRealm(`${props.realm}-realm`)
-        element.classList.add("current-realm");
-        const axios = useAxios()
-        async function getMessages () {
-            try{
-                const messages = await axios.get(`http://${props.url}/getchatmsgs/${props.realm}`)
-                if (messages.data.msg == "Success") {
-                    const response = messages.data.msgs;
-                    const parent_element = document.querySelector(".msgs");
-                    parent_element.innerHTML = "";
-                response.forEach(element => {
-                    let time = new Date(element.time_sent);
-                    let expiry = new Date(element.expiry);
-                    if (expiry - new Date() > 1500){
-                        let text = element.msg;
-                        let username = element.username;
-                        time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"})
-                        let new_element = document.createElement("li");
-                        expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
-                        new_element.classList.add(expiry, "chat-message-block")
-                        new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
-                        parent_element.append(new_element);
-                    }
-                });
-            }
-        }
-        catch(error){
-            if(error.response && error.response.data) {
-                setError(e => error.response.data.detail[0].msg);
-                setTrigger(t => !t);
-                if(ws.current && ws.current.readyState == WebSocket.OPEN)
-                    ws.current.close();
-                navigate("/signin")
-            }
-            console.warn("Connection to server failed")
-        }
-    }
-    const interval1 = setInterval(getMessages, 20000)
-    const interval2 = setInterval(()=>msgDisplay(2), 1000);
-    const interval3 = setInterval(()=>msgDisplay(-2), 1000);
-    let webreconInterval  = 2000;
-    function connect() {
-        // ws.current = new WebSocket(`wss://api.yappyyap.xyz/ws`);
-        ws.current = new WebSocket(`ws://${props.url}/ws/${props.realm}`)
-        ws.current.onopen = () => {
-            getMessages()
-        }
-        ws.current.onclose = () => {
-            if (ws.current.readyState == 0 && isMounted){
-                reconnect();
-            }
-        }
-        ws.current.onmessage = (e) => {
-            try {
-                const element = document.querySelector(".msgs");
-                let res = JSON.parse(e.data)
-                let time = new Date(res.time_sent);
-                let expiry = new Date(res.expiry);
-                
-                if (expiry - new Date() > 1500){
-                    let text = res.msg;
-                    let username = res.username;
-                    time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"});
-                    let new_element = document.createElement("li");
-                    expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
-                    new_element.classList.add(expiry, "chat-message-block")
-                    new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
-                    element.append(new_element);
-                }
-            }
-            catch (error) {
-                console.warn("Error occured in the message");
-            }
-        }
-        ws.current.onerror = (e) => {
-            if(ws.current && ws.current.readyState == WebSocket.OPEN){
-                ws.current.close();
-            }
-            console.warn("An error occured");
-        }
-    }
-    connect();
-    function reconnect() {
-        setTimeout(connect, webreconInterval);
-        webreconInterval += 1000;
-    }
-
-        return ()=> {
-            isMounted = false;
-            if(ws.current && ws.current.readyState == WebSocket.OPEN)
-                ws.current.close();
-            clearInterval(interval1);
-            clearInterval(interval2);
-            clearInterval(interval3);
-            element.classList.remove("current-realm")
-        }
-    }, [])
     // const [msgs, setMsgs] = useState(Array());
     function optionsAnimation() {
         if (optionsOpen) {
@@ -178,7 +77,7 @@ export default function Global(props){
         if (msg.trim() == "") {
             return;
         }
-        if (ws.current && ws.current.readyState == WebSocket.OPEN) {
+        if (props.ws.current && props.ws.current.readyState == WebSocket.OPEN) {
             let message = {
                 "msg" : msg.trim(),
                 "expire" : yapDuration
@@ -186,7 +85,7 @@ export default function Global(props){
             if (anonymity.current) {
                 message["anonymity"] = true
             }
-            ws.current.send(JSON.stringify(message));
+            props.ws.current.send(JSON.stringify(message));
         }
         
         textArea.current.value = "";
@@ -238,23 +137,6 @@ export default function Global(props){
         e.preventDefault();
         }
     }
-    async function msgDisplay(time) {
-        let date = new Date();
-        date.setSeconds(date.getSeconds() + time)
-        date = date.toString().replace(/\s/g, "-").replace(/[:+().]/g, "-");
-        const el = document.querySelectorAll(`.${date}`);
-        if (el.length > 0) {
-            gsap.to(`.${date}`,{
-                opacity : 0,
-                duration : 2,
-            })
-            setTimeout(()=>{
-                for (const element of el) {
-                    element.remove()
-                }
-            }, 2000)
-        }
-    }
     function anonymityHandler() {
         let xTravel;
         const element = document.querySelector(".anonymity-off");
@@ -273,18 +155,6 @@ export default function Global(props){
         anonymity.current = !anonymity.current;
     }
         return (
-            <>
-                    <div className="msgs-helper">
-                        <ul className="msgs">
-                            <li className="chat-message-block">
-                                <img src={default_image} alt="user" className="chat-message-img" />
-                                <span>
-                                    <span className="chat-message-header"><h3 className="username">Username</h3> <p className="timestamp">12:00am</p></span>
-                                    <p className="chat-message">--Welcome--</p>
-                                </span>
-                            </li>
-                        </ul>
-                    </div>
                     <div className="type-area-overlay">
                         <div className="type-area" onKeyDown={enterKeyHandler}>
                             <span className="options-chat-message">
@@ -313,6 +183,5 @@ export default function Global(props){
                                 </svg></button>
                         </div>
                     </div>
-                    </>
     )
 }

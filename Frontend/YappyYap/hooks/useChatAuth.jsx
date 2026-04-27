@@ -6,7 +6,7 @@ export default function useChatAuth() {
 }
 export function ChatAuthProvider({children}){
     const [logged, setLogged] = useState(false);
-    const [username, setUsername] = useState("");
+    const [username, setUsername] = useState("dumm");
     const [loading, setLoading] = useState(true);
     const [errorMsg, setError] = useState("Welcome to our page");
     const [errorMsgAnimation, setTrigger] = useState(false);

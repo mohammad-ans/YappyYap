@@ -42,13 +42,14 @@ export default function Voice(props) {
         }
     }, [])
     useEffect(() => {
-        const element = document.querySelector(".voice-realm");
+        let isMounted = true;
+        const element = document.querySelector(`.${props.realm}-realm`);
         element.classList.add("current-realm")
-        props.setRealm("voice-realm")
+        props.setRealm(`${props.realm}-realm`)
         const axios = useAxios();
         async function getmsgs() {
             try{
-                const response = await axios.get("http://localhost:8003/voice/getmsgs", {
+                const response = await axios.get(`http://${props.url}/getmsgs/${props.realm}`, {
                     responseType : "arraybuffer"
                 })
                 const zip = new Uint8Array(response.data)
@@ -81,9 +82,10 @@ export default function Voice(props) {
                     msg.querySelector(".audio-play").src = window.URL.createObjectURL(blob);
                 }
             }
-            catch(e){
-                if(e.response && e.response.data){
-                    setError(err => e.response.data.detail[0].msg);
+            catch(err){
+                console.log(err)
+                if((err.response) && (err.response.data)){
+                    setError(err => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
                     if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
                         websocket.current.close();
@@ -97,18 +99,19 @@ export default function Voice(props) {
         let webreconInterval  = 2000;
         function connect() {
             // websocket.current = new WebSocket("wss://api.yappyyap.xyz/voice/ws")
-            websocket.current = new WebSocket("ws://localhost:8003/voice/ws")
+            websocket.current = new WebSocket(`ws://${props.url}/ws/${props.realm}`) 
             websocket.current.binaryType = "arraybuffer"
             websocket.current.onopen = () => {
                 getmsgs()
             }
             websocket.current.onclose = () => {
-                if (websocket.current.readyState == 0)
+                if (websocket.current.readyState == 0 && isMounted)
                     reconnect();
             }
             websocket.current.onmessage = (e) => {
                 try{
                         const msg = document.createElement("li");
+                        console.log(e)
                         const vw = new DataView(e.data);
                         const timeSent = new Date(vw.getFloat64(0, false) * 1000).toLocaleTimeString([], {"hour" : "2-digit", "minute" : "2-digit"});
                         let expiry = new Date(vw.getFloat64(8, false) * 1000).toString();
@@ -129,8 +132,8 @@ export default function Voice(props) {
                         msg.querySelector(".audio-play-button").addEventListener("click", play_pause_audio);
                         msg.querySelector(".audio-play").src = window.URL.createObjectURL(blob);
                     }
-                catch(e){
-                    console.log(e);
+                catch(err){
+                    console.log(err);
                 }
     
             }
@@ -151,6 +154,7 @@ export default function Voice(props) {
         return () => {
             clearInterval(msgRemoverInterval.current);
             clearInterval(interval1);
+            isMounted = false;
             element.classList.remove("current-realm")
             if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
                 websocket.current.close()

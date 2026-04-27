@@ -4,7 +4,7 @@ import useAxios from "../hooks/useAxios"
 import default_image from "./assets/default_img.png"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
-export default function Global(props){
+export default function Personal(props){
     const [msg, setMsg] = useState("");
     const textArea = useRef();
     const ws = useRef(null);
@@ -15,7 +15,7 @@ export default function Global(props){
     const [yapDuration, setYapDuration] = useState(10);
     const {setError, setTrigger} = useChatAuth();
     const navigate = useNavigate()
-    const anonymity = useRef(false);
+    const startDuration = useRef(false);
     useEffect(() => {
         textArea.current.style.height = "auto";
         if (textArea.current.scrollHeight < 400) {
@@ -26,102 +26,53 @@ export default function Global(props){
         }
     }, [msg])
     useEffect(() => {
-        let isMounted = true;
-        const element = document.querySelector(`.${props.realm}-realm`);
-        props.setRealm(`${props.realm}-realm`)
+        const element = document.querySelector(`.${props.secondUser}`);
+        props.setRealm("dms")
+        props.setUser(props.secondUser);
         element.classList.add("current-realm");
-        const axios = useAxios()
-        async function getMessages () {
-            try{
-                const messages = await axios.get(`http://${props.url}/getchatmsgs/${props.realm}`)
-                if (messages.data.msg == "Success") {
-                    const response = messages.data.msgs;
-                    const parent_element = document.querySelector(".msgs");
-                    parent_element.innerHTML = "";
-                response.forEach(element => {
-                    let time = new Date(element.time_sent);
-                    let expiry = new Date(element.expiry);
-                    if (expiry - new Date() > 1500){
-                        let text = element.msg;
-                        let username = element.username;
-                        time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"})
-                        let new_element = document.createElement("li");
-                        expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
-                        new_element.classList.add(expiry, "chat-message-block")
-                        new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
-                        parent_element.append(new_element);
-                    }
-                });
-            }
-        }
-        catch(error){
-            if(error.response && error.response.data) {
-                setError(e => error.response.data.detail[0].msg);
-                setTrigger(t => !t);
-                if(ws.current && ws.current.readyState == WebSocket.OPEN)
-                    ws.current.close();
-                navigate("/signin")
-            }
-            console.warn("Connection to server failed")
-        }
-    }
-    const interval1 = setInterval(getMessages, 20000)
-    const interval2 = setInterval(()=>msgDisplay(2), 1000);
-    const interval3 = setInterval(()=>msgDisplay(-2), 1000);
-    let webreconInterval  = 2000;
-    function connect() {
-        // ws.current = new WebSocket(`wss://api.yappyyap.xyz/ws`);
-        ws.current = new WebSocket(`ws://${props.url}/ws/${props.realm}`)
-        ws.current.onopen = () => {
-            getMessages()
-        }
-        ws.current.onclose = () => {
-            if (ws.current.readyState == 0 && isMounted){
-                reconnect();
-            }
-        }
-        ws.current.onmessage = (e) => {
-            try {
-                const element = document.querySelector(".msgs");
-                let res = JSON.parse(e.data)
-                let time = new Date(res.time_sent);
-                let expiry = new Date(res.expiry);
-                
-                if (expiry - new Date() > 1500){
-                    let text = res.msg;
-                    let username = res.username;
-                    time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"});
-                    let new_element = document.createElement("li");
-                    expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
-                    new_element.classList.add(expiry, "chat-message-block")
-                    new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
-                    element.append(new_element);
-                }
-            }
-            catch (error) {
-                console.warn("Error occured in the message");
-            }
-        }
-        ws.current.onerror = (e) => {
-            if(ws.current && ws.current.readyState == WebSocket.OPEN){
-                ws.current.close();
-            }
-            console.warn("An error occured");
-        }
-    }
-    connect();
-    function reconnect() {
-        setTimeout(connect, webreconInterval);
-        webreconInterval += 1000;
-    }
-
+    //     const axios = useAxios()
+    //     async function getMessages () {
+    //         try{
+    //             const messages = await axios.get("http://localhost:8002/getchatmsgs")
+    //             if (messages.data.msg == "Success") {
+    //                 const response = messages.data.msgs;
+    //                 const parent_element = document.querySelector(".msgs");
+    //                 parent_element.innerHTML = "";
+    //             response.forEach(element => {
+    //                 let time = new Date(element.time_sent);
+    //                 let expiry = new Date(element.expiry);
+    //                 if (expiry - new Date() > 1500){
+    //                     let text = element.msg;
+    //                     let username = element.username;
+    //                     time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"})
+    //                     let new_element = document.createElement("li");
+    //                     expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
+    //                     new_element.classList.add(expiry, "chat-message-block")
+    //                     new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
+    //                     parent_element.append(new_element);
+    //                 }
+    //             });
+    //         }
+    //     }
+    //     catch(error){
+    //         if(error.response && error.response.data) {
+    //             setError(e => error.response.data.detail[0].msg);
+    //             setTrigger(t => !t);
+    //             if(ws.current && ws.current.readyState == WebSocket.OPEN)
+    //                 ws.current.close();
+    //             navigate("/signin")
+    //         }
+    //         console.warn("Connection to server failed")
+    //     }
+    // }
+    // const interval1 = setInterval(getMessages, 20000)
+    // const interval2 = setInterval(()=>msgDisplay(2), 1000);
+    // const interval3 = setInterval(()=>msgDisplay(-2), 1000);
+    
         return ()=> {
-            isMounted = false;
-            if(ws.current && ws.current.readyState == WebSocket.OPEN)
-                ws.current.close();
-            clearInterval(interval1);
-            clearInterval(interval2);
-            clearInterval(interval3);
+        //     clearInterval(interval1);
+        //     clearInterval(interval2);
+        //     clearInterval(interval3);
             element.classList.remove("current-realm")
         }
     }, [])
@@ -178,16 +129,15 @@ export default function Global(props){
         if (msg.trim() == "") {
             return;
         }
-        if (ws.current && ws.current.readyState == WebSocket.OPEN) {
+        // if (ws.current && ws.current.readyState == WebSocket.OPEN) {
             let message = {
+                "receiver" : props.secondUser,
+                "defaultDuration" : startDuration,
                 "msg" : msg.trim(),
                 "expire" : yapDuration
             }
-            if (anonymity.current) {
-                message["anonymity"] = true
-            }
-            ws.current.send(JSON.stringify(message));
-        }
+        //     ws.current.send(JSON.stringify(message));
+        // }
         
         textArea.current.value = "";
         // textArea.current.focus()
@@ -255,7 +205,7 @@ export default function Global(props){
             }, 2000)
         }
     }
-    function anonymityHandler() {
+    function startDurationHandler() {
         let xTravel;
         const element = document.querySelector(".anonymity-off");
         if (anonymity.current) {
@@ -270,19 +220,12 @@ export default function Global(props){
             x : xTravel,
             duration : 0.1
         })
-        anonymity.current = !anonymity.current;
+        startDuration.current = !startDuration.current;
     }
         return (
             <>
                     <div className="msgs-helper">
                         <ul className="msgs">
-                            <li className="chat-message-block">
-                                <img src={default_image} alt="user" className="chat-message-img" />
-                                <span>
-                                    <span className="chat-message-header"><h3 className="username">Username</h3> <p className="timestamp">12:00am</p></span>
-                                    <p className="chat-message">--Welcome--</p>
-                                </span>
-                            </li>
                         </ul>
                     </div>
                     <div className="type-area-overlay">
@@ -297,8 +240,8 @@ export default function Global(props){
                             <textarea placeholder="Enter message" ref={textArea} value={msg} onChange={changeHandler} className="send-message" />
                             <div className="chat-yap-duration">
                                 <div className="anonymity-button-area">
-                                    <span className="input-label">Anonymity: </span>
-                                    <button className="anonymity-off" onClick={anonymityHandler}><span className="anonymity-button-circle"></span></button>
+                                    <span className="input-label">Start Duration: </span>
+                                    <button className="anonymity-off" onClick={startDurationHandler}><span className="anonymity-button-circle"></span></button>
                                 </div>
                                 <div>
                                 <span className="input-label">Duration: </span>

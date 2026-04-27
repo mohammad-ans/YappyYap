@@ -17,6 +17,7 @@ class PersonalMsgs(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     sender = Column(String)
     receiver = Column(String)
+    msg = Column(String)
     sentTime = Column(DateTime(timezone=True))
     duration = Column(Integer)
     defaultExpiration = Column(DateTime(timezone=True), nullable=True)

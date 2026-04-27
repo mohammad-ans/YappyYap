@@ -7,14 +7,26 @@ export default function ChatHeader(props) {
     const [online, setOnline] = useState(0);
     const axios = useAxios();
     const {setError, setTrigger} = useChatAuth();
+    const [displayname, setDisplay] = useState("")
     const navigate = useNavigate();
     const getOnline = useCallback(async ()=> {
         try{
-            let initialPath = "2/global";
-            if (props.realm == "voice-realm") {
-                initialPath = "3/voice";
+            let response;
+            if (props.realm == "dms"){
+                response = await axios.get(`http://localhost:8005/${props.user}`)
+            }else{
+                let initialPath;
+                if (props.realm == "voice-realm") {
+                    initialPath = "3/voice";
+                }
+                else if (props.realm == "global-realm") {
+                    initialPath = "2/global"
+                }
+                else 
+                    initialPath = `4/${props.realm}`
+    
+                response = await axios.get(`http://localhost:800${initialPath}/livecount`);
             }
-            const response = await axios.get(`http://localhost:800${initialPath}/livecount`);
             if (response.data.msg === "Success") {
                 setOnline(response.data.total)
             }
@@ -34,6 +46,14 @@ export default function ChatHeader(props) {
         const onlineInterval = setInterval(getOnline, 4000);
         return ()=> clearInterval(onlineInterval);
     }, [])
+    useEffect(()=>{
+        if(props.realm == "dms") {
+            setDisplay(`Personal Msg: ${props.user}`)
+        }
+        else {
+            setDisplay(props.realm.toUpperCase())
+        }
+    }, [props.realm, props.user])
     function changeTheme(e) {
         let temp = e.target.value;
         localStorage.setItem("theme", temp);
@@ -55,7 +75,7 @@ export default function ChatHeader(props) {
                 <div className="chat-menu-bar" onClick={navBarSimulator}>≡</div>
                 <div className="active-realm">
 
-                    <h2>{(props.realm).toUpperCase()}
+                    <h2>{displayname}
                         </h2>
                 </div>
                 <div className="chat-theme">

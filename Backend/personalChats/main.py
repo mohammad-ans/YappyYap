@@ -34,3 +34,6 @@ def personalMsgs(user : str, db : Session = Depends(get_db)):
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Messages could not be fetched"}])
     return msgs
+
+# @app.get("/livecount/{user}")
+

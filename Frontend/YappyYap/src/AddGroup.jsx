@@ -7,7 +7,6 @@ export default function AddGroup(props){
     const [grpType, setGrpType] = useState("text");
     const [inviteType, setInvite] = useState("all");
     const [anonymity, setAnonymity] = useState(true);
-    const [guestsAllowed, setGuests] = useState(true);
     const [liveCount, setLiveCount] = useState(true);
     const [grpSize, setSize] = useState("");
     const [maxDuration, setMaxDuration] = useState("");
@@ -19,13 +18,12 @@ export default function AddGroup(props){
         try{
             const response = await axios.post("http://localhost:8004/addgroup", {
                 name : name,
-                owner : props.username,
+                owner : username,
                 liveCount : liveCount,
                 anonymity : anonymity,
-                maxGrpSize : grpSize,
-                maxDuration : maxDuration,
-                minDuration : minDuration,
-                guestsAllowed : guestsAllowed,
+                maxGrpSize : Number(grpSize),
+                maxDuration : Number(maxDuration),
+                minDuration : Number(minDuration),
                 grpType : grpType,
                 inviteType : inviteType
             })
@@ -39,7 +37,7 @@ export default function AddGroup(props){
         <div className="add-groupoverlay">
                 <form onSubmit={addGroup} className="group-add">
                 <p className="cancel-cross" onClick={removeGroupArea}>X</p>
-                <h2>Add your Group</h2>
+                <h2>Add your Realm</h2>
                 <input type="text" placeholder="Enter a unique Group Name" value={name} onChange={e => setName(e.target.value)} required/>
                 <input type="number" value={grpSize} min={1} max={100} placeholder="Maximum size of Group" onChange={e => setSize(e.target.value)} required/>
                 <input type="number" value={minDuration} min={10} max={250} placeholder="Minimum Duration of message(10, 250)" onChange={e => setMinDuration(e.target.value)} required/>
@@ -57,15 +55,11 @@ export default function AddGroup(props){
                     <option value={true}>Anonymity feature allowed</option>
                     <option value={false}>Anonymity feature disabled</option>
                 </select>
-                <select value={guestsAllowed} onChange={e => setGuests(e.target.value)}>
-                    <option value={true}>Guests can join</option>
-                    <option value={false}>Only permanent users can join</option>
-                </select>
                 <select value={liveCount} onChange={e => setLiveCount(e.target.value)}>
                     <option value={true}>Online Count enabled</option>
                     <option value={false}>Online Count disabled</option>
                 </select>
-                <button type="submit">Add Group</button>
+                <button type="submit">Add Realm</button>
                 </form>
             
         </div>

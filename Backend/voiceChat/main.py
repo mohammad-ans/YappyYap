@@ -78,7 +78,7 @@ class Connection_Manager:
 manager = Connection_Manager()
 
 
-@app.websocket("/voice/ws")
+@app.websocket("/voice/ws/voice")
 async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), db : Session = Depends(get_db)):
     username = payload["username"]
     await manager.add_connection(user, username)
@@ -163,7 +163,7 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
          print("Disconnet")
          manager.disconnect(username)
 
-@app.get("/voice/getmsgs")
+@app.get("/voice/getmsgs/voice")
 async def get_msgs(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
     db_data = db.execute(select(VoiceMsgs).where(VoiceMsgs.expiry > time)).scalars().all()

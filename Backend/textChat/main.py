@@ -69,7 +69,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # async def websoc(user : WebSocket, db : Session = Depends(get_db)):
-@app.websocket("/ws")
+@app.websocket("/ws/global")
 async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     MAX_TIME = payload["exp"]
     username = payload["username"]
@@ -120,7 +120,7 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
             manager.disconnect(username)
 
 # async def send_messages(db : Session = Depends(get_db)):
-@app.get("/getchatmsgs")
+@app.get("/getchatmsgs/global")
 async def send_messages(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
     msgs = db.execute(select(Msgs).where(Msgs.expiry > time)).scalars().all()

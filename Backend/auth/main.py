@@ -317,7 +317,20 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
         email = user["email"]
         username = db.execute(select(Users.username).where(Users.email == email)).mappings().one_or_none()
         if not username:
-            return RedirectResponse(url=f"http://localhost:5173/signup?email={email}")
+            token = await create_session_token({"temp" : "token", "exp" : int(time.time()) + 1800})
+            response = RedirectResponse(url=f"http://localhost:5173/signup?email={email}")
+            response.set_cookie(
+                key="temp_token",
+                value=token,
+                httponly=True,
+                secure=True,
+                samesite="none",
+                max_age=1800,
+                path="/",
+                domain=".yappyyap.xyz"
+            )
+            return response
+        
         response = RedirectResponse(url=f"http://localhost:5173/chat")
         username = username["username"]
 
@@ -337,3 +350,7 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=[{"msg" : "Could not verify identity"}])
+    
+@app.post("/add/google")
+def add_user_google(username : str, temp_token : Annotated[str | None, Cookie()] = None):
+    pass

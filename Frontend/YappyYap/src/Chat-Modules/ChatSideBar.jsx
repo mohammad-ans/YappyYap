@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import default_image from "./../assets/default_img.png"
 import { Link, useLocation } from "react-router-dom";
 import AddGroup from "./../AddGroup";
@@ -20,11 +20,10 @@ export default function ChatSideBar(props) {
         }
     }
     function testfunc(e) {
-        if (!props.navOpen)
+        if (props.navOpen)
             e.stopPropagation()
     }
     function addGroup(e) {
-        console.log(addArea)
         props.setAddArea(true);
     }
     return(
@@ -35,12 +34,17 @@ export default function ChatSideBar(props) {
             <span className="ealms">ealms</span>
             </h2>
             <hr />
-            <button className="add-group" onClick={addGroup}>+ Add your own Group</button>
+            <div className="scroll-area">
+
+            <button className="add-group" onClick={addGroup}>+ Add your own Realm</button>
             <ul className="realms-list">
-                <Link to="/chat/global" className="global-realm" onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">global</span></li></Link>
-                <Link to="/chat/voice" className="voice-realm" onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">voice</span></li></Link>
-                {/* <li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><button onClick={handleActiveRealm} className="realm-button hacker-realm">hacker</button></li> */}
+                {props.groups["Realms"].map(element => <Link to={`/chat/${element["name"]}`} key={`${element["name"]}-realm`} className={`${element["name"]}-realm`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">{element["name"]}</span></li></Link>)}
+
             </ul>
+            {("Direct Messages" in props.groups) && (<><h3 className="personal-msg-heading">Personal Messages</h3><ul className="dms">
+                {props.groups["Direct Messages"].map(element => <Link to={`/chat/u/${element}`} key={element} className={element} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="realm-button">{element}</span></li></Link>)}
+            </ul></>)}
+            </div>
             <div className="user-profile">
                 <Link to="/account">
                 <img src={default_image} alt="user" className="user-profile-pic" />

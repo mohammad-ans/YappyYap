@@ -16,14 +16,13 @@ session = sessionmaker(bind=engine)
 class Group(Base):
     __tablename__ = "groups"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String)
+    name = Column(String, unique=True)
     owner = Column(String)
     liveCount = Column(Boolean)
     anyonymity = Column(Boolean)
     maxGrpSize = Column(Integer)
     maxDuration = Column(Integer)
     minDuration = Column(Integer)
-    guestsAllowed = Column(Boolean)
     grpType = Column(String)
     inviteType = Column(String)
 
@@ -41,13 +40,23 @@ class grpMsgBase:
     def get_expiry(seconds : int):
         return datetime.now(timezone.utc) + timedelta(seconds=seconds)
     id = Column(Integer, primary_key=True, autoincrement=True)
-    msg = Column(String)
+    username = Column(String)
     time_sent = Column(DateTime(timezone=True))
     expiry = Column(DateTime(timezone=True))
+    grpName = Column(String, ForeignKey("groups.name"))
 
 class grpMsgsT(Base, grpMsgBase):
     __tablename__ = "texts"
     msg = Column(String)
+
+class Msg_return(BaseModel):
+    msg : str
+    username : str
+    time_sent : datetime | str
+    expiry : datetime | str
+    model_config = {
+        "from_attributes" : True
+    }
 
 class grpsMsgsV(Base, grpMsgBase):
     __tablename__ = "voices"
@@ -57,10 +66,9 @@ class GrpAdd(BaseModel):
     name : str
     owner : str
     liveCount : bool
-    anyonymity : bool
+    anonymity : bool
     maxGrpSize : int
     maxDuration : int
     minDuration : int
-    guestsAllowed : bool
     grpType : str
     inviteType : str
