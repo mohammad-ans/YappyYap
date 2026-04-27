@@ -10,14 +10,19 @@ import Voice from "./Voice"
 import AddGroup from "./AddGroup"
 import useAxios from "../hooks/useAxios"
 import Personal from "./Personal"
+import {ChatContext} from "./ChatContext"
+
 export default function Chat(props) {
     const {username} = useChatAuth();
     const [realm, setRealm] = useState("global-realm");
+    const realmRef = useRef("global-realm");
     const [navOpen, setNavopen] = useState(false);
     const [theme, setTheme ] = useState("blue");
     const [addArea, setAddArea] = useState(false);
     const [groups, setGroups] = useState({"Realms" : [{"name" : "global", "grpType" : "text", "url" : "localhost:8002"}, {"name": "voice", "grpType" : "voice", "url" : "localhost:8003/voice"}]})
     const [user, setUser] = useState("");
+    const dmSendOption = useRef();
+    const tempDM = useRef("");
     const ws = useRef();
     const axios = useAxios();
     useEffect(()=>{
@@ -42,9 +47,6 @@ export default function Chat(props) {
                     return element
                 })
                 const realms = [...groups["Realms"]].concat(tempGroups)
-                const realms2 = groups["Realms"].concat(response.data)
-                console.log(realms)
-                console.log(realms2)
                 setGroups((pre) => {
                     return {...pre, "Realms" : realms}
                 })
@@ -55,26 +57,30 @@ export default function Chat(props) {
         }
         getGroups()
     }, [])
-    useEffect(()=>{
-    },[])
+    async function getDms() {
+        try{
+            tempDM.current = "";
+            const response = await axios.get("http://localhost:8005/dms")
+            return response.data;
+        }
+        catch{
+            return [ {"name" : "A", "msgs" : ["msg1", "msg2"]}, { "name" : "B", "msgs" : ["msg"]} ]
+        }
+    }
+    async function setDms(dmns) {
+        let dms = await dmns;
+        if(tempDM.current != "")
+            dms.push(tempDM.current)
+        setGroups((pre) => {
+            return {...pre, "Direct Messages" : dms}
+        })
+    }
     useEffect(()=>{
         let isMounted = true;
         
-    let webreconInterval  = 2000;
-        async function getDms() {
-            try{
-                const response = await axios.get("http://localhost:8005/dms")
-                setGroups((pre) => {
-                    return {...pre, "Direct Messages" : response.data}
-                })
-            }
-            catch{
-                setGroups((pre) => {
-                    return {...pre, "Direct Messages" : {"A" : ["msg1", "msg2"], "B" : ["msg"] } }
-                })
-            }
-        }
-
+        let webreconInterval  = 2000;
+        // let dms = getDms();
+        setDms(getDms())
         function connect(){
 
             try{
@@ -91,6 +97,7 @@ export default function Chat(props) {
                 ws.current.onmessage = (e) => {
                     try{
                         let res = JSON.parse(e.data)
+                        console.log(res)
                     }
                     catch{
     
@@ -129,8 +136,15 @@ export default function Chat(props) {
         setTheme(pre => temp);
         document.documentElement.setAttribute("data-theme", temp);
     }
+    function clearClick() {
+        try{
+            dmSendOption.current.style.display = "none"
+        }
+        catch{}
+    }
     return(
-        <main className="chat-area nav-close-styles">
+        <ChatContext.Provider value={{groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, realmRef}}>
+        <main className="chat-area nav-close-styles" onClick={clearClick}>
             {props.chatInstructions ? <div className="instructions-overlay">
                 <div className="instructions">
                     <button className="instruction-cross" onClick={removeInstructionsHeader}>X</button>
@@ -154,16 +168,16 @@ export default function Chat(props) {
                 </div>
             </div> : (<></>)}
                 {addArea && <AddGroup setAddArea={setAddArea}/>} 
-                <ChatSideBar groups = {groups} username = {username} realm={realm} setRealm={setRealm} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea}/>
+                <ChatSideBar realmRef={realmRef} groups = {groups} username = {username} realm={realm} setRealm={setRealm} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea}/>
                 <div className="chat-mainarea">
-                    <ChatHeader realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user}/>
+                    <ChatHeader realmRef={realmRef} realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user}/>
                     <Routes>
                         {("Direct Messages" in groups) ?(
-                            groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser = {element} setUser={setUser}/>} />)
+                            groups["Direct Messages"].map(element => <Route path={`/u/${element["name"]}`} element={<Personal key={`${element["name"]}-personal`} setRealm={setRealm} secondUser = {element["name"]} setUser={setUser}/>} />)
                         ) : (<></>)}
                         {
                             groups["Realms"].map(element => <Route 
-                                key={`${element["name"]}-realm`} path={`/${element["name"]}`} element={element["grpType"] == "text" ? (<Global key={`${element["name"]}-realm`} url={element["url"]} setRealm={setRealm} realm={element["name"]}/>) : (<Voice key={`${element["name"]}-realm`} url={element["url"]} setRealm={setRealm} realm={element["name"]}/>)}
+                                key={`${element["name"]}-realm`} path={`/${element["name"]}`} element={element["grpType"] == "text" ? (<Global key={`${element["name"]}-realm`} url={element["url"]} realm={element["name"]}/>) : (<Voice key={`${element["name"]}-realm`} url={element["url"]} realm={element["name"]}/>)}
                             />)
                         }
                         <Route path="*" element={<DefaultRoot/>}/>
@@ -171,6 +185,7 @@ export default function Chat(props) {
                     {/* {realm === "global-realm" ? <Global/> : <Voice/>} */}
                 </div>
         </main>
+        </ChatContext.Provider>
     )
 }
 function DefaultRoot() {

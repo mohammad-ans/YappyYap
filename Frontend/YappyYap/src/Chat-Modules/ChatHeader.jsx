@@ -5,6 +5,7 @@ import useChatAuth from "../../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 export default function ChatHeader(props) {
     const [online, setOnline] = useState(0);
+    const [members, setMembers] = useState(0);
     const axios = useAxios();
     const {setError, setTrigger} = useChatAuth();
     const [displayname, setDisplay] = useState("")
@@ -12,19 +13,23 @@ export default function ChatHeader(props) {
     const getOnline = useCallback(async ()=> {
         try{
             let response;
-            if (props.realm == "dms"){
-                response = await axios.get(`http://localhost:8005/${props.user}`)
+            document.querySelector(".members").style.display = "none";
+            if (props.realmRef.current == "dms"){
+                response = await axios.get(`http://localhost:8005/${props.user}`);
             }else{
                 let initialPath;
-                if (props.realm == "voice-realm") {
+                if (props.realmRef.current == "voice-realm") {
                     initialPath = "3/voice";
                 }
-                else if (props.realm == "global-realm") {
+                else if (props.realmRef.current == "global-realm") {
                     initialPath = "2/global"
                 }
-                else 
-                    initialPath = `4/${props.realm}`
-    
+                else {
+                    initialPath = `4/${props.realmRef.current}`
+                    document.querySelector(".members").style.display = "block";
+                    tempMembers = await axios.get(`http://localhost:800${initialPath}/numMembers`);
+                    setMembers(tempMembers.data);
+                }
                 response = await axios.get(`http://localhost:800${initialPath}/livecount`);
             }
             if (response.data.msg === "Success") {
@@ -70,6 +75,10 @@ export default function ChatHeader(props) {
         element.classList.add("nav-open-styles");
         props.setNavopen(n => true);
     }
+    function showMembers() {
+        document.querySelector(".msg-typearea").style.display = "none";
+        document.querySelector(".members-area").style.display = "block";
+    }
     return(
             <div className="chat-header">
                 <div className="chat-menu-bar" onClick={navBarSimulator}>≡</div>
@@ -86,9 +95,10 @@ export default function ChatHeader(props) {
                 </select>
                 {/* <div className="setting">
                     <input type="color"/>
-                </div> */}
+                    </div> */}
                 </div>
                         <div className="online-count">
+                        <div className="members" onClick={showMembers}>{`${members} Members`}</div>
                                 <div className="online-count-dot">
                                 </div>
                                 <span>{online}</span>

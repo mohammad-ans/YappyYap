@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 import default_img from "./assets/default_img.png"
 import Play from "./assets/Play"
 import Pause from "./assets/Pause"
@@ -10,6 +10,8 @@ import useAxios from "../hooks/useAxios";
 import TypeArea from "./Voice/TypeArea"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
+import {ChatContext} from "./ChatContext";
+import Members from "./Chat-Modules/Members";
 export default function Voice(props) {
     const duration = useRef(0);
     const moveBarAnimation = useRef(new Map())
@@ -19,6 +21,7 @@ export default function Voice(props) {
     const websocket = useRef()
     const msgRemoverInterval = useRef();
     const {setError, setTrigger} = useChatAuth();
+    const {dmSendOption, setRealm, tempDM, realmRef, getDms, setDms} = useContext(ChatContext);
     const navigate = useNavigate();
     useGSAP(() => {
         gsap.ticker.lagSmoothing(0)
@@ -43,9 +46,10 @@ export default function Voice(props) {
     }, [])
     useEffect(() => {
         let isMounted = true;
-        const element = document.querySelector(`.${props.realm}-realm`);
+        realmRef.current = `${props.realm}-realm`;
+        const element = document.querySelector(`.${realmRef.current}`);
+        setRealm(realmRef.current);
         element.classList.add("current-realm")
-        props.setRealm(`${props.realm}-realm`)
         const axios = useAxios();
         async function getmsgs() {
             try{
@@ -74,10 +78,22 @@ export default function Voice(props) {
                     msg.innerHTML = `
                     <img src=${default_img} alt="user" class="chat-message-img" />
                     <span>
-                    <span class="chat-message-header"><h3 class="username">${username}</h3><span class="timestamp">${timeSent}</span></span>
+                    <span class="chat-message-header"><h3 class="username">${username}</h3><span class="timestamp">${timeSent}</span><span class="three-dots" chatOption>
+                                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><g id="dots">
+                                    <circle className="cls-1" cx="16" cy="16" r="3" />
+                                    <circle className="cls-1" cx="16" cy="8" r="3" />
+                                    <circle className="cls-1" cx="16" cy="24" r="3" />
+                                    <path className="cls-2" d="M16,13v6a3,3,0,0,0,0-6Z" />
+                                    <path className="cls-2" d="M16,5v6a3,3,0,0,0,0-6Z" />
+                                    <path className="cls-2" d="M16,21v6a3,3,0,0,0,0-6Z" /></g></svg>
+                            <span class="send-msg-option">Send Message</span>
+                            </span></span>
                     ${helperFunction()}
                     </span>`
+                
                     document.querySelector(".msgs").append(msg);
+                    msg.querySelector(".send-msg-option").addEventListener("click", dmUser);
+                    msg.querySelector(".three-dots").addEventListener("click", chatOption);
                     msg.querySelector(".audio-play-button").addEventListener("click", play_pause_audio);
                     msg.querySelector(".audio-play").src = window.URL.createObjectURL(blob);
                 }
@@ -111,7 +127,7 @@ export default function Voice(props) {
             websocket.current.onmessage = (e) => {
                 try{
                         const msg = document.createElement("li");
-                        console.log(e)
+                        // console.log(e)
                         const vw = new DataView(e.data);
                         const timeSent = new Date(vw.getFloat64(0, false) * 1000).toLocaleTimeString([], {"hour" : "2-digit", "minute" : "2-digit"});
                         let expiry = new Date(vw.getFloat64(8, false) * 1000).toString();
@@ -125,10 +141,21 @@ export default function Voice(props) {
                         msg.innerHTML = `
                             <img src=${default_img} alt="user" class="chat-message-img" />
                             <span>
-                                <span class="chat-message-header"><h3 class="username">${username}</h3><span class="timestamp">${timeSent}</span></span>
+                                <span class="chat-message-header"><h3 class="username">${username}</h3><span class="timestamp">${timeSent}</span><span class="three-dots" chatOption>
+                                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><g id="dots">
+                                    <circle className="cls-1" cx="16" cy="16" r="3" />
+                                    <circle className="cls-1" cx="16" cy="8" r="3" />
+                                    <circle className="cls-1" cx="16" cy="24" r="3" />
+                                    <path className="cls-2" d="M16,13v6a3,3,0,0,0,0-6Z" />
+                                    <path className="cls-2" d="M16,5v6a3,3,0,0,0,0-6Z" />
+                                    <path className="cls-2" d="M16,21v6a3,3,0,0,0,0-6Z" /></g></svg>
+                            <span class="send-msg-option">Send Message</span>
+                            </span></span>
                                 ${helperFunction()}
                             </span>`
                         document.querySelector(".msgs").append(msg);
+                    msg.querySelector(".send-msg-option").addEventListener("click", dmUser);
+                    msg.querySelector(".three-dots").addEventListener("click", chatOption);
                         msg.querySelector(".audio-play-button").addEventListener("click", play_pause_audio);
                         msg.querySelector(".audio-play").src = window.URL.createObjectURL(blob);
                     }
@@ -225,13 +252,42 @@ export default function Voice(props) {
             tempMoveBarMover.pause();
         }
     }
+
+    function chatOption(e) {
+        try{
+            const element = e.currentTarget.children[1];
+            dmSendOption.current = element;
+            dmSendOption.current.style.display = "inline";
+            e.stopPropagation()
+        }
+        catch{}
+    }
+
+    async function dmUser(e) {
+        try{
+            console.log("hi")
+            const username = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
+            console.log(username)
+            let dms = getDms();
+            tempDM.current = {"name" : username, "msgs" : []}
+            await setDms(dms)
+            navigate(`/chat/u/${username}`)
+        }
+        catch{
+
+        }
+    }
+
     return (
         <>
+        <div className="msg-typearea">
             <div className="voice">
                 <ul className="msgs">
                 </ul>
                 <TypeArea websocket={websocket} />
             </div>
+        </div>
+        <Members url={""}/>
         </>
     )
     function helperFunction() {

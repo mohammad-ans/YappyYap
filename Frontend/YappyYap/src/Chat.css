@@ -209,6 +209,7 @@ flex-direction: row-reverse;
     flex-direction: row;
     align-items: center;
     gap: 20px;
+    overflow: visible;
 }
 .timestamp{
     font-size: 0.6rem;
@@ -528,12 +529,93 @@ flex-direction: row-reverse;
     transform: translateX(-50%);
     cursor: pointer;
 }
+.add-new-member{
+    margin-bottom: 16px;
+    outline: none;
+    background: transparent;
+    border: 2px solid var(--input-backgrounds);
+    color: var(--text-color);
+    padding: 10px 8px;
+    margin: 25px 25px 20px 25px;
+    border-radius: 6px;
+    position: relative;
+    cursor: pointer;
+    list-style: none;
+    text-align: center;
+}
+.add-new-member:hover{
+    background-color: var(--text-color);
+    color: var(--header-color);
+}
+.confirm-delete-helper{
+    display: none;
+    top: 0px;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 6;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+.confirm-delete{
+    display: none;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    position: absolute;
+    margin: 20px;
+    background-color: black;
+    border-radius: 8px;
+    width: fit-content;
+    padding: 25px 20px 20px 20px;
+}
+.confirm-delete-buttons{
+    margin-top: 40px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+}
+.confirm-delete-option{
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    border: 2px solid var(--text-color);
+    background: transparent;
+    padding: 4px 10px;
+    color: var(--text-color);
+    font-size: 1rem;
+}
+.three-dots{
+    position: relative;
+    right: 16px;
+    overflow: visible;
+    cursor: pointer;
+}
+.three-dots svg{
+    width: 16px;
+    height: 16px;
+    fill: beige;
+}
+.send-msg-option{
+    background-color: grey;
+    padding: 3px 4px;
+    position: relative;
+    border-radius: 3px;
+    z-index: 5;
+    overflow: visible;
+    right: 10px;
+    top: 14px;
+    display: none;
+    font-size: 0.7rem;
+}
 @media (max-width : 680px) {
     .nav-close-styles .chat-sidearea{
         display: none;
     }
     .nav-close-styles .chat-header{
         width: 100vw;
+    }
+    .nav-close-styles .chat-header .active-realm{
+        font-size: 0.8rem;
     }
     .nav-close-styles .chat-mainarea{
         width: 100vw;
@@ -571,9 +653,9 @@ flex-direction: row-reverse;
     flex-direction: row;
     margin-bottom: 30px;
     padding-right: 4vw;
-    /* position: relative;
-    background: linear-gradient(0deg, rgba(236,221,66,1) 10%, rgba(237,174,52,1) 15%, rgba(237,100,52,1) 50%, rgba(250,71,8,1) 59%);
-    animation: burn_alt 3s forwards infinite; */
+    position: relative;
+    /* background: linear-gradient(0deg, rgba(236,221,66,1) 10%, rgba(237,174,52,1) 15%, rgba(237,100,52,1) 50%, rgba(250,71,8,1) 59%);
+    animation: burn_alt 3s forwards infinite;  */
 }
 /* .box-absolute{
     position: absolute;

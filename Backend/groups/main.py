@@ -93,6 +93,7 @@ def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload
 @app.delete("/delete/{groupname}")
 def del_group(groupname : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     try:
+        db.execute(delete(database.Members).where(database.Members.grpName == groupname))
         exists = db.execute(select(database.Group).where(database.Group.name == groupname)).scalars().one_or_none()
         if not exists:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg" : "Group does not exists"}])
@@ -121,10 +122,24 @@ def del_user(memberData : database.MemberData, db : Session = Depends(get_db), p
         db.commit()
     except:
        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "User could not be deleted"}])
+    return {"msg" : "Success"}
     
-# @app.get("/{group}/livecount")
-
+@app.get("/{group}/members")
+def get_members(group : str, db : Session = Depends(get_db)):
+    try:
+        members = db.execute(select(database.Members.grpName).where(database.Members.grpName == group)).scalars().all()
+        return members
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])
  
+@app.get("/{group}/numMembers")
+def num_members(group : str, db : Session = Depends(get_db)):
+    try:
+        members = db.execute(select(database.Members).where(database.Members.grpName == group)).scalars().all()
+        return len(members)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])
+
 
 class ConnectionManager:
     def __init__(self):

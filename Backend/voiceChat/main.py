@@ -196,5 +196,5 @@ async def get_msgs(db : Session = Depends(get_db), payload = Depends(verify_sess
 def total_active(payload = Depends(verify_session_token)):
     return {
         "msg" : "Success",
-        "total":len(manager.connections)
+        "total":len(manager.active_connections)
     }

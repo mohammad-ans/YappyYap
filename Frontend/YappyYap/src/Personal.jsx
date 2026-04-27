@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react"
+import { useContext, useEffect, useRef, useState } from "react"
 import { gsap } from "gsap/gsap-core"
 import useAxios from "../hooks/useAxios"
 import default_image from "./assets/default_img.png"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
+import { ChatContext } from "./ChatContext";
 export default function Personal(props){
     const [msg, setMsg] = useState("");
     const textArea = useRef();
@@ -14,6 +15,7 @@ export default function Personal(props){
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [yapDuration, setYapDuration] = useState(10);
     const {setError, setTrigger} = useChatAuth();
+    const {getDms, setDms} = useContext(ChatContext)
     const navigate = useNavigate()
     const startDuration = useRef(false);
     useEffect(() => {
@@ -74,6 +76,7 @@ export default function Personal(props){
         //     clearInterval(interval2);
         //     clearInterval(interval3);
             element.classList.remove("current-realm")
+            setDms(getDms())
         }
     }, [])
     // const [msgs, setMsgs] = useState(Array());
