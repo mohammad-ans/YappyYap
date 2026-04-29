@@ -134,6 +134,7 @@ export default function Global(props) {
                 if (ws.current && ws.current.readyState == WebSocket.OPEN) {
                     ws.current.close();
                 }
+                console.log(e)
                 console.warn("An error occured");
             }
         }
@@ -316,7 +317,7 @@ export default function Global(props) {
         try{
             const username = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
             let dms = getDms();
-            tempDM.current = {"name" : username, "msgs" : []}
+            tempDM.current = username
             await setDms(dms)
             navigate(`/chat/u/${username}`)
         }

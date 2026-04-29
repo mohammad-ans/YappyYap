@@ -15,7 +15,7 @@ export default function ChatHeader(props) {
             let response;
             document.querySelector(".members").style.display = "none";
             if (props.realmRef.current == "dms"){
-                response = await axios.get(`http://localhost:8005/${props.user}`);
+                response = await axios.get(`http://localhost:8005/${props.user.current}`);
             }else{
                 let initialPath;
                 if (props.realmRef.current == "voice-realm") {
@@ -39,8 +39,8 @@ export default function ChatHeader(props) {
         catch(e) {
             if (e.response && e.response.data) {
                 setError(err => e.response.data.detail[0].msg);
-                setTrigger(t => !t);
-                navigate("/signin");
+                // setTrigger(t => !t);
+                // navigate("/signin");
             }
         }
     })
@@ -53,12 +53,12 @@ export default function ChatHeader(props) {
     }, [])
     useEffect(()=>{
         if(props.realm == "dms") {
-            setDisplay(`Personal Msg: ${props.user}`)
+            setDisplay(`Personal Msg: ${props.user.current}`)
         }
         else {
             setDisplay(props.realm.toUpperCase())
         }
-    }, [props.realm, props.user])
+    }, [props.realm, props.user.current])
     function changeTheme(e) {
         let temp = e.target.value;
         localStorage.setItem("theme", temp);

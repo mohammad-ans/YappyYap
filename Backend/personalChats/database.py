@@ -24,3 +24,15 @@ class PersonalMsgs(Base):
     @staticmethod
     def setDefaultExpiry(self):
         return self.sentTime + datetime.timedelta(seconds=self.duration)
+    
+
+class Msg_return(BaseModel):
+    sender : str
+    receiver : str
+    msg : str
+    sentTime : datetime.datetime | str
+    duration : int
+    defaultExpiration : datetime.datetime | None
+    model_config = {
+        "from_attributes" : True
+    }

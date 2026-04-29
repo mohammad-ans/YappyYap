@@ -269,7 +269,7 @@ export default function Voice(props) {
             const username = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
             console.log(username)
             let dms = getDms();
-            tempDM.current = {"name" : username, "msgs" : []}
+            tempDM.current = username;
             await setDms(dms)
             navigate(`/chat/u/${username}`)
         }
