@@ -13,7 +13,7 @@ export function AboutCompsProvider({children}) {
     async function getAboutComps() {
         setLoading(false)
         try{
-            const response = await axios.get("/get/aboutcomps");
+            const response = await axios.get("https://dashboard.yappyyap.xyz/get/aboutcomps");
             if (response.data.msg == "Success") {
                 // setContents(pre=> response.data.content);
             }

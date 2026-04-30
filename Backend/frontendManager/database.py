@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, EmailStr
 
 load_dotenv()
-DB_URL = os.getenv("AUTH_DATABASE_URL")
+DB_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DB_URL)
 Base = declarative_base()
 session = sessionmaker(bind=engine)

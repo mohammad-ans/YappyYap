@@ -18,7 +18,7 @@ export function HomeCompsProvider({children}) {
             setUrls(pre=>[])
             setContent(pre=>[])
             setLoading(l => true);
-            const response = await axios.get("/get/homecomps", {
+            const response = await axios.get("https://dashboard.yappyyap.xyz/get/homecomps", {
                 responseType : "arraybuffer"
             })
             const zip = new Uint8Array(response.data)

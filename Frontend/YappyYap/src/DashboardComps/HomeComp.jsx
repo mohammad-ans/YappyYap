@@ -19,7 +19,7 @@ export default function HomeComp() {
             payload.append("file", file_ref.current.files[0]);
             payload.append("heading", heading);
             payload.append("content", content);
-            const response = await axios.post("/homecomps", payload, {
+            const response = await axios.post("https://dashboard.yappyyap.xyz/homecomps", payload, {
                 headers : {
                     "Content-Type" : "multipart/formd-data"
                 }
@@ -36,7 +36,7 @@ export default function HomeComp() {
     async function deleteComp(e) {
         const data = e.currentTarget.dataset.key;
         try{
-            const response = await axios.post("/delete/homecomps", {
+            const response = await axios.post("https://dashboard.yappyyap.xyz/delete/homecomps", {
                 heading : data
             });
             setError(response.data.msg)

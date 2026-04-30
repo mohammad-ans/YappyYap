@@ -13,7 +13,7 @@ export default function AboutComp() {
     const {contents, loading, setCompsCheck} = useAboutComps()
     async function send() {
         try{
-            const response = await axios.post("/aboutcomps", {
+            const response = await axios.post("https://dashboard.yappyyap.xyz/aboutcomps", {
                 content : content
             });
             setCompsCheck(c => !c);
@@ -28,7 +28,7 @@ export default function AboutComp() {
     async function deleteComp(e) {
         const data = e.currentTarget.dataset.key;
         try{
-            const response = await axios.post("/delete/aboutcomps", {
+            const response = await axios.post("https://dashboard.yappyyap.xyz/delete/aboutcomps", {
                 content : data
             });
             setError(response.data.msg)
