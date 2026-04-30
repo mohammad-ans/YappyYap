@@ -449,6 +449,23 @@ flex-direction: row-reverse;
         width: 6px;
         height: 6px;
     }
+    .nav-open-styles .add-group{
+        display: block;
+    }
+    .nav-close-styles .add-group{
+        display: none;
+    }
+    .nav-close-styles .personal-msg-heading{
+        text-wrap: nowrap;
+        overflow: hidden;
+        margin-right: 16px;
+    }
+    .nav-open-styles .search-users-groups{
+        display: flex;
+    }
+    .nav-close-styles .search-users-groups{
+        display: none;
+    }
 }
 .instructions-overlay{
     z-index: 4;

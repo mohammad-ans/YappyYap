@@ -110,7 +110,13 @@ export default function Personal(props){
             e.target.innerText = "Joined";
         }
         catch(err) {
-            console.log(err)
+            if(err.response.status == 406){
+                setError(err.response.data.detail[0].msg);
+                setTrigger(pre => !pre);
+            }
+            else{
+                e.target.innerText = "Could not join";
+            }
         }
     }
     // const [msgs, setMsgs] = useState(Array());

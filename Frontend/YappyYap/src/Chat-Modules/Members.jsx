@@ -140,7 +140,7 @@ export default function Members(props) {
                 {(username == props.owner || props.inviteType != "invite") && <li className="add-new-member" onClick={addMember}>Add a new Member&emsp;+</li>}
                 {members.map((element) => <li key={element} className="single-member">
                     <span className="member-name">{element}</span>
-                    <span className="member-remove" onClick={removeMember}>-</span>
+                    {props.owner == username && <span className="member-remove" onClick={removeMember}>-</span>}
                 </li>)}
             </ul>
             <div className="confirm-delete-helper">

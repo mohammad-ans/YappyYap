@@ -76,10 +76,14 @@ def return_groups(query : str, db : Session = Depends(get_db), payload = Depends
 
 @app.post("/addgroup")
 def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
     try:
-        already_exists = db.execute(select(database.Group).where(database.Group.name == grpData.name)).scalar_one_or_none()
+        already_exists = db.execute(select(database.Group.name, database.Group.owner).where((database.Group.name == grpData.name) | (database.Group.owner == username ))).mappings().one_or_none()
         if already_exists:
-            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg" : "A group with this name already exists."}])
+            if already_exists.name == grpData.name:
+                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg" : "A realm with this name already exists."}])
+            else:
+                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg" : f"You already own one realm {already_exists.name}"}])
         db_data = database.Group(
             name = grpData.name,
             owner = grpData.owner,
@@ -94,8 +98,9 @@ def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload
         db.add(db_data)
         db.commit()
         return {"msg" : "Success"}
+    except HTTPException:
+        raise
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Group Not Added"}])
     
 @app.delete("/delete/{groupname}")
@@ -115,6 +120,10 @@ def del_group(groupname : str, db : Session = Depends(get_db), payload = Depends
 def add_mem(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
     try:
+        already_exists = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpName == group))).scalar_one_or_none()
+        if already_exists:
+            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg" : "Already joined"}])
+
         member = database.Members(
             name = username,
             grpName = group

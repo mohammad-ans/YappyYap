@@ -44,8 +44,13 @@ export default function ChatSideBar(props) {
             e.target.innerText = "Joined"   
         }
         catch(err){
-            e.target.innerText = "Could not join"   
-
+            if(err.response.status == 406){
+                setError(err.response.data.detail[0].msg);
+                setTrigger(pre => !pre)
+            }
+            else{
+                e.target.innerText = "Could not join"   
+            }
         }
     }
     useEffect(()=>{
@@ -84,6 +89,9 @@ export default function ChatSideBar(props) {
 
         }
     }
+    function endPropagation(e) {
+        e.stopPropagation();
+    }
     return(
         <div className="chat-sidearea" onClick={navbarSimulator}>
             {addArea && <AddGroup/>}
@@ -94,9 +102,9 @@ export default function ChatSideBar(props) {
             <hr />
             <div className="search-users-groups">
                 <div>
-                    <input type="text" placeholder="Search" value={query} onChange={e => setQuery(e.target.value)}/>
-                    <div><input type="checkbox" checked={searchBy} onChange={e => setSearchBy(pre => !pre)}/>
-                    <span className="searchBy-label" onClick={e => setSearchBy(pre => !pre)}>Search Groups</span>
+                    <input type="text" onClick={endPropagation} placeholder="Search" value={query} onChange={e => setQuery(e.target.value)}/>
+                    <div><input type="checkbox" checked={searchBy} onClick={endPropagation} onChange={e => setSearchBy(pre => !pre)}/>
+                    <span className="searchBy-label" onClick={e => {setSearchBy(pre => !pre); e.stopPropagation();}}>Search Groups</span>
                     </div>
                 </div>
                 <ul className="results-search">

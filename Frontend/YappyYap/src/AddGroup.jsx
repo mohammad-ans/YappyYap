@@ -30,7 +30,9 @@ export default function AddGroup(props){
             })
         }
         catch(err){
-            console.log(err)
+            if(err.response.status == 406)
+                setError(err.response.data.detail[0].msg)
+            else
             setError("Could Not Add Group")
             setTrigger(pre => !pre)
         }
