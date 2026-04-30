@@ -11,7 +11,7 @@ export default function ChatSideBar(props) {
     const [query, setQuery] = useState("");
     const [searchBy, setSearchBy] = useState(true);
     const {setError, setTrigger} = useChatAuth();
-    const [searchResult, setSearchResults] = useState([{"name" : "A", grpType : "all"}, {"name" : "B", grpType : "invite"}, {"name" : "C", grpType : "all"}, {"name" : "D", grpType : "invite"}, {"name" : "E", grpType : "all"}, {"name" : "F", grpType : "invite"}])
+    const [searchResult, setSearchResults] = useState([])
     const {setDms, getDms, tempDM, getGroups} = useContext(ChatContext);
     const navigate = useNavigate();
     const axios = useAxios();

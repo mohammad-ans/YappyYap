@@ -102,7 +102,7 @@ export default function Voice(props) {
             }
             catch(err){
                 if((err.response) && (err.response.data)){
-                    setError(err => err.response.data.detail[0].msg);
+                    setError(pre => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
                     if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
                         websocket.current.close();
@@ -162,7 +162,7 @@ export default function Voice(props) {
                     }
                 catch(err){
                     if(err.response && err.response.data) {
-                            setError(e => err.response.data.detail[0].msg);
+                            setError(pre => err.response.data.detail[0].msg);
                             setTrigger(t => !t);
                             if(ws.current && ws.current.readyState == WebSocket.OPEN)
                                 ws.current.close();

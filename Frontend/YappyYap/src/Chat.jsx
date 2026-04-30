@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import "./Chat.css"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Routes, Route, Navigate } from "react-router-dom"
 import ChatSideBar from "./Chat-Modules/ChatSideBar"
 import ChatHeader from "./Chat-Modules/ChatHeader"
@@ -33,6 +33,7 @@ export default function Chat(props) {
     const axios = useAxios();
     const location = useLocation();
     const liveCount = useRef(true);
+    const navigate = useNavigate()
     useEffect(() => {
         let temp = localStorage.getItem("theme");
         if (temp) {
@@ -58,14 +59,14 @@ export default function Chat(props) {
             })
             
             // const realms = [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
-            const realms = [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
+            const realms = [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
             setGroups((pre) => {
                 return { ...pre, "Realms": realms }
             })
         }
         catch (err) {
                 if (err.response && err.response.data) {
-                    setError(e => error.response.data.detail[0].msg);
+                    setError(pre => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
                     if (ws.current && ws.current.readyState == WebSocket.OPEN)
                         ws.current.close();
@@ -145,7 +146,7 @@ export default function Chat(props) {
         }
         catch (err) {
                 if (err.response && err.response.data) {
-                    setError(e => err.response.data.detail[0].msg);
+                    setError(pre => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
                     if (ws.current && ws.current.readyState == WebSocket.OPEN)
                         ws.current.close();
@@ -220,7 +221,7 @@ export default function Chat(props) {
                     }
                     catch (err) {
                 if (err.response && err.response.data) {
-                    setError(e => err.response.data.detail[0].msg);
+                    setError(pre => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
                     if (ws.current && ws.current.readyState == WebSocket.OPEN)
                         ws.current.close();

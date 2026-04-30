@@ -63,7 +63,6 @@ export default function Members(props) {
             cancelRemoveMem();
         }
         catch (err) { 
-            console.log(err)
         }
     }
     function addMember(e) {
@@ -105,7 +104,6 @@ export default function Members(props) {
             element.style.color = "#22ee3a";
         }
         catch(err) {
-            console.log(err)
             element.innerHTML = "Not sent"
             element.style.color = "red";
         }

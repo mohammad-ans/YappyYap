@@ -76,7 +76,7 @@ def return_groups(db : Session = Depends(get_db), payload = Depends(verify_sessi
 @app.get("/groups/all/{username}")
 def return_groups(username : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     try:
-        tempGrps = db.execute(select(database.Members.grpName).where(database.Members.name == username))
+        tempGrps = select(database.Members.grpName).where(database.Members.name == username)
         groups = db.execute(select(database.Group).where(database.Group.name.in_(tempGrps))).scalars().all()
         return groups
     except Exception as e:
