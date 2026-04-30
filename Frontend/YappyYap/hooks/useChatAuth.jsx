@@ -14,7 +14,8 @@ export function ChatAuthProvider({children}){
         async function makereq() {
             const axios = useAxios();
             try{
-                const response = await axios.get("http://localhost:8001/logincheck");
+                // const response = await axios.get("http://localhost:8001/logincheck");
+                const response = await axios.get("https://auth.yappyyap.xyz/logincheck");
                 if (response.data.msg == "Success") {
                     setLogged(true)
                     setUsername(response.data.username);
@@ -23,7 +24,7 @@ export function ChatAuthProvider({children}){
             catch{}
             finally{
                 setLoading(false);
-                    setLogged(true)
+                    // setLogged(true)
             }
         }
         makereq();

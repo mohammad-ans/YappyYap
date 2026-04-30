@@ -27,7 +27,8 @@ export default function SignUp(props) {
         e.preventDefault();
         const axios = useAxios();
         try{
-            const resp = await axios.post("http://localhost:8001/signup", {
+            // const resp = await axios.post("http://localhost:8001/signup", {
+            const resp = await axios.post("https://auth.yappyyap.xyz/signup", {
                 email: email,
                 username: username
             })

@@ -17,22 +17,28 @@ export default function ChatHeader(props) {
             let response;
             document.querySelector(".members").style.display = "none";
             if (props.realmRef.current == "dms"){
-                response = await axios.get(`http://localhost:8005/${props.user.current}`);
+                // response = await axios.get(`http://localhost:8005/${props.user.current}`);
+                response = await axios.get(`https://chat.yappyyap.xyz/${props.user.current}`);
             }else{
                 let initialPath;
                 if (props.realmRef.current == "voice-realm") {
-                    initialPath = "3/voice";
+                    // initialPath = "3/voice";
+                    initialPath = "voice.yappyyap.xyz/voice";
                 }
                 else if (props.realmRef.current == "global-realm") {
-                    initialPath = "2/global"
+                    // initialPath = "2/global"
+                    initialPath = "textchat.yappyyap.xyz/global"
                 }
                 else {
-                    initialPath = `4/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
+                    // initialPath = `4/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
+                    initialPath = `groups.yappyyap.xyz/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
                     document.querySelector(".members").style.display = "block";
-                    const tempMembers = await axios.get(`http://localhost:800${initialPath}/numMembers`);
+                    // const tempMembers = await axios.get(`http://localhost:800${initialPath}/numMembers`);
+                    const tempMembers = await axios.get(`https://${initialPath}/numMembers`);
                     setMembers(tempMembers.data);
                 }
-                response = await axios.get(`http://localhost:800${initialPath}/livecount`);
+                // response = await axios.get(`http://localhost:800${initialPath}/livecount`);
+                response = await axios.get(`https://${initialPath}/livecount`);
             }
             if (response.data.msg === "Success") {
                 setOnline(response.data.total)

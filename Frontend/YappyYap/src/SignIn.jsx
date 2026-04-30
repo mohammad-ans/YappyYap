@@ -16,7 +16,8 @@ export default function SignIn(props) {
         setLoading(true);
         e.preventDefault()
         try{
-            const resp = await axios.post("http://localhost:8001/signin", {
+            // const resp = await axios.post("http://localhost:8001/signin", {
+            const resp = await axios.post("https://auth.yappyyap.xyz/signin", {
                 email: email
             })
             if (resp.data.msg == "Success"){
@@ -42,7 +43,8 @@ export default function SignIn(props) {
     }
 
     async function loginWithGoogle(e) {
-        window.location.href = "http://localhost:8001/auth/g"
+        // window.location.href = "http://localhost:8001/auth/g"
+        window.location.href = "https://auth.yappyyap.xyz/auth/g"
     }
 
     return (

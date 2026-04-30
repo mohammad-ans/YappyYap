@@ -39,7 +39,8 @@ export default function ChatSideBar(props) {
     async function joinGroup(e) {
         const group = e.target.parentNode.children[0].innerText;
         try{
-            const response = await axios.get(`http://localhost:8004/addmem/${group}`)
+            // const response = await axios.get(`http://localhost:8004/addmem/${group}`)
+            const response = await axios.get(`https://groups.yappyyap.xyz/addmem/${group}`)
             getGroups();
             e.target.innerText = "Joined"   
         }
@@ -62,11 +63,13 @@ export default function ChatSideBar(props) {
                     return;
                 }
                 if(searchBy){
-                    response = await axios.get(`http://localhost:8004/groups/${query}`)
+                    // response = await axios.get(`http://localhost:8004/groups/${query}`)
+                    response = await axios.get(`https://groups.yappyyap.xyz/groups/${query}`)
                     setSearchResults(response.data)
                 }
                 else{
-                    response = await axios.get(`http://localhost:8001/search/obj/${query}`)
+                    // response = await axios.get(`http://localhost:8001/search/obj/${query}`)
+                    response = await axios.get(`https://auth.yappyyap.xyz/search/obj/${query}`)
                     setSearchResults(response.data)
                 }
             }

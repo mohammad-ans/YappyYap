@@ -289,7 +289,8 @@ export default function Voice(props) {
                 <TypeArea websocket={websocket} realm = {props.realm} />
             </div>
         </div>
-        <Members url={`localhost:8004/${props.realm["name"]}`} owner={props.realm["owner"]}/>
+        {/* <Members url={`localhost:8004/${props.realm["name"]}`} owner={props.realm["owner"]}/> */}
+        <Members url={`groups.yappyyap.xyz/${props.realm["name"]}`} owner={props.realm["owner"]}/>
         </>
     )
     function helperFunction() {

@@ -17,7 +17,8 @@ export default function AddGroup(props){
     async function addGroup(e) {
         e.preventDefault();
         try{
-            const response = await axios.post("http://localhost:8004/addgroup", {
+            // const response = await axios.post("http://localhost:8004/addgroup", {
+            const response = await axios.post("https://groups.yappyyap.xyz/addgroup", {
                 name : name,
                 owner : username,
                 liveCount : liveCount,

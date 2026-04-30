@@ -54,7 +54,8 @@ export default function Members(props) {
             const grpName = realmRef.current.slice(0, -6);
             console.log(grpName)
             console.log(user)
-            const response = await axios.post("http://localhost:8004/delmem", {
+            // const response = await axios.post("http://localhost:8004/delmem", {
+            const response = await axios.post("https://groups.yappyyap.xyz/delmem", {
                 name: user,
                 grpName: grpName
             })
@@ -78,7 +79,8 @@ export default function Members(props) {
             return;
         }
         try{
-            const response = await axios.get(`http://localhost:8001/search/${usernameQuery}`);
+            // const response = await axios.get(`http://localhost:8001/search/${usernameQuery}`);
+            const response = await axios.get(`https://auth.yappyyap.xyz/search/${usernameQuery}`);
             setUsers(response.data)
         }
         catch(err) {

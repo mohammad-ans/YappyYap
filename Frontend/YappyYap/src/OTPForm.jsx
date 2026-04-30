@@ -15,7 +15,8 @@ export default function OTPForm(props) {
     async function otpVerification(otp) {
         const axios = useAxios();
         try {
-            const response = await axios.post(`http://localhost:8001${props.link}`, {
+            // const response = await axios.post(`http://localhost:8001${props.link}`, {
+            const response = await axios.post(`https://auth.yappyyap.xyz${props.link}`, {
                 email: props.email,
                 otp: otp
             })

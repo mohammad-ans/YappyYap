@@ -106,7 +106,7 @@ export default function Personal(props){
         let group = e.target.dataset.group;
         console.log(group)
         try{
-            const response = await axios.get(`http://localhost:8004/addmem/${group}`);
+            const response = await axios.get(`https://groups.yappyyap.xyz/addmem/${group}`);
             e.target.innerText = "Joined";
         }
         catch(err) {
