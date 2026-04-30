@@ -7,7 +7,7 @@ import useChatAuth from "../../hooks/useChatAuth";
 
 export default function Members(props) {
     const axios = useAxios();
-    const [members, setMembers] = useState(["Chaman", "Chaan", "abc" ]);
+    const [members, setMembers] = useState([]);
     const [user, setUser] = useState("");
     const { realmRef, ws } = useContext(ChatContext);
     const [searchQuery, setSearchQuery] = useState("");
@@ -17,7 +17,7 @@ export default function Members(props) {
     async function getMembers() {
         try {
             const response = await axios.get(`http://${props.url}/members`);
-            // setMembers(response.data);
+            setMembers(response.data);
         }
         catch (err) {
 
@@ -33,8 +33,10 @@ export default function Members(props) {
     }
     function removeMember(e) {
         try {
+            const username = e.target.parentNode.children[0].innerText;
             const parent = document.querySelector(".confirm-delete-helper");
             parent.style.display = "block";
+            setUser(username);
             // parent.children[0].style.display = "block";
         }
         catch (err) { }
@@ -50,6 +52,8 @@ export default function Members(props) {
     async function confirmRemoveMem() {
         try {
             const grpName = realmRef.current.slice(0, -6);
+            console.log(grpName)
+            console.log(user)
             const response = await axios.post("http://localhost:8004/delmem", {
                 name: user,
                 grpName: grpName
@@ -57,7 +61,9 @@ export default function Members(props) {
             getMembers();
             cancelRemoveMem();
         }
-        catch (err) { }
+        catch (err) { 
+            console.log(err)
+        }
     }
     function addMember(e) {
             document.querySelector(".add-search-members-overlay").style.display = "block"
@@ -88,7 +94,7 @@ export default function Members(props) {
             let message = {
                 "recipient" : username,
                 "defaultExpiration" : false,
-                "msg" : `${realmRef.current}`,
+                "msg" : `${realmRef.current.slice(0, -6)}`,
                 "duration" : 3600,
                 "type" : "invite"
             }
@@ -122,8 +128,8 @@ export default function Members(props) {
                                 <span className="already-in-group" >Already in Group</span>
                             </li> )
                             }
-                            return (<li key={element["name"]}>
-                                <span className="searched-mem-name">{element["name"]}</span>
+                            return (<li key={element}>
+                                <span className="searched-mem-name">{element}</span>
                                 <span className="add-to-group" onClick={addToGroup}>+</span>
                             </li> )
                         })}

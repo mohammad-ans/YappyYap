@@ -16,7 +16,7 @@ export default function Global(props) {
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [yapDuration, setYapDuration] = useState(10);
     const { setError, setTrigger } = useChatAuth();
-    const {dmSendOption, liveCount, setRealm, tempDM, getDms, setDms, setGroups, realmRef, groups} = useContext(ChatContext);
+    const {realmType, dmSendOption, liveCount, setRealm, tempDM, getDms, setDms, setGroups, realmRef, groups} = useContext(ChatContext);
     const navigate = useNavigate()
     const anonymity = useRef(false);
     useEffect(() => {
@@ -32,6 +32,7 @@ export default function Global(props) {
         liveCount.current = props.realm["liveCount"];
         let isMounted = true;
         realmRef.current = `${props.realm["name"]}-realm`;
+        realmType.current = "global";
         const element = document.querySelector(`.${realmRef.current}`);
         setRealm(realmRef.current);
         element.classList.add("current-realm");

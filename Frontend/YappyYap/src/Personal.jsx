@@ -17,6 +17,7 @@ export default function Personal(props){
     const {getDms, setDms, dmMsgs, ws, realmRef, user, tempDM} = useContext(ChatContext)
     const navigate = useNavigate()
     const startDuration = useRef(false);
+    const axios = useAxios();
     useEffect(() => {
         textArea.current.style.height = "auto";
         if (textArea.current.scrollHeight < 400) {
@@ -52,7 +53,6 @@ export default function Personal(props){
                     let expiry;
                     if (element.defaultExpiration){
                         expiry = new Date(element.defaultExpiration);
-                        console.log(expiry)
                     }
                     else
                         expiry = new Date(time.getTime() + element.duration * 1000);
@@ -60,7 +60,8 @@ export default function Personal(props){
                     if (expiry - new Date() > 500){
                         let tempMsg;
                         if(element.group) {
-                            tempMsg = `<button class="group-invite">Join ${element.group}</button>`
+                            tempMsg = `<button class="group-invite" data-group="${element.group}">Join ${element.group}-realm</button>`
+                            
                         }
                         else{
                             tempMsg = `<p class="chat-message">${element.msg}</p>`
@@ -70,28 +71,29 @@ export default function Personal(props){
                         expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
                         new_element.classList.add(expiry, "chat-message-block")
                         new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span>${tempMsg}</span>`)
+                        const tempElement = new_element.querySelector(".group-invite");
+                        if(tempElement)
+                            tempElement.addEventListener("click", joinGroup)
                         parent_element.append(new_element);
-                        console.log(tempMsg)
-                        console.log(element)
                     }
                 });
             }
-        catch(error){
-            console.log(error)
+            catch(error){
+                console.log(error)
             // if(error.response && error.response.data) {
-            //     setError(e => error.response.data.detail[0].msg);
-            //     setTrigger(t => !t);
-            //     if(ws.current && ws.current.readyState == WebSocket.OPEN)
-            //         ws.current.close();
-            //     navigate("/signin")
-            // }
-            // console.warn("Connection to server failed")
+                //     setError(e => error.response.data.detail[0].msg);
+                //     setTrigger(t => !t);
+                //     if(ws.current && ws.current.readyState == WebSocket.OPEN)
+                //         ws.current.close();
+                //     navigate("/signin")
+                // }
+                // console.warn("Connection to server failed")
+            }
         }
-    }
-    setMessages()
-    const interval2 = setInterval(()=>msgDisplay(2), 1000);
-    const interval3 = setInterval(()=>msgDisplay(-2), 1000);
-    
+        setMessages()
+        const interval2 = setInterval(()=>msgDisplay(2), 1000);
+        const interval3 = setInterval(()=>msgDisplay(-2), 1000);
+        
         return ()=> {
             clearInterval(interval2);
             clearInterval(interval3);
@@ -100,6 +102,17 @@ export default function Personal(props){
             setDms(getDms());
         }
     }, [])
+    async function joinGroup(e){
+        let group = e.target.dataset.group;
+        console.log(group)
+        try{
+            const response = await axios.get(`http://localhost:8004/addmem/${group}`);
+            e.target.innerText = "Joined";
+        }
+        catch(err) {
+            console.log(err)
+        }
+    }
     // const [msgs, setMsgs] = useState(Array());
     function optionsAnimation() {
         if (optionsOpen) {

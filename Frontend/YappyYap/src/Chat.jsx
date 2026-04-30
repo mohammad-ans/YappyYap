@@ -17,6 +17,7 @@ export default function Chat(props) {
     const { username } = useChatAuth();
     const [realm, setRealm] = useState("global-realm");
     const realmRef = useRef("global-realm");
+    const realmType = useRef("global");
     const [navOpen, setNavopen] = useState(false);
     const [theme, setTheme] = useState("blue");
     const [addArea, setAddArea] = useState(false);
@@ -186,7 +187,7 @@ export default function Chat(props) {
                             else{
                                 if(!groups["Direct Messages"].includes(username)) {
                                     setGroups((pre) => {
-                                        return {...pre, "Direct Messages" : [...pre["Direct Messages", username]]}
+                                        return {...pre, "Direct Messages" : [...pre["Direct Messages"], username]}
                                     })
                                 }
                                     
@@ -242,7 +243,7 @@ export default function Chat(props) {
         catch { }
     }
     return (
-        <ChatContext.Provider value={{ liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups }}>
+        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups }}>
             <main className="chat-area nav-close-styles" onClick={clearClick}>
                 {props.chatInstructions ? <div className="instructions-overlay">
                     <div className="instructions">

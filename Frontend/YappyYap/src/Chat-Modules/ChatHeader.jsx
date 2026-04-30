@@ -1,15 +1,17 @@
 import "./ChatHeader.css"
 import useAxios from "../../hooks/useAxios"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useContext } from "react"
 import useChatAuth from "../../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
+import { ChatContext } from "../ChatContext";
 export default function ChatHeader(props) {
     const [online, setOnline] = useState(0);
     const [members, setMembers] = useState(0);
     const axios = useAxios();
     const {setError, setTrigger} = useChatAuth();
-    const [displayname, setDisplay] = useState("")
+    const [displayname, setDisplay] = useState("");
     const navigate = useNavigate();
+    const {realmType} = useContext(ChatContext);
     const getOnline = useCallback(async ()=> {
         try{
             let response;
@@ -25,9 +27,9 @@ export default function ChatHeader(props) {
                     initialPath = "2/global"
                 }
                 else {
-                    initialPath = `4/${props.realmRef.current}`
+                    initialPath = `4/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
                     document.querySelector(".members").style.display = "block";
-                    tempMembers = await axios.get(`http://localhost:800${initialPath}/numMembers`);
+                    const tempMembers = await axios.get(`http://localhost:800${initialPath}/numMembers`);
                     setMembers(tempMembers.data);
                 }
                 response = await axios.get(`http://localhost:800${initialPath}/livecount`);
@@ -43,7 +45,7 @@ export default function ChatHeader(props) {
                 // navigate("/signin");
             }
         }
-    })
+    }, [])
     useEffect(()=>{
         let theme = localStorage.getItem("theme");
         if(theme)

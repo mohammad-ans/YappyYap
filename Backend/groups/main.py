@@ -121,6 +121,8 @@ def add_mem(group : str, db : Session = Depends(get_db), payload = Depends(verif
         )
         db.add(member)
         db.commit()
+    except HTTPException:
+        raise
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "User could not be added"}])
     
@@ -136,12 +138,20 @@ def del_user(memberData : database.MemberData, db : Session = Depends(get_db), p
 @app.get("/{group}/members")
 def get_members(group : str, db : Session = Depends(get_db)):
     try:
-        members = db.execute(select(database.Members.grpName).where(database.Members.grpName == group)).scalars().all()
+        members = db.execute(select(database.Members.name).where(database.Members.grpName == group)).scalars().all()
         return members
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])
  
-@app.get("/{group}/numMembers")
+@app.get("/global/{group}/numMembers")
+def num_members(group : str, db : Session = Depends(get_db)):
+    try:
+        members = db.execute(select(database.Members).where(database.Members.grpName == group)).scalars().all()
+        return len(members)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])
+    
+@app.get("/voice/{group}/numMembers")
 def num_members(group : str, db : Session = Depends(get_db)):
     try:
         members = db.execute(select(database.Members).where(database.Members.grpName == group)).scalars().all()
@@ -230,7 +240,7 @@ async def send_messages(group : str, db : Session = Depends(get_db), payload = D
         "msgs" : msgs_return
     }
 
-@app.get("/global/livecount/{group}")
+@app.get("/global/{group}/livecount")
 def total_active(group : str, payload = Depends(verify_session_token)):
     count = 0
     for user in manager.connections:
@@ -375,7 +385,7 @@ async def get_msgs(group : str, db : Session = Depends(get_db), payload = Depend
 #     return {"msgs" : payload}
 
 
-@app.get("/voice/livecount/{group}")
+@app.get("/voice/{group}/livecount")
 def total_active(group : str, payload = Depends(verify_session_token)):
     count = 0
     for user in managerV.connections:
