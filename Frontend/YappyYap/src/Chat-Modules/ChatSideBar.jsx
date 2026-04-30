@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import AddGroup from "./../AddGroup";
 import { ChatContext } from "../ChatContext";
 import useAxios from "../../hooks/useAxios";
+import useChatAuth from "../../hooks/useChatAuth";
 export default function ChatSideBar(props) {
     // const [navOpen, setNavopen] = useState(false);
     const [addArea, setAddArea] = useState(false);
