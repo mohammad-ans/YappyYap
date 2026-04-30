@@ -55,7 +55,7 @@ export default function Voice(props) {
         const axios = useAxios();
         async function getmsgs() {
             try{
-                const response = await axios.get(`http://${props.url}/getmsgs/${props.realm["name"]}`, {
+                const response = await axios.get(`https://${props.url}/getmsgs/${props.realm["name"]}`, {
                     responseType : "arraybuffer"
                 })
                 const zip = new Uint8Array(response.data)
@@ -117,7 +117,7 @@ export default function Voice(props) {
         let webreconInterval  = 2000;
         function connect() {
             // websocket.current = new WebSocket("wss://api.yappyyap.xyz/voice/ws")
-            websocket.current = new WebSocket(`ws://${props.url}/ws/${props.realm["name"]}`) 
+            websocket.current = new WebSocket(`wss://${props.url}/ws/${props.realm["name"]}`) 
             websocket.current.binaryType = "arraybuffer"
             websocket.current.onopen = () => {
                 getmsgs()
