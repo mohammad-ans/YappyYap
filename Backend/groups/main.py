@@ -65,6 +65,14 @@ def return_groups(db : Session = Depends(get_db), payload = Depends(verify_sessi
         return groups
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])
+    
+@app.get("/groups/{query}")
+def return_groups(query : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    try:
+        groups = db.execute(select(database.Group).where(database.Group.name.ilike(f"%{query}%")).limit(6)).scalars().all()
+        return groups
+    except:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])
 
 @app.post("/addgroup")
 def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -103,12 +111,13 @@ def del_group(groupname : str, db : Session = Depends(get_db), payload = Depends
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Group could not be deleted"}])
     return {"msg" : "Success"}
 
-@app.post("/addmem")
-def add_mem(memberData : database.MemberData, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+@app.get("/addmem/{group}")
+def add_mem(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
     try:
         member = database.Members(
-            name = memberData.name,
-            grpName = memberData.name
+            name = username,
+            grpName = group
         )
         db.add(member)
         db.commit()

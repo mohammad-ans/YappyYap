@@ -12,7 +12,7 @@ export default function TypeArea(props) {
     const [start, setStart] = useState(false)
     const pause = useRef(false)
     const spaceFullCheck = useRef(false)
-    const [yapDuration, setyapDuration] = useState(10)
+    const [yapDuration, setyapDuration] = useState(props.realm["minDuration"])
     const anonymity = useRef(false)
     const axios = useAxios()
     const recorder = useRef(null);
@@ -157,13 +157,13 @@ export default function TypeArea(props) {
                     <div className="bar"></div>
                 </div>
                 <div className="chat-yap-duration">
-                    <div className="anonymity-button-area">
+                    {props.realm["anonymity"] && <div className="anonymity-button-area">
                     <span className="input-label">Anonymity: </span>
                     <button className="anonymity-off" onClick={anonymityHandler}><span className="anonymity-button-circle"></span></button>
-                </div>
+                </div>}
                 <div>
                     <span className="input-label">Duration: </span>
-                    <input type="range" min={10} max={300} step={5} value={yapDuration} onChange={(e) => setyapDuration(e.target.value)} />
+                    <input type="range" min={props.realm["minDuration"]} max={props.realm["maxDuration"]} step={5} value={yapDuration} onChange={(e) => setyapDuration(e.target.value)} />
                     <span id="chat-yap-duration">{`${yapDuration}s`}</span>
                 </div>
                 </div>

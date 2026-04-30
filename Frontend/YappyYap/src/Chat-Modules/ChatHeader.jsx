@@ -97,12 +97,12 @@ export default function ChatHeader(props) {
                     <input type="color"/>
                     </div> */}
                 </div>
-                        <div className="online-count">
+                        {props.liveCount.current && <div className="online-count">
                         <div className="members" onClick={showMembers}>{`${members} Members`}</div>
                                 <div className="online-count-dot">
                                 </div>
                                 <span>{online}</span>
-                        </div>
+                        </div>}
             </div>
     )
 }

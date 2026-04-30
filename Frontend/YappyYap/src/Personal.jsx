@@ -14,7 +14,7 @@ export default function Personal(props){
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [yapDuration, setYapDuration] = useState(10);
     const {setError, setTrigger} = useChatAuth();
-    const {getDms, setDms, dmMsgs, ws, realmRef, user} = useContext(ChatContext)
+    const {getDms, setDms, dmMsgs, ws, realmRef, user, tempDM} = useContext(ChatContext)
     const navigate = useNavigate()
     const startDuration = useRef(false);
     useEffect(() => {
@@ -35,7 +35,7 @@ export default function Personal(props){
         element.classList.add("current-realm");
         async function setMessages () {
             try{
-                setDms(getDms())
+                setDms(getDms());
                 let username = props.secondUser;
                 if(!dmMsgs[username]){
                     return;
@@ -58,13 +58,21 @@ export default function Personal(props){
                         expiry = new Date(time.getTime() + element.duration * 1000);
                     
                     if (expiry - new Date() > 500){
-                        let text = element.msg;
+                        let tempMsg;
+                        if(element.group) {
+                            tempMsg = `<button class="group-invite">Join ${element.group}</button>`
+                        }
+                        else{
+                            tempMsg = `<p class="chat-message">${element.msg}</p>`
+                        }
                         time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"})
                         let new_element = document.createElement("li");
                         expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
                         new_element.classList.add(expiry, "chat-message-block")
-                        new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
+                        new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span>${tempMsg}</span>`)
                         parent_element.append(new_element);
+                        console.log(tempMsg)
+                        console.log(element)
                     }
                 });
             }
@@ -87,8 +95,9 @@ export default function Personal(props){
         return ()=> {
             clearInterval(interval2);
             clearInterval(interval3);
-            element.classList.remove("current-realm")
-            setDms(getDms())
+            element.classList.remove("current-realm");
+            tempDM.current = "";
+            setDms(getDms());
         }
     }, [])
     // const [msgs, setMsgs] = useState(Array());

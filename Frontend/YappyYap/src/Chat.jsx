@@ -20,7 +20,7 @@ export default function Chat(props) {
     const [navOpen, setNavopen] = useState(false);
     const [theme, setTheme] = useState("blue");
     const [addArea, setAddArea] = useState(false);
-    const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "localhost:8002" }, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice" }] })
+    const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
     const [dmMsgs, setDmMsgs] = useState([]);
     // const [notifications, setNotifications] = useState([]);
     const user = useRef("");
@@ -29,6 +29,7 @@ export default function Chat(props) {
     const ws = useRef();
     const axios = useAxios();
     const location = useLocation();
+    const liveCount = useRef(true);
     useEffect(() => {
         let temp = localStorage.getItem("theme");
         if (temp) {
@@ -36,34 +37,33 @@ export default function Chat(props) {
             props.setChatInstructions(false);
         }
     }, [])
-    useEffect(() => {
-        async function getGroups() {
-            try {
-                const response = await axios.get("http://localhost:8004/groups");
-                // console.log(response.data)
-                const tempGroups = response.data;
-                tempGroups.map((element) => {
-                    if (element.grpType == "text")
-                        element["url"] = "localhost:8004";
-                    else
-                        element["url"] = "localhost:8004/voice";
+    async function getGroups() {
+        try {
+            const response = await axios.get("http://localhost:8004/groups");
+            // console.log(response.data)
+            const tempGroups = response.data;
+            tempGroups.map((element) => {
+                if (element.grpType == "text")
+                    element["url"] = "localhost:8004";
+                else
+                    element["url"] = "localhost:8004/voice";
 
-                    return element
-                })
-                const realms = [...groups["Realms"]].concat(tempGroups)
-                setGroups((pre) => {
-                    return { ...pre, "Realms": realms }
-                })
-            }
-            catch (err) {
-                console.log(err)
-            }
+                return element
+            })
+            const realms = [...groups["Realms"]].concat(tempGroups)
+            setGroups((pre) => {
+                return { ...pre, "Realms": realms }
+            })
         }
+        catch (err) {
+            console.log(err)
+        }
+    }
+    useEffect(() => {
         getGroups()
     }, [])
     async function getDms() {
         try {
-            tempDM.current = "";
             const response = await axios.get("http://localhost:8005/dms")
             console.log(response.data)
             let arr = {};
@@ -73,45 +73,73 @@ export default function Chat(props) {
                     if (!arr[element["receiver"]]) {
                         arr[element["receiver"]] = []
                     }
-                    arr[element["receiver"]].push(
-                        {
-                            "msg": element["msg"],
-                            "defaultExpiration": element["defaultExpiration"],
-                            "duration": element["duration"],
-                            "sent": true,
-                            "sentTime": element["sentTime"]
-                        }
-                    )
+                    if(element["group"]) {
+                        arr[element["receiver"]].push(
+                            {
+                                "group": element["group"],
+                                "defaultExpiration": element["defaultExpiration"],
+                                "duration": element["duration"],
+                                "sent": true,
+                                "sentTime": element["sentTime"]
+                            }
+                        )
+                    }
+                    else{
+                        arr[element["receiver"]].push(
+                            {
+                                "msg": element["msg"],
+                                "defaultExpiration": element["defaultExpiration"],
+                                "duration": element["duration"],
+                                "sent": true,
+                                "sentTime": element["sentTime"]
+                            }
+                        )
                 }
+            }
                 else {
                     if (!arr[element["sender"]]) {
                         arr[element["sender"]] = []
                     }
-                    arr[element["sender"]].push(
-                        {
-                            "msg": element["msg"],
-                            "defaultExpiration": element["defaultExpiration"],
-                            "duration": element["duration"],
-                            "sent": false,
-                            "sentTime": element["sentTime"]
-                        }
-                    )
+                    if(element["group"]) {
+                        arr[element["sender"]].push(
+                            {
+                                "group": element["group"],
+                                "defaultExpiration": element["defaultExpiration"],
+                                "duration": element["duration"],
+                                "sent": false,
+                                "sentTime": element["sentTime"]
+                            }
+                        )
+                    }
+                    else{
+                        arr[element["sender"]].push(
+                            {
+                                "msg": element["msg"],
+                                "defaultExpiration": element["defaultExpiration"],
+                                "duration": element["duration"],
+                                "sent": false,
+                                "sentTime": element["sentTime"]
+                            }
+                        )
+                    }
                 }
-
-
             })
+
             setDmMsgs(pre => arr)
             //  
             return Object.keys(arr)
         }
         catch (err) {
+            console.log(err)
             console.error("Messages were not fetched")
         }
     }
     async function setDms(dmns) {
+
         let dms = await dmns;
         if (tempDM.current != "")
             dms.push(tempDM.current)
+        console.log(dms)
         setGroups((pre) => {
             return { ...pre, "Direct Messages": dms }
         })
@@ -156,6 +184,12 @@ export default function Chat(props) {
                                 }
                             }
                             else{
+                                if(!groups["Direct Messages"].includes(username)) {
+                                    setGroups((pre) => {
+                                        return {...pre, "Direct Messages" : [...pre["Direct Messages", username]]}
+                                    })
+                                }
+                                    
                                 const domElement = document.querySelector(`.${username}`)
                                 domElement.classList.add("new-msg-notification");
                             }
@@ -208,7 +242,7 @@ export default function Chat(props) {
         catch { }
     }
     return (
-        <ChatContext.Provider value={{ groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws }}>
+        <ChatContext.Provider value={{ liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups }}>
             <main className="chat-area nav-close-styles" onClick={clearClick}>
                 {props.chatInstructions ? <div className="instructions-overlay">
                     <div className="instructions">
@@ -235,14 +269,14 @@ export default function Chat(props) {
                 {addArea && <AddGroup setAddArea={setAddArea} />}
                 <ChatSideBar realmRef={realmRef} groups={groups} username={username} realm={realm} setRealm={setRealm} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea} />
                 <div className="chat-mainarea">
-                    <ChatHeader realmRef={realmRef} realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user} />
+                    <ChatHeader liveCount={liveCount} realmRef={realmRef} realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user} />
                     <Routes>
-                        {("Direct Messages" in groups) ? (
+                        {
                             groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)
-                        ) : (<></>)}
+                        }
                         {
                             groups["Realms"].map(element => <Route
-                                key={`${element["name"]}-realm`} path={`/${element["name"]}`} element={element["grpType"] == "text" ? (<Global key={`${element["name"]}-realm`} url={element["url"]} realm={element["name"]} />) : (<Voice key={`${element["name"]}-realm`} url={element["url"]} realm={element["name"]} />)}
+                                key={`${element["name"]}-realm`} path={`/${element["name"]}`} element={element["grpType"] == "text" ? (<Global key={`${element["name"]}-realm`} url={element["url"]} realm={element} />) : (<Voice key={`${element["name"]}-realm`} url={element["url"]} realm={element} />)}
                             />)
                         }
                         <Route path="*" element={<DefaultRoot />} />

@@ -16,7 +16,7 @@ export default function Global(props) {
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [yapDuration, setYapDuration] = useState(10);
     const { setError, setTrigger } = useChatAuth();
-    const {dmSendOption, setRealm, tempDM, getDms, setDms, setGroups, realmRef} = useContext(ChatContext);
+    const {dmSendOption, liveCount, setRealm, tempDM, getDms, setDms, setGroups, realmRef, groups} = useContext(ChatContext);
     const navigate = useNavigate()
     const anonymity = useRef(false);
     useEffect(() => {
@@ -29,15 +29,16 @@ export default function Global(props) {
         }
     }, [msg])
     useEffect(() => {
+        liveCount.current = props.realm["liveCount"];
         let isMounted = true;
-        realmRef.current = `${props.realm}-realm`;
+        realmRef.current = `${props.realm["name"]}-realm`;
         const element = document.querySelector(`.${realmRef.current}`);
         setRealm(realmRef.current);
         element.classList.add("current-realm");
         const axios = useAxios()
         async function getMessages() {
             try {
-                const messages = await axios.get(`http://${props.url}/getchatmsgs/${props.realm}`)
+                const messages = await axios.get(`http://${props.url}/getchatmsgs/${props.realm["name"]}`)
                 if (messages.data.msg == "Success") {
                     const response = messages.data.msgs;
                     const parent_element = document.querySelector(".msgs");
@@ -88,7 +89,7 @@ export default function Global(props) {
         let webreconInterval = 2000;
         function connect() {
             // ws.current = new WebSocket(`wss://api.yappyyap.xyz/ws`);
-            ws.current = new WebSocket(`ws://${props.url}/ws/${props.realm}`)
+            ws.current = new WebSocket(`ws://${props.url}/ws/${props.realm["name"]}`)
             ws.current.onopen = () => {
                 getMessages()
             }
@@ -360,13 +361,15 @@ export default function Global(props) {
                     </span>
                     <textarea placeholder="Enter message" ref={textArea} value={msg} onChange={changeHandler} className="send-message" />
                     <div className="chat-yap-duration">
+                        {props.realm["anonymity"] &&  
                         <div className="anonymity-button-area">
+                            
                             <span className="input-label">Anonymity: </span>
                             <button className="anonymity-off" onClick={anonymityHandler}><span className="anonymity-button-circle"></span></button>
-                        </div>
+                        </div>}
                         <div>
                             <span className="input-label">Duration: </span>
-                            <input type="range" value={yapDuration} min={10} max={300} step={5} onChange={yapDurationhandler} />
+                            <input type="range" value={yapDuration} min={props.realm["minDuration"]} max={props.realm["maxDuration"]} step={5} onChange={yapDurationhandler} />
                             <span id="chat-yap-duration">{`${yapDuration}s`}</span>
                         </div>
                     </div>
@@ -378,7 +381,7 @@ export default function Global(props) {
                 </div>
             </div>
         </div>
-        <Members url={"ocoma"}/>
+        <Members url={`localhost:8004/${props.realm["name"]}`} owner={props.realm["owner"]} inviteType={props.realm["inviteType"]}/>
         </>
     )
 }

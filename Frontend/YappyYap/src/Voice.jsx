@@ -21,7 +21,7 @@ export default function Voice(props) {
     const websocket = useRef()
     const msgRemoverInterval = useRef();
     const {setError, setTrigger} = useChatAuth();
-    const {dmSendOption, setRealm, tempDM, realmRef, getDms, setDms} = useContext(ChatContext);
+    const {liveCount, dmSendOption, setRealm, tempDM, realmRef, getDms, setDms} = useContext(ChatContext);
     const navigate = useNavigate();
     useGSAP(() => {
         gsap.ticker.lagSmoothing(0)
@@ -45,15 +45,16 @@ export default function Voice(props) {
         }
     }, [])
     useEffect(() => {
+        liveCount.current = props.realm["liveCount"];
         let isMounted = true;
-        realmRef.current = `${props.realm}-realm`;
+        realmRef.current = `${props.realm["name"]}-realm`;
         const element = document.querySelector(`.${realmRef.current}`);
         setRealm(realmRef.current);
         element.classList.add("current-realm")
         const axios = useAxios();
         async function getmsgs() {
             try{
-                const response = await axios.get(`http://${props.url}/getmsgs/${props.realm}`, {
+                const response = await axios.get(`http://${props.url}/getmsgs/${props.realm["name"]}`, {
                     responseType : "arraybuffer"
                 })
                 const zip = new Uint8Array(response.data)
@@ -115,7 +116,7 @@ export default function Voice(props) {
         let webreconInterval  = 2000;
         function connect() {
             // websocket.current = new WebSocket("wss://api.yappyyap.xyz/voice/ws")
-            websocket.current = new WebSocket(`ws://${props.url}/ws/${props.realm}`) 
+            websocket.current = new WebSocket(`ws://${props.url}/ws/${props.realm["name"]}`) 
             websocket.current.binaryType = "arraybuffer"
             websocket.current.onopen = () => {
                 getmsgs()
@@ -284,10 +285,10 @@ export default function Voice(props) {
             <div className="voice">
                 <ul className="msgs">
                 </ul>
-                <TypeArea websocket={websocket} />
+                <TypeArea websocket={websocket} realm = {props.realm} />
             </div>
         </div>
-        <Members url={""}/>
+        <Members url={`localhost:8004/${props.realm["name"]}`} owner={props.realm["owner"]}/>
         </>
     )
     function helperFunction() {

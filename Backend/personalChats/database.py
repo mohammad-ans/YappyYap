@@ -25,11 +25,35 @@ class PersonalMsgs(Base):
     def setDefaultExpiry(self):
         return self.sentTime + datetime.timedelta(seconds=self.duration)
     
+class GroupInvite(Base):
+    __tablename__ = "grpinvites"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sender = Column(String)
+    receiver = Column(String)
+    group = Column(String)
+    sentTime = Column(DateTime(timezone=True))
+    duration = Column(Integer)
+    defaultExpiration = Column(DateTime(timezone=True), nullable=True)
+    @staticmethod
+    def setDefaultExpiry(self):
+        return self.sentTime + datetime.timedelta(seconds=self.duration)
+    
 
 class Msg_return(BaseModel):
     sender : str
     receiver : str
     msg : str
+    sentTime : datetime.datetime | str
+    duration : int
+    defaultExpiration : datetime.datetime | None
+    model_config = {
+        "from_attributes" : True
+    }
+
+class Msg_invite(BaseModel):
+    sender : str
+    receiver : str
+    group : str
     sentTime : datetime.datetime | str
     duration : int
     defaultExpiration : datetime.datetime | None

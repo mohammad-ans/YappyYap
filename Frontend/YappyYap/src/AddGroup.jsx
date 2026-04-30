@@ -12,6 +12,7 @@ export default function AddGroup(props){
     const [maxDuration, setMaxDuration] = useState("");
     const [minDuration, setMinDuration] = useState("");
     const {username} = useChatAuth();
+    const {setError, setTrigger} = useChatAuth();
     const axios = useAxios()
     async function addGroup(e) {
         e.preventDefault();
@@ -28,7 +29,11 @@ export default function AddGroup(props){
                 inviteType : inviteType
             })
         }
-        catch{}
+        catch(err){
+            console.log(err)
+            setError("Could Not Add Group")
+            setTrigger(pre => !pre)
+        }
     }
     function removeGroupArea() {
         props.setAddArea(false);
@@ -61,7 +66,6 @@ export default function AddGroup(props){
                 </select>
                 <button type="submit">Add Realm</button>
                 </form>
-            
         </div>
     )
 }

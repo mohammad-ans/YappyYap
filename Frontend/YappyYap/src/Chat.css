@@ -271,7 +271,6 @@ flex-direction: row-reverse;
     bottom: 30px;
     left: 15%;
     height: 40px;
-    background-color: #0e100f;
     z-index: 5;
 }
 .user-profile a{
@@ -319,6 +318,7 @@ flex-direction: row-reverse;
 }
 .chat-sidearea hr{
     margin-top: 0;
+    margin-bottom: 20px;
 }
 .realms-list{
     width: 100%;
@@ -547,7 +547,7 @@ flex-direction: row-reverse;
     background-color: var(--text-color);
     color: var(--header-color);
 }
-.confirm-delete-helper{
+.confirm-delete-helper, .add-search-members-overlay{
     display: none;
     top: 0px;
     position: absolute;
@@ -556,17 +556,124 @@ flex-direction: row-reverse;
     z-index: 6;
     background-color: rgba(0, 0, 0, 0.6);
 }
-.confirm-delete{
-    display: none;
+.confirm-delete, .add-search-members{
     top: 40px;
     left: 50%;
     transform: translateX(-50%);
     position: absolute;
-    margin: 20px;
     background-color: black;
     border-radius: 8px;
     width: fit-content;
     padding: 25px 20px 20px 20px;
+}
+.cancel-add-mem{
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+.add-search-members{
+    min-height: 40vh;
+}
+.add-to-group{
+    cursor: pointer;
+    font-size: 2rem;
+}
+.already-in-group{
+    font-size: 0.8rem;
+}
+.members-to-add{
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.members-to-add li{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.add-search-members input{
+    color: var(--text-color);
+    padding: 6px 5px;
+    width: calc(65vw - 20px);
+    border: 2px solid var(--anonymity-button);
+    border-radius: 2px;
+    outline: none;
+    background-color: transparent;
+    font-size: 16px;
+    position: relative;
+    top: 1px;
+    margin-top: 20px;
+}
+.add-search-members input:focus{
+    border: 2px solid var(--text-color);
+}
+.search-users-groups input{
+    color: var(--text-color);
+    padding: 6px 5px;
+    border: 2px solid var(--anonymity-button);
+    border-radius: 4px;
+    outline: none;
+    background-color: transparent;
+    position: relative;
+    margin-bottom: 2px;
+}
+.search-users-groups input:focus{
+    border: 2px solid var(--text-color);
+}
+.search-users-groups > div{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.search-users-groups input[type="checkbox"] {
+    cursor: pointer;
+}
+.searchBy-label{
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+.results-search{
+    position: absolute;
+    top: 100%;
+    width: 90%;
+    max-height: 150px;
+    background-color: black;
+    z-index: 6;
+    overflow-y: scroll;
+    border-radius: 3px;
+}
+.search-users-groups{
+    position: relative;
+    margin: 20px 0px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: visible;
+}
+.group-invite{
+    background-color: var(--buttons-active-color);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 6px;
+    cursor: pointer;
+}
+.results-search li {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+}
+.results-search li button{
+    background-color: var(--buttons-active-color);
+    border: none;
+    border-radius: 3px;
+    padding: 2px 3px;
+    cursor: pointer;
+    font-size: 0.8rem;
 }
 .new-msg-notification .realm-button{
     color: rgba(255, 255, 255, 1);

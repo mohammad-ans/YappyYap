@@ -56,19 +56,28 @@ def personalMsgs(db : Session = Depends(get_db), payload = Depends(verify_sessio
     user = payload["username"]
     msgs = []
     try:
-        handle_duration = db.execute(update(database.PersonalMsgs).where(
+        db.execute(update(database.PersonalMsgs).where(
             ((database.PersonalMsgs.sender == user) | (database.PersonalMsgs.receiver == user))
             & (database.PersonalMsgs.defaultExpiration == None)
         ).values(defaultExpiration = (func.now() + text("duration * interval '1 second'"))))
+
+        db.execute(update(database.GroupInvite).where(
+            ((database.GroupInvite.sender == user) | (database.GroupInvite.receiver == user))
+            & (database.GroupInvite.defaultExpiration == None)
+        ).values(defaultExpiration = (func.now() + text("duration * interval '1 second'"))))
+
         db.commit()
+
         curr_time = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1)
         msgs = db.execute(select(database.PersonalMsgs).where(
             ((database.PersonalMsgs.sender == user) | (database.PersonalMsgs.receiver == user))
             & (database.PersonalMsgs.defaultExpiration > curr_time)
             )).scalars().all()
-        for msg in msgs:
-            print(msg.defaultExpiration)
-            print(curr_time)
+        invites = db.execute(select(database.GroupInvite).where(
+            ((database.GroupInvite.sender == user) | (database.GroupInvite.receiver == user))
+            & (database.GroupInvite.defaultExpiration > curr_time)
+            )).scalars().all()
+        msgs.extend(invites)
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Messages could not be fetched"}])
@@ -135,9 +144,7 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                 print(data)
                 if "recipient" in data:
                     secondUser = data["recipient"]
-                    print("hi")
                     timeCurr = datetime.datetime.now(datetime.timezone.utc)
-                    print("hi")
                     defaultExpiration = data["defaultExpiration"]
                     print(defaultExpiration)
                     
@@ -148,26 +155,37 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                         if secondUser in manager.connections:
                             exp = timeCurr + datetime.timedelta(seconds=data["duration"])
                     print("hi")
-                    
-                    
-                    message = database.PersonalMsgs(
-                        sender = username, 
-                        receiver = secondUser,
-                        msg = data["msg"],
-                        sentTime = timeCurr,
-                        duration = data["duration"],
-                        defaultExpiration = exp
-                    )
+                    msg = ""
+                    if "type" in data:
+                        print("invite")
+                        message = database.GroupInvite(
+                            sender = username, 
+                            receiver = secondUser,
+                            group = data["msg"],
+                            sentTime = timeCurr,
+                            duration = data["duration"],
+                            defaultExpiration = exp
+                        )
+                        msg = database.Msg_invite.from_orm(message).model_dump_json()
+
+                    else:
+                        message = database.PersonalMsgs(
+                            sender = username, 
+                            receiver = secondUser,
+                            msg = data["msg"],
+                            sentTime = timeCurr,
+                            duration = data["duration"],
+                            defaultExpiration = exp
+                        )
+                        msg = database.Msg_return.from_orm(message).model_dump_json()
                     print("hi")
-                    msg = database.Msg_return.from_orm(message).model_dump_json()
-                    print(msg)
                     db.add(message)
                     print("hi")
                     print(msg)
                     if(not await manager.send_message(msg, secondUser) and not defaultExpiration):
                         message.defaultExpiration = None
                     db.commit()
-                
+                    print("commited")
             except WebSocketDisconnect:
                 manager.disconnect(username)
                 break
