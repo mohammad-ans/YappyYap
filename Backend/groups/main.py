@@ -53,13 +53,13 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
     try:
         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
         if not payload:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Payload not found"}])
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Payload not found"}])
         if not payload["username"]:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Username Not found"}])
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Username Not found"}])
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Invalid Token"}])
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid Token"}])
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg" : "Expired Token"}])
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Expired Token"}])
     return payload
 
 
@@ -69,6 +69,15 @@ client = httpx.AsyncClient()
 def return_groups(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     try:
         groups = db.execute(select(database.Group)).scalars().all()
+        return groups
+    except:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])
+    
+@app.get("/groups/all/{username}")
+def return_groups(username : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    try:
+        tempGrps = db.execute(select(database.Members.grpName).where(database.Members.name == username))
+        groups = db.execute(select(database.Group).where(database.Group.name.in_(tempGrps))).scalars().all()
         return groups
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])

@@ -7,7 +7,24 @@ from sqlalchemy import select
 from io import BytesIO
 from pydantic import BaseModel
 import zipfile
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+origins=[
+    "http://localhost:5173",
+    "https://yappyyap.xyz"
+]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
 
 Base.metadata.create_all(bind=engine)
 

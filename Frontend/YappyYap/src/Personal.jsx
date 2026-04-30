@@ -78,15 +78,14 @@ export default function Personal(props){
                     }
                 });
             }
-            catch(error){
-                console.log(error)
-            // if(error.response && error.response.data) {
-                //     setError(e => error.response.data.detail[0].msg);
-                //     setTrigger(t => !t);
-                //     if(ws.current && ws.current.readyState == WebSocket.OPEN)
-                //         ws.current.close();
-                //     navigate("/signin")
-                // }
+            catch(err){
+            if(err.response && err.response.data) {
+                    setError(e => err.response.data.detail[0].msg);
+                    setTrigger(t => !t);
+                    if(ws.current && ws.current.readyState == WebSocket.OPEN)
+                        ws.current.close();
+                    navigate("/signin")
+                }
                 // console.warn("Connection to server failed")
             }
         }

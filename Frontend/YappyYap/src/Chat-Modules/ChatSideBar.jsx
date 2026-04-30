@@ -116,9 +116,9 @@ export default function ChatSideBar(props) {
                             return (
                                 <li key={element["name"]}>
                                     <span className="name">{element["name"]}</span>
-                                    {element["grpType"] == "all" ? 
-                                    <button className="join-group" onClick={joinGroup}>Join Group</button>
-                                    : <button className="join-group" style={{cursor : "text"}} disabled={true}>Invite only</button>
+                                    {element["inviteType"] == "all" ? 
+                                    (<button className="join-group" onClick={joinGroup}>Join Group</button>)
+                                    : (<button className="join-group" style={{cursor : "text"}} disabled={true}>Invite only</button>)
                                     }
                                 </li>
                             )

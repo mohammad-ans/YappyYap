@@ -25,9 +25,12 @@ origins=[
     "https://yappyyap.xyz"
 ]
 
+secretkey = os.getenv("SECRET")
+
+
 app.add_middleware(
     SessionMiddleware,
-    secret_key="123"   
+    secret_key=secretkey   
 )
 
 app.add_middleware(
@@ -73,13 +76,13 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
     try:
         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
         if not payload:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Payload not found"}])
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Payload not found"}])
         if not payload["username"]:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Username Not found"}])
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Username Not found"}])
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Invalid Token"}])
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid Token"}])
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg" : "Expired Token"}])
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Expired Token"}])
     return payload
 
 
@@ -352,7 +355,6 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
         path="/",
         domain=".yappyyap.xyz"
         )
-        print(user)
         return response
     except Exception as e:
         print(e)
@@ -392,4 +394,3 @@ def get_users(query : str, db : Session = Depends(get_db), payload = Depends(ver
         return users
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch users"}])
-    

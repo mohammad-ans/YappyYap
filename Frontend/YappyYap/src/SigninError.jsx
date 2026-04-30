@@ -23,7 +23,7 @@ export default function SigninError() {
     useEffect(()=>{
         const element = document.querySelector(".signin-error-error");
         const element2 = document.querySelector(".signin-error-decoration")
-        if (errorMsg === "Successfuly Logged In" || errorMsg === "Welcome to our page" || errorMsg === "OTP Sent" || errorMsg === "Success"){
+        if (errorMsg === "Successfuly Logged In" || errorMsg === "Welcome to our page" || errorMsg === "OTP Sent" || errorMsg === "Success" || errorMsg == "Successfully done"){
             element.style.color = "rgb(104, 234, 104)"
             element2.style.backgroundColor = "rgb(104, 234, 104)"
         }

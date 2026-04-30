@@ -17,6 +17,7 @@ export default function Global(props) {
     const [yapDuration, setYapDuration] = useState(10);
     const { setError, setTrigger } = useChatAuth();
     const {realmType, dmSendOption, liveCount, setRealm, tempDM, getDms, setDms, setGroups, realmRef, groups} = useContext(ChatContext);
+    const {username} = useChatAuth();
     const navigate = useNavigate()
     const anonymity = useRef(false);
     useEffect(() => {
@@ -73,9 +74,9 @@ export default function Global(props) {
                     });
                 }
             }
-            catch (error) {
-                if (error.response && error.response.data) {
-                    setError(e => error.response.data.detail[0].msg);
+            catch (err) {
+                if (err.response && err.response.data) {
+                    setError(e => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
                     if (ws.current && ws.current.readyState == WebSocket.OPEN)
                         ws.current.close();
@@ -317,7 +318,11 @@ export default function Global(props) {
 
     async function dmUser(e) {
         try{
-            const username = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
+            const tempUsername = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
+            if (username == tempUsername) {
+                setTrigger(pre => !pre);
+                setError("Its ur own account🙂")
+            }
             let dms = getDms();
             tempDM.current = username
             await setDms(dms)

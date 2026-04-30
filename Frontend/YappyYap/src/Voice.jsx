@@ -20,7 +20,7 @@ export default function Voice(props) {
     const dotMover = useRef()
     const websocket = useRef()
     const msgRemoverInterval = useRef();
-    const {setError, setTrigger} = useChatAuth();
+    const {setError, setTrigger, username} = useChatAuth();
     const {realmType, liveCount, dmSendOption, setRealm, tempDM, realmRef, getDms, setDms} = useContext(ChatContext);
     const navigate = useNavigate();
     useGSAP(() => {
@@ -101,7 +101,6 @@ export default function Voice(props) {
                 }
             }
             catch(err){
-                console.log(err)
                 if((err.response) && (err.response.data)){
                     setError(err => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
@@ -162,7 +161,14 @@ export default function Voice(props) {
                         msg.querySelector(".audio-play").src = window.URL.createObjectURL(blob);
                     }
                 catch(err){
-                    console.log(err);
+                    if(err.response && err.response.data) {
+                            setError(e => err.response.data.detail[0].msg);
+                            setTrigger(t => !t);
+                            if(ws.current && ws.current.readyState == WebSocket.OPEN)
+                                ws.current.close();
+                            navigate("/signin")
+                        }
+
                 }
     
             }
@@ -267,9 +273,11 @@ export default function Voice(props) {
 
     async function dmUser(e) {
         try{
-            console.log("hi")
-            const username = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
-            console.log(username)
+            const tempUsername = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
+            if (username == tempUsername) {
+                setTrigger(pre => !pre);
+                setError("Its ur own account🙂")
+            }
             let dms = getDms();
             tempDM.current = username;
             await setDms(dms)

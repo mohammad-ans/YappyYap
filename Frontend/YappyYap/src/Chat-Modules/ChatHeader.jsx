@@ -44,12 +44,14 @@ export default function ChatHeader(props) {
                 setOnline(response.data.total)
             }
         }
-        catch(e) {
-            if (e.response && e.response.data) {
-                setError(err => e.response.data.detail[0].msg);
-                // setTrigger(t => !t);
-                // navigate("/signin");
-            }
+        catch(err) {
+            if(err.response && err.response.data) {
+                    setError(e => err.response.data.detail[0].msg);
+                    setTrigger(t => !t);
+                    if(ws.current && ws.current.readyState == WebSocket.OPEN)
+                        ws.current.close();
+                    navigate("/signin")
+                }
         }
     }, [])
     useEffect(()=>{

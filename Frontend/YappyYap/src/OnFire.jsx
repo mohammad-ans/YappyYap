@@ -7,7 +7,7 @@ export default function Onfire(props) {
     const axios = useAxios()
     async function guestLogin() {
         try{
-            const response = await axios.get("/guestlogin");
+            const response = await axios.get("https://auth.yappyyap.xyz/guestlogin");
             if (response.data.msg == "Success"){
                 setError("Successfuly Logged In");
                 setUsername(response.data.username);

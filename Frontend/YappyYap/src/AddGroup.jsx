@@ -1,7 +1,8 @@
-import {useState} from "react"
+import {useContext, useState} from "react"
 import useAxios from "../hooks/useAxios";
 import "./AddGroup.css"
 import useChatAuth from "../hooks/useChatAuth";
+import { ChatContext } from "./ChatContext";
 export default function AddGroup(props){
     const [name, setName] = useState("");
     const [grpType, setGrpType] = useState("text");
@@ -13,6 +14,7 @@ export default function AddGroup(props){
     const [minDuration, setMinDuration] = useState("");
     const {username} = useChatAuth();
     const {setError, setTrigger} = useChatAuth();
+    const {getGroups} = useContext(ChatContext)
     const axios = useAxios()
     async function addGroup(e) {
         e.preventDefault();
@@ -29,12 +31,16 @@ export default function AddGroup(props){
                 grpType : grpType,
                 inviteType : inviteType
             })
+            getGroups();
+            setError("Successfully Done");
         }
         catch(err){
             if(err.response.status == 406)
                 setError(err.response.data.detail[0].msg)
             else
-            setError("Could Not Add Group")
+                setError("Could Not Add Group");
+    }
+    finally{
             setTrigger(pre => !pre)
         }
     }

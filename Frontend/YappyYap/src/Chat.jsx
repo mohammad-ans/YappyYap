@@ -22,7 +22,7 @@ export default function Chat(props) {
     const [theme, setTheme] = useState("blue");
     const [addArea, setAddArea] = useState(false);
     // const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
-    const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
+    const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
     const [dmMsgs, setDmMsgs] = useState([]);
     // const [notifications, setNotifications] = useState([]);
     const user = useRef("");
@@ -42,7 +42,7 @@ export default function Chat(props) {
     async function getGroups() {
         try {
             // const response = await axios.get("http://localhost:8004/groups");
-            const response = await axios.get("https://groups.yappyyap.xyz/groups");
+            const response = await axios.get(`https://groups.yappyyap.xyz/groups/all/${username}`);
             // console.log(response.data)
             const tempGroups = response.data;
             tempGroups.map((element) => {
@@ -57,13 +57,19 @@ export default function Chat(props) {
             })
             
             // const realms = [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
-            const realms = [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
+            const realms = [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
             setGroups((pre) => {
                 return { ...pre, "Realms": realms }
             })
         }
         catch (err) {
-            console.log(err)
+                if (err.response && err.response.data) {
+                    setError(e => error.response.data.detail[0].msg);
+                    setTrigger(t => !t);
+                    if (ws.current && ws.current.readyState == WebSocket.OPEN)
+                        ws.current.close();
+                    navigate("/signin")
+                }
         }
     }
     useEffect(() => {
@@ -137,8 +143,13 @@ export default function Chat(props) {
             return Object.keys(arr)
         }
         catch (err) {
-            console.log(err)
-            console.error("Messages were not fetched")
+                if (err.response && err.response.data) {
+                    setError(e => err.response.data.detail[0].msg);
+                    setTrigger(t => !t);
+                    if (ws.current && ws.current.readyState == WebSocket.OPEN)
+                        ws.current.close();
+                    navigate("/signin")
+                }
         }
     }
     async function setDms(dmns) {
@@ -207,7 +218,13 @@ export default function Chat(props) {
                         }
                     }
                     catch (err) {
-                        console.log(err)
+                if (err.response && err.response.data) {
+                    setError(e => err.response.data.detail[0].msg);
+                    setTrigger(t => !t);
+                    if (ws.current && ws.current.readyState == WebSocket.OPEN)
+                        ws.current.close();
+                    navigate("/signin")
+                }
                     }
                 }
                 ws.current.onerror = (e) => {
