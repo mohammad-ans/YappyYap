@@ -23,7 +23,8 @@ app = FastAPI()
 load_dotenv()
 
 origins=[
-     "http://localhost:5173"
+     "http://localhost:5173",
+    "https://yappyyap.xyz"
 ]
 
 app.add_middleware(

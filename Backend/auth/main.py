@@ -21,7 +21,8 @@ load_dotenv()
 app = FastAPI()
 
 origins=[
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "https://yappyyap.xyz"
 ]
 
 app.add_middleware(
@@ -322,7 +323,8 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
         username = db.execute(select(Users.username).where(Users.email == email)).mappings().one_or_none()
         if not username:
             token = await create_session_token({"temp" : "token", "exp" : int(time.time()) + 1800})
-            response = RedirectResponse(url=f"http://localhost:5173/signup?email={email}")
+            # response = RedirectResponse(url=f"http://localhost:5173/signup?email={email}")
+            response = RedirectResponse(url=f"https://yappyyap.xyz/signup?email={email}")
             response.set_cookie(
                 key="temp_token",
                 value=token,
@@ -335,7 +337,8 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
             )
             return response
         
-        response = RedirectResponse(url=f"http://localhost:5173/chat")
+        # response = RedirectResponse(url=f"http://localhost:5173/chat")
+        response = RedirectResponse(url=f"https://yappyyap.xyz/chat")
         username = username["username"]
 
         token = await create_session_token({"username" : username, "type": "a", "exp": int(time.time()) + 1800})
