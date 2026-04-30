@@ -46,16 +46,21 @@ ALGORITHM = "HS256"
 
 async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
     if not session_token:
+        print(1)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
     try:
         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
         if not payload:
+            print(2)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Payload not found"}])
         if not payload["username"]:
+            print(3)
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Username Not found"}])
     except jwt.InvalidTokenError:
+        print(4)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid Token"}])
     except jwt.ExpiredSignatureError:
+        print(5)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Expired Token"}])
     return payload
 
@@ -140,6 +145,7 @@ manager = ConnectionManager()
 # async def websoc(user : WebSocket, db : Session = Depends(get_db)):
 @app.websocket("/ws")
 async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    print("reached here")
     MAX_TIME = payload["exp"]
     username = payload["username"]
     await manager.add_connection(user, username)
