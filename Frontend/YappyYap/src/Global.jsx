@@ -388,7 +388,7 @@ export default function Global(props) {
             </div>
         </div>
         {/* <Members url={`localhost:8004/${props.realm["name"]}`} owner={props.realm["owner"]} inviteType={props.realm["inviteType"]}/> */}
-        <Members url={`groups.yappyyap.xyz/${props.realm["name"]}`} owner={props.realm["owner"]} inviteType={props.realm["inviteType"]}/>
+        {realmRef.current != "global" && <Members url={`groups.yappyyap.xyz/${props.realm["name"]}`} owner={props.realm["owner"]} inviteType={props.realm["inviteType"]}/>}
         </>
     )
 }

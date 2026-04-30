@@ -79,7 +79,8 @@ def return_groups(username : str, db : Session = Depends(get_db), payload = Depe
         tempGrps = db.execute(select(database.Members.grpName).where(database.Members.name == username))
         groups = db.execute(select(database.Group).where(database.Group.name.in_(tempGrps))).scalars().all()
         return groups
-    except:
+    except Exception as e:
+        print(e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])
     
 @app.get("/groups/{query}")

@@ -16,7 +16,7 @@ export default function Members(props) {
 
     async function getMembers() {
         try {
-            const response = await axios.get(`http://${props.url}/members`);
+            const response = await axios.get(`https://${props.url}/members`);
             setMembers(response.data);
         }
         catch (err) {

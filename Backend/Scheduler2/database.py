@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, LargeBinary
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, LargeBinary, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime, timedelta, timezone
 import os
@@ -10,7 +10,8 @@ engine = create_engine(DB_URL)
 Base = declarative_base()
 session = sessionmaker(bind=engine)
 
-class BaseMsg:
+
+class grpMsgBase:
     @staticmethod
     def get_expiry(seconds : int):
         return datetime.now(timezone.utc) + timedelta(seconds=seconds)
@@ -18,12 +19,12 @@ class BaseMsg:
     username = Column(String)
     time_sent = Column(DateTime(timezone=True))
     expiry = Column(DateTime(timezone=True))
+    grpName = Column(String, ForeignKey("groups.name"))
 
-class Msgs(BaseMsg, Base):
-    __tablename__ = "msgs"
+class grpMsgsT(Base, grpMsgBase):
+    __tablename__ = "texts"
     msg = Column(String)
 
-class VoiceMsgs(BaseMsg, Base):
+class grpsMsgsV(Base, grpMsgBase):
     __tablename__ = "voices"
     msg = Column(LargeBinary)
-
