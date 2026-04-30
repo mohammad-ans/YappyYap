@@ -9,8 +9,11 @@ from coolname import generate_slug
 import httpx
 import os, jwt
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
 app = FastAPI()
+
+load_dotenv()
 
 origins=[
     "http://localhost:5173"
@@ -33,24 +36,24 @@ def get_db():
         yield db
 
 
-async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
-    payload = {"username" : "NA", "type" : "admin", "exp" : 0}
-    return payload
-
 # async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
-#     if not session_token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
-#     try:
-#         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
-#         if not payload:
-#             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Payload not found"}])
-#         if not payload["username"]:
-#             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Username Not found"}])
-#     except jwt.InvalidTokenError:
-#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Invalid Token"}])
-#     except jwt.ExpiredSignatureError:
-#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg" : "Expired Token"}])
+#     payload = {"username" : "NA", "type" : "admin", "exp" : 0}
 #     return payload
+
+async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
+    if not session_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
+    try:
+        payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
+        if not payload:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Payload not found"}])
+        if not payload["username"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Username Not found"}])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Invalid Token"}])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg" : "Expired Token"}])
+    return payload
  
 
 class ConnectionManager:

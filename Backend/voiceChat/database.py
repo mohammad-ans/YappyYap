@@ -5,7 +5,8 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-DB_URL = "postgresql://myuser:pswd@tchat-db:5432/tchatdb"
+
+DB_URL = os.getenv("DB_URL")
 engine = create_engine(DB_URL)
 Base = declarative_base()
 session = sessionmaker(bind=engine)
