@@ -4,10 +4,11 @@ import { useEffect, useState } from "react"
 import { gsap } from "gsap"
 import useLogged from "../hooks/useChatAuth"
 import logo from "./assets/logo.png"
+import useChatAuth from "../hooks/useChatAuth"
 export default function Nav(props) {
     const [navOpen, setnavOpen] = useState(false);
     const [animating, setAnimating] = useState(false);
-    const {logged} = useLogged()
+    const {logged} = useChatAuth()
     
     function hoverEnter() {
         document.querySelector(".menubar").style.color = "rgb(95, 93, 93)";

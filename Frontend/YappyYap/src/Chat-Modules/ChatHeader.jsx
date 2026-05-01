@@ -18,7 +18,7 @@ export default function ChatHeader(props) {
             document.querySelector(".members").style.display = "none";
             if (props.realmRef.current == "dms"){
                 // response = await axios.get(`http://localhost:8005/${props.user.current}`);
-                response = await axios.get(`https://chat.yappyyap.xyz/${props.user.current}`);
+                response = await axios.get(`https://chat.yappyyap.xyz/livecount/${props.user.current}`);
             }else{
                 let initialPath;
                 if (props.realmRef.current == "voice-realm") {
