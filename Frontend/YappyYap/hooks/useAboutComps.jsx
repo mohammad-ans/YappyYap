@@ -15,14 +15,14 @@ export function AboutCompsProvider({children}) {
         try{
             const response = await axios.get("https://dashboard.yappyyap.xyz/get/aboutcomps");
             if (response.data.msg == "Success") {
-                // setContents(pre=> response.data.content);
+                setContents(pre=> response.data.content);
             }
         }
         catch{
 
         }
         finally{
-            setContents(["hi", "by"]);
+            
             setLoading(false)
         }
     }
