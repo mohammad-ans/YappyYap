@@ -113,6 +113,10 @@ def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload
             inviteType = grpData.inviteType
         )
         db.add(db_data)
+        member_data = database.Members(
+            name = grpData.owner,
+            grpName = grpData.name
+        )
         db.commit()
         return {"msg" : "Success"}
     except HTTPException:

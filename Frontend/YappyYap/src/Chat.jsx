@@ -191,7 +191,8 @@ export default function Chat(props) {
                         const element = JSON.parse(e.data)
                         if (element["sender"]) {
                             let tempUsername = element["sender"];
-                            if (location.pathname == `/chat/u/${tempUsername}`) {
+                            const locationTemp = useLocation();
+                            if (locationTemp.pathname == `/chat/u/${tempUsername}`) {
                                 const parent_element = document.querySelector(".msgs");
                                 let time = new Date(element["sentTime"]);
                                 let expiry = new Date(element.defaultExpiration);

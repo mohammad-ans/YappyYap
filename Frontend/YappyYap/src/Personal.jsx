@@ -15,6 +15,7 @@ export default function Personal(props){
     const [yapDuration, setYapDuration] = useState(10);
     const {setError, setTrigger, username} = useChatAuth();
     const {getDms, setDms, dmMsgs, ws, realmRef, user, tempDM} = useContext(ChatContext)
+    const parentMsgs = useRef();
     const navigate = useNavigate()
     const startDuration = useRef(false);
     const axios = useAxios();
@@ -187,6 +188,7 @@ export default function Personal(props){
             expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
             new_element.classList.add(expiry, "chat-message-block");
             new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${tempMsg}</p></span>`)
+            parentMsgs.current.append(new_element);
         }
         
         textArea.current.value = "";
@@ -275,7 +277,7 @@ export default function Personal(props){
         return (
             <>
                     <div className="msgs-helper">
-                        <ul className="msgs">
+                        <ul className="msgs" ref={parentMsgs}>
                         </ul>
                     </div>
                     <div className="type-area-overlay">
