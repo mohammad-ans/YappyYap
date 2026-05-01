@@ -143,11 +143,12 @@ manager = ConnectionManager()
 #             pass
 
 # async def websoc(user : WebSocket, db : Session = Depends(get_db)):
+# async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
 @app.websocket("/ws/main")
-async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+async def websoc(user : WebSocket, db : Session = Depends(get_db)):
     print("reached here")
-    MAX_TIME = payload["exp"]
-    username = payload["username"]
+    MAX_TIME = "payload"
+    username = "payload"
     await manager.add_connection(user, username)
     try:
         while True:
