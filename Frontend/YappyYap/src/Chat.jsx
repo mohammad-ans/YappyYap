@@ -75,7 +75,6 @@ export default function Chat(props) {
                         ws.current.close();
                     navigate("/signin")
                 }
-                console.log(err)
         }
     }
     useEffect(() => {
@@ -192,13 +191,9 @@ export default function Chat(props) {
                 ws.current.onmessage = (e) => {
                     try {
                         const element = JSON.parse(e.data)
-                        console.log("sender" in element)
                         if ("sender" in element) {
-                            console.log(window.location.pathname);
                             let tempUsername = element["sender"];
-                            console.log(`/chat/u/${tempUsername}`);
                             if (window.location.pathname == `/chat/u/${tempUsername}`) {
-                                console.log("here");
                                 const parent_element = document.querySelector(".msgs");
                                 let time = new Date(element["sentTime"]);
                                 let expiry = new Date(element.defaultExpiration);
@@ -211,7 +206,6 @@ export default function Chat(props) {
                                     new_element.classList.add(expiry, "chat-message-block")
                                     new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${tempUsername}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
                                     parent_element.append(new_element);
-                                    console.log("here2");
                                 }
                             }
                             else{
@@ -223,7 +217,8 @@ export default function Chat(props) {
                                 }
                                     
                                 const domElement = document.querySelector(`.${tempUsername}`)
-                                domElement.classList.add("new-msg-notification");
+                                if(domElement)
+                                    domElement.classList.add("new-msg-notification");
                             }
                         }
                         else{

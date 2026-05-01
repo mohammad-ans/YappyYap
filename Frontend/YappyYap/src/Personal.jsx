@@ -14,7 +14,7 @@ export default function Personal(props){
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [yapDuration, setYapDuration] = useState(10);
     const {setError, setTrigger, username} = useChatAuth();
-    const {getDms, setDms, dmMsgs, ws, realmRef, user, tempDM} = useContext(ChatContext)
+    const {getDms, setDms, dmMsgs, ws, realmRef, user, tempDM, getGroups} = useContext(ChatContext)
     const parentMsgs = useRef();
     const navigate = useNavigate()
     const startDuration = useRef(false);
@@ -112,6 +112,7 @@ export default function Personal(props){
         try{
             const response = await axios.get(`https://groups.yappyyap.xyz/addmem/${group}`);
             e.target.innerText = "Joined";
+            getGroups();
         }
         catch(err) {
             if(err.response.status == 406){
