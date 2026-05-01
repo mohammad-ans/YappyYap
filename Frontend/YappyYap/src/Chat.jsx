@@ -196,6 +196,8 @@ export default function Chat(props) {
                         if (element["sender"]) {
                             let tempUsername = element["sender"];
                             const locationTemp = useLocation();
+                            console.log(locationTemp.pathname);
+                            console.log(`/chat/u/${tempUsername}`);
                             if (locationTemp.pathname == `/chat/u/${tempUsername}`) {
                                 console.log("here");
                                 const parent_element = document.querySelector(".msgs");
