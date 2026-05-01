@@ -50,7 +50,8 @@ export default function Voice(props) {
             const tempUsername = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
             if (username == tempUsername) {
                 setTrigger(pre => !pre);
-                setError("Its ur own account🙂")
+                setError("Its ur own account🙂");
+                return;
             }
             let dms = getDms();
             tempDM.current = tempUsername;

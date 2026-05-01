@@ -36,6 +36,7 @@ export default function Global(props) {
             if (username == tempUsername) {
                 setTrigger(pre => !pre);
                 setError("Its ur own account🙂")
+                return;
             }
             let dms = getDms();
             tempDM.current = tempUsername

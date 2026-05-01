@@ -38,11 +38,10 @@ export default function Personal(props){
         async function setMessages () {
             try{
                 setDms(getDms());
-                let username = props.secondUser;
-                if(!dmMsgs[username]){
+                if(!dmMsgs[props.secondUser]){
                     return;
                 }
-                const response = dmMsgs[username];
+                const response = dmMsgs[props.secondUser];
                 const parent_element = document.querySelector(".msgs");
                 parent_element.innerHTML = "";
                 response.forEach(element => {
@@ -50,6 +49,12 @@ export default function Personal(props){
                     //     sentTime = timeCurr,
                     //     duration = data["duration"],
                     //     defaultExpiration
+                    
+                    let tempUsername;
+                    if(element.sent)
+                        tempUsername = username;
+                    else
+                        tempUsername = props.secondUser;
                     let time = new Date(element.sentTime);
                     let expiry;
                     if (element.defaultExpiration){
@@ -71,7 +76,7 @@ export default function Personal(props){
                         let new_element = document.createElement("li");
                         expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
                         new_element.classList.add(expiry, "chat-message-block")
-                        new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span>${tempMsg}</span>`)
+                        new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${tempUsername}</h3> <p class="timestamp">${time}</p></span>${tempMsg}</span>`)
                         const tempElement = new_element.querySelector(".group-invite");
                         if(tempElement)
                             tempElement.addEventListener("click", joinGroup)
