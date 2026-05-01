@@ -171,13 +171,22 @@ export default function Personal(props){
             return;
         }
         if (ws.current && ws.current.readyState == WebSocket.OPEN) {
+            const duration = Number(yapDuration);
+            const tempMsg = msg.trim();
             let message = {
                 "recipient" : props.secondUser,
                 "defaultExpiration" : startDuration.current,
-                "msg" : msg.trim(),
-                "duration" : Number(yapDuration)
+                "msg" : tempMsg,
+                "duration" : duration
             }
             ws.current.send(JSON.stringify(message));
+            let time = new Date();
+            expiry = new Date(time.getTime() + duration * 1000);
+            time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"})
+            let new_element = document.createElement("li");
+            expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
+            new_element.classList.add(expiry, "chat-message-block");
+            new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${tempMsg}</p></span>`)
         }
         
         textArea.current.value = "";

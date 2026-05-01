@@ -184,7 +184,6 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                         )
                         msg = database.Msg_return.from_orm(message).model_dump_json()
                     db.add(message)
-                    await manager.send_message(msg, username)
                     if(not await manager.send_message(msg, secondUser) and not defaultExpiration):
                         message.defaultExpiration = None
                     db.commit()

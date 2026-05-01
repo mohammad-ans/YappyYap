@@ -189,10 +189,7 @@ export default function Chat(props) {
                         const element = JSON.parse(e.data)
                         if (element["sender"]) {
                             let tempUsername = element["sender"];
-                            let secondUser = tempUsername;
-                            if(element["sender"] == username)
-                                secondUser = element["receiver"];
-                            if (location.pathname == `/chat/u/${secondUser}`) {
+                            if (location.pathname == `/chat/u/${tempUsername}`) {
                                 const parent_element = document.querySelector(".msgs");
                                 let time = new Date(element["sentTime"]);
                                 let expiry = new Date(element.defaultExpiration);
@@ -208,13 +205,13 @@ export default function Chat(props) {
                                 }
                             }
                             else{
-                                if(!groups["Direct Messages"].includes(secondUser)) {
+                                if(!groups["Direct Messages"].includes(tempUsername)) {
                                     setGroups((pre) => {
-                                        return {...pre, "Direct Messages" : [...pre["Direct Messages"], secondUser]}
+                                        return {...pre, "Direct Messages" : [...pre["Direct Messages"], tempUsername]}
                                     })
                                 }
                                     
-                                const domElement = document.querySelector(`.${secondUser}`)
+                                const domElement = document.querySelector(`.${tempUsername}`)
                                 domElement.classList.add("new-msg-notification");
                             }
                         }
