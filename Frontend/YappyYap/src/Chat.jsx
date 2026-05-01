@@ -211,6 +211,7 @@ export default function Chat(props) {
                                     setGroups((pre) => {
                                         return {...pre, "Direct Messages" : [...pre["Direct Messages"], tempUsername]}
                                     })
+                                    dmUsersRef.current = [...dmUsersRef.current, tempUsername];
                                 }
                                     
                                 const domElement = document.querySelector(`.${tempUsername}`)
