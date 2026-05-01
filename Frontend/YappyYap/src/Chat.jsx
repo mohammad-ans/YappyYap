@@ -190,6 +190,9 @@ export default function Chat(props) {
                     try {
                         console.log(e.data);
                         const element = JSON.parse(e.data)
+                        console.log(e.data);
+                        console.log(element["sender"])
+                        console.log(element.sender)
                         if (element["sender"]) {
                             let tempUsername = element["sender"];
                             const locationTemp = useLocation();
@@ -288,7 +291,7 @@ export default function Chat(props) {
                             <li>You will have to sign in again after this time period for true anonymity.</li>
                             <li>The message gets deleted after the n seconds specified.</li>
                             <li>Filters are applied on voice so that no one can recognize you.</li>
-                            <li>We really advise to take a look at these detailed features <Link>Learn more</Link></li>
+                            <li>We really advise to take a look at these detailed features <a href="https://github.com/mohammad-ans/YappyYap/blob/main/README.md" target="_blank">Learn more</a></li>
                         </ul>
                         <div className="default-theme-set">
                             <p>Select default theme</p>
