@@ -188,8 +188,12 @@ export default function Chat(props) {
                     try {
                         const element = JSON.parse(e.data)
                         if (element["sender"]) {
-                            let username = element["sender"];
-                            if (location.pathname == `/chat/u/${username}`) {
+                            let tempUsername;
+                            if(element["sender"] == username)
+                                tempUsername = element["receiver"];
+                            else
+                                tempUsername = element["sender"];
+                            if (location.pathname == `/chat/u/${tempUsername}`) {
                                 const parent_element = document.querySelector(".msgs");
                                 let time = new Date(element["sentTime"]);
                                 let expiry = new Date(element.defaultExpiration);
@@ -200,18 +204,18 @@ export default function Chat(props) {
                                     let new_element = document.createElement("li");
                                     expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
                                     new_element.classList.add(expiry, "chat-message-block")
-                                    new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
+                                    new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${tempUsername}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
                                     parent_element.append(new_element);
                                 }
                             }
                             else{
-                                if(!groups["Direct Messages"].includes(username)) {
+                                if(!groups["Direct Messages"].includes(tempUsername)) {
                                     setGroups((pre) => {
                                         return {...pre, "Direct Messages" : [...pre["Direct Messages"], username]}
                                     })
                                 }
                                     
-                                const domElement = document.querySelector(`.${username}`)
+                                const domElement = document.querySelector(`.${tempUsername}`)
                                 domElement.classList.add("new-msg-notification");
                             }
                         }
