@@ -181,7 +181,7 @@ export default function Personal(props){
             }
             ws.current.send(JSON.stringify(message));
             let time = new Date();
-            expiry = new Date(time.getTime() + duration * 1000);
+            let expiry = new Date(time.getTime() + duration * 1000);
             time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"})
             let new_element = document.createElement("li");
             expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
