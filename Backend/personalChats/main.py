@@ -150,7 +150,6 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
             
             try:
                 data = await user.receive_json()
-                print(data)
                 if "recipient" in data:
                     secondUser = data["recipient"]
                     timeCurr = datetime.datetime.now(datetime.timezone.utc)
@@ -163,7 +162,6 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                         if secondUser in manager.connections:
                             exp = timeCurr + datetime.timedelta(seconds=data["duration"])
                     msg = ""
-                    print("default set")
                     if "type" in data:
                         message = database.GroupInvite(
                             sender = username, 
@@ -187,9 +185,7 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                         msg = database.Msg_return.from_orm(message).model_dump_json()
                     db.add(message)
                     if(not await manager.send_message(msg, secondUser) and not defaultExpiration):
-                        print("default sent")
                         message.defaultExpiration = None
-                    print("Sent")
 
                     db.commit()
             except WebSocketDisconnect:

@@ -188,15 +188,17 @@ export default function Chat(props) {
                 }
                 ws.current.onmessage = (e) => {
                     try {
+                        console.log(e.data);
                         const element = JSON.parse(e.data)
                         if (element["sender"]) {
                             let tempUsername = element["sender"];
                             const locationTemp = useLocation();
                             if (locationTemp.pathname == `/chat/u/${tempUsername}`) {
+                                console.log("here");
                                 const parent_element = document.querySelector(".msgs");
                                 let time = new Date(element["sentTime"]);
                                 let expiry = new Date(element.defaultExpiration);
-
+                                
                                 if (expiry - new Date() > 500) {
                                     let text = element.msg;
                                     time = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -205,6 +207,7 @@ export default function Chat(props) {
                                     new_element.classList.add(expiry, "chat-message-block")
                                     new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${tempUsername}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
                                     parent_element.append(new_element);
+                                    console.log("here2");
                                 }
                             }
                             else{
