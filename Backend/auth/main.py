@@ -394,3 +394,15 @@ def get_users(query : str, db : Session = Depends(get_db), payload = Depends(ver
         return users
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch users"}])
+    
+
+
+@app.get("/userdetails")
+def user_details(payload = Depends(verify_session_token)):
+    username = payload["username"]
+    user_type = payload["type"]
+    # raise HTTPException(status_code=404)
+    return {
+        "username" : username,
+        "user_type" : user_type
+    }

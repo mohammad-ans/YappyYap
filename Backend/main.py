@@ -31,15 +31,6 @@ def get_db():
     with session() as db:
         yield db
 
-@app.get("/userdetails")
-def user_details(payload = Depends(verify_session_token)):
-    username = payload["username"]
-    user_type = payload["type"]
-    # raise HTTPException(status_code=404)
-    return {
-        "username" : username,
-        "user_type" : user_type
-    }
 
 @app.post("/contactus")
 def contactus(data : Contact_us_data, db : Session = Depends(get_db)):

@@ -12,7 +12,7 @@ export default function Account() {
     useEffect(()=>{
         async function getUserDetails(){
             try{
-                const response = await axios.get("/userdetails")
+                const response = await axios.get("https://auth.yappyyap.xyz/userdetails")
                 const elements = document.querySelector(".account-details").children;
                 elements[1].textContent = response.data.username;
                 elements[2].textContent = response.data.user_type;
@@ -44,12 +44,12 @@ export default function Account() {
         <div className="account-area">
             <div className="account-details">
                 <img src={defaultImg} alt="UserPic" />
-                <p className="account-username">Hi</p>
-                <p className="account-type">Guesr</p>
+                <p className="account-username"></p>
+                <p className="account-type"></p>
             </div>
             <h2>Active Messages: </h2>
             <div className="active-messages">
-                <button className="fetch-messages" onClick={fetchMessages}>Fetch Active Messages</button>
+                <button className="fetch-messages" onClick={fetchMessages} disabled={true}>Fetch Active Messages(Under Development)</button>
                 {msgList.map(element => {
                     let time_sent = new Date(element.time_sent).toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"})
                     let expirySeconds = Math.trunc((new Date(element.expiry) - new Date())/ 1000);
