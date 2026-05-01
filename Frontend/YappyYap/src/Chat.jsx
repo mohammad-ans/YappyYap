@@ -48,6 +48,7 @@ export default function Chat(props) {
             const response = await axios.get(`https://groups.yappyyap.xyz/groups/all/${username}`);
             // console.log(response.data)
             const tempGroups = response.data;
+            console.log(tempGroups)
             tempGroups.map((element) => {
                 if (element.grpType == "text")
                     // element["url"] = "localhost:8004";
@@ -61,6 +62,7 @@ export default function Chat(props) {
             
             // const realms = [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
             const realms = [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
+            console.log(realms)
             setGroups((pre) => {
                 return { ...pre, "Realms": realms }
             })
@@ -73,6 +75,7 @@ export default function Chat(props) {
                         ws.current.close();
                     navigate("/signin")
                 }
+                console.log(err)
         }
     }
     useEffect(() => {
@@ -235,6 +238,8 @@ export default function Chat(props) {
                         ws.current.close();
                     navigate("/signin")
                 }
+                
+                console.log(err)
                     }
                 }
                 ws.current.onerror = (e) => {
