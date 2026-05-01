@@ -279,9 +279,9 @@ export default function Voice(props) {
                 setError("Its ur own account🙂")
             }
             let dms = getDms();
-            tempDM.current = username;
+            tempDM.current = tempUsername;
             await setDms(dms)
-            navigate(`/chat/u/${username}`)
+            navigate(`/chat/u/${tempUsername}`)
         }
         catch{
 

@@ -137,7 +137,6 @@ export default function Global(props) {
                 if (ws.current && ws.current.readyState == WebSocket.OPEN) {
                     ws.current.close();
                 }
-                console.log(e)
                 console.warn("An error occured");
             }
         }
@@ -324,9 +323,9 @@ export default function Global(props) {
                 setError("Its ur own account🙂")
             }
             let dms = getDms();
-            tempDM.current = username
+            tempDM.current = tempUsername
             await setDms(dms)
-            navigate(`/chat/u/${username}`)
+            navigate(`/chat/u/${tempUsername}`)
         }
         catch{
 

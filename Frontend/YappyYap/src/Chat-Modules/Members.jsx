@@ -52,8 +52,6 @@ export default function Members(props) {
     async function confirmRemoveMem() {
         try {
             const grpName = realmRef.current.slice(0, -6);
-            console.log(grpName)
-            console.log(user)
             // const response = await axios.post("http://localhost:8004/delmem", {
             const response = await axios.post("https://groups.yappyyap.xyz/delmem", {
                 name: user,

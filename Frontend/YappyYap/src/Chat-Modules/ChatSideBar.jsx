@@ -27,7 +27,6 @@ export default function ChatSideBar(props) {
                 element.classList.remove("nav-close-styles")
             }
             props.setNavopen((n)=>!n);
-            console.log("hi")
         }
     }
     function testfunc(e) {
@@ -39,6 +38,7 @@ export default function ChatSideBar(props) {
         props.setAddArea(true);
     }
     async function joinGroup(e) {
+        e.stopPropagation()
         const group = e.target.parentNode.children[0].innerText;
         try{
             // const response = await axios.get(`http://localhost:8004/addmem/${group}`)
@@ -83,6 +83,7 @@ export default function ChatSideBar(props) {
         
     },[searchBy, query])
     async function dmUser(e) {
+        e.stopPropagation()
         try{
             const username = e.currentTarget.parentNode.children[0].innerHTML;
             let dms = getDms();

@@ -80,7 +80,6 @@ export default function Chat(props) {
     async function getDms() {
         try {
             const response = await axios.get("https://chat.yappyyap.xyz/dms")
-            console.log(response.data)
             let arr = {};
             response.data.forEach(element => {
                 // let secondUser = 
@@ -159,7 +158,6 @@ export default function Chat(props) {
         let dms = await dmns;
         if (tempDM.current != "")
             dms.push(tempDM.current)
-        console.log(dms)
         setGroups((pre) => {
             return { ...pre, "Direct Messages": dms }
         })
@@ -187,7 +185,6 @@ export default function Chat(props) {
                     try {
                         const element = JSON.parse(e.data)
                         if (element["sender"]) {
-                            console.log("hi")
                             let username = element["sender"];
                             if (location.pathname == `/chat/u/${username}`) {
                                 const parent_element = document.querySelector(".msgs");
