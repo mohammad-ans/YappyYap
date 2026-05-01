@@ -189,12 +189,12 @@ export default function Chat(props) {
                 ws.current.onmessage = (e) => {
                     try {
                         const element = JSON.parse(e.data)
+                        console.log("sender" in element)
                         if ("sender" in element) {
+                            console.log(window.location.pathname);
                             let tempUsername = element["sender"];
-                            const locationTemp = useLocation();
-                            console.log(locationTemp.pathname);
                             console.log(`/chat/u/${tempUsername}`);
-                            if (locationTemp.pathname == `/chat/u/${tempUsername}`) {
+                            if (window.location.pathname == `/chat/u/${tempUsername}`) {
                                 console.log("here");
                                 const parent_element = document.querySelector(".msgs");
                                 let time = new Date(element["sentTime"]);
