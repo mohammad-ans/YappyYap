@@ -49,6 +49,7 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
         print(1)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
     try:
+        print(PRIVATE_KEY)
         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
         if not payload:
             print(2)
