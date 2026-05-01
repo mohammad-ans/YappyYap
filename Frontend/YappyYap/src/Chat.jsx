@@ -188,12 +188,8 @@ export default function Chat(props) {
                 }
                 ws.current.onmessage = (e) => {
                     try {
-                        console.log(e.data);
                         const element = JSON.parse(e.data)
-                        console.log(e.data);
-                        console.log(element["sender"])
-                        console.log(element.sender)
-                        if (element["sender"]) {
+                        if ("sender" in element) {
                             let tempUsername = element["sender"];
                             const locationTemp = useLocation();
                             console.log(locationTemp.pathname);
