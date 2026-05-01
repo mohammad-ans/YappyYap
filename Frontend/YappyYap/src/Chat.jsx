@@ -173,7 +173,7 @@ export default function Chat(props) {
 
             try {
                 // ws.current = new WebSocket("ws://localhost:8005/ws");
-                ws.current = new WebSocket("wss://chat.yappyyap.xyz/ws");
+                ws.current = new WebSocket("wss://chat.yappyyap.xyz/ws/main");
                 ws.current.onopen = () => {
                     setDms(getDms());
                 }

@@ -143,7 +143,7 @@ manager = ConnectionManager()
 #             pass
 
 # async def websoc(user : WebSocket, db : Session = Depends(get_db)):
-@app.websocket("/ws")
+@app.websocket("/ws/main")
 async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     print("reached here")
     MAX_TIME = payload["exp"]
