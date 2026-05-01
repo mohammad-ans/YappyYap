@@ -24,6 +24,7 @@ export default function Chat(props) {
     const {setError, setTrigger} = useChatAuth();
     // const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
     const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
+    const dmUsersRef = useRef([]);
     const [dmMsgs, setDmMsgs] = useState([]);
     // const [notifications, setNotifications] = useState([]);
     const user = useRef("");
@@ -164,6 +165,7 @@ export default function Chat(props) {
         setGroups((pre) => {
             return { ...pre, "Direct Messages": dms }
         })
+        dmUsersRef.current = dms;
     }
     useEffect(() => {
         let isMounted = true;
@@ -205,7 +207,7 @@ export default function Chat(props) {
                                 }
                             }
                             else{
-                                if(!groups["Direct Messages"].includes(tempUsername)) {
+                                if(!dmUsersRef.current.includes(tempUsername)) {
                                     setGroups((pre) => {
                                         return {...pre, "Direct Messages" : [...pre["Direct Messages"], tempUsername]}
                                     })

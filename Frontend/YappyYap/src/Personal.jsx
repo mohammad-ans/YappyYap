@@ -13,7 +13,7 @@ export default function Personal(props){
     const [strike, setStrike] = useState(false);
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [yapDuration, setYapDuration] = useState(10);
-    const {setError, setTrigger} = useChatAuth();
+    const {setError, setTrigger, username} = useChatAuth();
     const {getDms, setDms, dmMsgs, ws, realmRef, user, tempDM} = useContext(ChatContext)
     const navigate = useNavigate()
     const startDuration = useRef(false);
