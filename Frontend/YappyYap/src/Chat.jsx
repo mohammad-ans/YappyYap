@@ -156,8 +156,11 @@ export default function Chat(props) {
     async function setDms(dmns) {
 
         let dms = await dmns;
-        if (tempDM.current != "")
+        if (tempDM.current != "" && !(dms.includes(tempDM))){
+            
             dms.push(tempDM.current)
+
+        }
         setGroups((pre) => {
             return { ...pre, "Direct Messages": dms }
         })

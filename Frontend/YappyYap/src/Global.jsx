@@ -29,6 +29,23 @@ export default function Global(props) {
             textArea.current.style.height = "400px";
         }
     }, [msg])
+    
+    async function dmUser(e) {
+        try{
+            const tempUsername = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
+            if (username == tempUsername) {
+                setTrigger(pre => !pre);
+                setError("Its ur own account🙂")
+            }
+            let dms = getDms();
+            tempDM.current = tempUsername
+            await setDms(dms)
+            navigate(`/chat/u/${tempUsername}`)
+        }
+        catch{
+
+        }
+    }
     useEffect(() => {
         liveCount.current = props.realm["liveCount"];
         let isMounted = true;
@@ -315,22 +332,6 @@ export default function Global(props) {
     }
 
 
-    async function dmUser(e) {
-        try{
-            const tempUsername = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
-            if (username == tempUsername) {
-                setTrigger(pre => !pre);
-                setError("Its ur own account🙂")
-            }
-            let dms = getDms();
-            tempDM.current = tempUsername
-            await setDms(dms)
-            navigate(`/chat/u/${tempUsername}`)
-        }
-        catch{
-
-        }
-    }
     return (
         <>
         <div className="msg-typearea">

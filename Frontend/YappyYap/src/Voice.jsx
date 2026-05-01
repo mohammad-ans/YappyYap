@@ -44,6 +44,23 @@ export default function Voice(props) {
             moveBarMover.current.set(id, animation)
         }
     }, [])
+    
+    async function dmUser(e) {
+        try{
+            const tempUsername = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
+            if (username == tempUsername) {
+                setTrigger(pre => !pre);
+                setError("Its ur own account🙂")
+            }
+            let dms = getDms();
+            tempDM.current = tempUsername;
+            await setDms(dms)
+            navigate(`/chat/u/${tempUsername}`)
+        }
+        catch{
+
+        }
+    }
     useEffect(() => {
         liveCount.current = props.realm["liveCount"];
         realmType.current = "voice";
@@ -271,22 +288,6 @@ export default function Voice(props) {
         catch{}
     }
 
-    async function dmUser(e) {
-        try{
-            const tempUsername = e.currentTarget.parentNode.parentNode.children[0].innerHTML;
-            if (username == tempUsername) {
-                setTrigger(pre => !pre);
-                setError("Its ur own account🙂")
-            }
-            let dms = getDms();
-            tempDM.current = tempUsername;
-            await setDms(dms)
-            navigate(`/chat/u/${tempUsername}`)
-        }
-        catch{
-
-        }
-    }
 
     return (
         <>
