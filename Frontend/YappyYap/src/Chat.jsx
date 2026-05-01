@@ -156,7 +156,7 @@ export default function Chat(props) {
     async function setDms(dmns) {
 
         let dms = await dmns;
-        if (tempDM.current != "" && !(dms.includes(tempDM))){
+        if (tempDM.current != "" && !(dms.includes(tempDM.current))){
             
             dms.push(tempDM.current)
 
@@ -188,12 +188,11 @@ export default function Chat(props) {
                     try {
                         const element = JSON.parse(e.data)
                         if (element["sender"]) {
-                            let tempUsername;
+                            let tempUsername = element["sender"];
+                            let secondUser = tempUsername;
                             if(element["sender"] == username)
-                                tempUsername = element["receiver"];
-                            else
-                                tempUsername = element["sender"];
-                            if (location.pathname == `/chat/u/${tempUsername}`) {
+                                secondUser = element["receiver"];
+                            if (location.pathname == `/chat/u/${secondUser}`) {
                                 const parent_element = document.querySelector(".msgs");
                                 let time = new Date(element["sentTime"]);
                                 let expiry = new Date(element.defaultExpiration);
@@ -209,13 +208,13 @@ export default function Chat(props) {
                                 }
                             }
                             else{
-                                if(!groups["Direct Messages"].includes(tempUsername)) {
+                                if(!groups["Direct Messages"].includes(secondUser)) {
                                     setGroups((pre) => {
-                                        return {...pre, "Direct Messages" : [...pre["Direct Messages"], username]}
+                                        return {...pre, "Direct Messages" : [...pre["Direct Messages"], secondUser]}
                                     })
                                 }
                                     
-                                const domElement = document.querySelector(`.${tempUsername}`)
+                                const domElement = document.querySelector(`.${secondUser}`)
                                 domElement.classList.add("new-msg-notification");
                             }
                         }
