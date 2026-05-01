@@ -18,7 +18,6 @@ from dotenv import load_dotenv
 
 app = FastAPI()
 
-load_dotenv()
 origins = [
     "http://localhost:5173",
     "https://yappyyap.xyz"
@@ -37,7 +36,9 @@ def get_db():
         yield db
 
 
+load_dotenv()
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+
 ALGORITHM = "HS256"
 
 # async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
@@ -49,7 +50,7 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
         print(1)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
     try:
-        print(PRIVATE_KEY)
+        print(PRIVATE_KEY, "hi")
         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
         if not payload:
             print(2)
