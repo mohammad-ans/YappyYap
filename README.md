@@ -1,23 +1,11 @@
 <h1>Yappy Yap</h1>
 
-
-<h2>Features</h2>
-
-
-<ul>
-
-
-  <li>Provides Anonymity.</li>
-
-
-  <li>Easy to Use</li>
-
-
-  <li>Beautiful interface</li>
-
-
-</ul>
-
+<h2>A guide to use</h2>
+<p>The personal messages of the site are in beta feature. There are some errors that are continuosly persisting but they are being solved as soon as found.</p>
+<p>For trying the dms, if your messages are not being sent, try changing navigation and then sending twice. It doesn't works first time most of the times as of now due to some class and rendering issues but the sent messages are not lost. Just the live transfer for first sent msgs may vary but it becomes fine over time</p>
+<p>In fact the whole site is in beta feature, so if you reach an error or unreachable state, please referesh the page. A good feedback will be very much appreciated.</p>
+<p>For trying the dms it is recommended to use two different devices</p>
+<p>Most of the features are listed below.</p>
 
 <h2>Detailed Explanation of Features And My Learning</h2>
 
@@ -42,7 +30,7 @@
 
 <p>User can also click on the three dots to send personal dm message to another user. For persoanl messages, sender can specify type of duration. If set to true(default duration), expire duration will start counting from current time. If default duration is turned off, expiration of the message(duration length) starts when the user becomes online once.</p>
 
-<p>For non default duration, </p>
+<p>For non default duration, duration will not stop if the user becomes online once and then goes offline again.</p>
 
 <p>The user can login with google if they have an account</p>
 
@@ -71,3 +59,23 @@
 
 <h2>Usage of AI</h2>
 <p>AI was used to very least extent and even then when I used it I made sure that I try something different than what AI assumes the solution to be in an effort to make this project as least AI slop as possible.</p>
+
+
+
+<h2>Features</h2>
+
+
+<ul>
+
+
+  <li>Provides Anonymity.</li>
+
+
+  <li>Easy to Use</li>
+
+
+  <li>Beautiful interface</li>
+
+
+</ul>
+
