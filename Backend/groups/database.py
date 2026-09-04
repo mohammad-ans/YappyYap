@@ -4,6 +4,8 @@ from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
+import secrets
+from typing import Optional
 
 load_dotenv()
 
@@ -18,18 +20,21 @@ class Group(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, unique=True)
     owner = Column(String)
-    liveCount = Column(Boolean)
-    anyonymity = Column(Boolean)
+    liveCount = Column(Boolean, default=True)
+    anyonymity = Column(Boolean, default=False)
     maxGrpSize = Column(Integer)
     maxDuration = Column(Integer)
     minDuration = Column(Integer)
     grpType = Column(String)
     inviteType = Column(String)
+    description = Column(String, nullable=True, default="")
 
 class Members(Base):
     __tablename__ = "members"
     name = Column(String, primary_key=True)
     grpName = Column(String, ForeignKey("groups.name"), primary_key=True)
+    role = Column(String, default="member")
+    joinedAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
 class MemberData(BaseModel):
     name : str
@@ -64,11 +69,22 @@ class grpsMsgsV(Base, grpMsgBase):
 
 class GrpAdd(BaseModel):
     name : str
+    description: Optional[str]
     owner : str
-    liveCount : bool
-    anonymity : bool
+    liveCount : bool = True
+    anonymity : bool = False
     maxGrpSize : int
     maxDuration : int
     minDuration : int
     grpType : str
     inviteType : str
+
+class GrpUpdate(BaseModel):
+    description: Optional[str] = None
+    liveCount: Optional[bool] = None
+    anonymity: Optional[bool] = None
+    maxGrpSize: Optional[int] = None
+    maxDuration: Optional[int] = None
+    minDuration: Optional[int] = None
+    grpType: Optional[str] = None
+    inviteType: Optional[str] = None

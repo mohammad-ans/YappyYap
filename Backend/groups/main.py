@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Cookie
 from sqlalchemy.orm import Session
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from database import session, engine, Base
 import database
 from coolname import generate_slug
@@ -94,6 +94,8 @@ def return_groups(query : str, db : Session = Depends(get_db), payload = Depends
 @app.post("/addgroup")
 def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
+    if grpData.minDuration >= grpData.maxDuration:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg": "min duration must be less than max duration"}])
     try:
         already_exists = db.execute(select(database.Group.name, database.Group.owner).where((database.Group.name == grpData.name) | (database.Group.owner == username ))).mappings().one_or_none()
         if already_exists:
@@ -103,6 +105,7 @@ def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload
                 raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg" : f"You already own one realm {already_exists.name}"}])
         db_data = database.Group(
             name = grpData.name,
+            description = grpData.description,
             owner = grpData.owner,
             liveCount = grpData.liveCount,
             anyonymity = grpData.anonymity,
@@ -115,7 +118,8 @@ def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload
         db.add(db_data)
         member_data = database.Members(
             name = grpData.owner,
-            grpName = grpData.name
+            grpName = grpData.name,
+            role = "owner"
         )
         db.add(member_data)
         db.commit()
@@ -127,6 +131,10 @@ def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload
     
 @app.delete("/delete/{groupname}")
 def del_group(groupname : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    owner = db.execute(select(database.Members).where((database.Members.grpName == groupname) & (database.Members.name == username) & (database.Members.role == "admin"))).scalar_one_or_none()
+    if not owner:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You are not allowed to delete the group"}])
     try:
         db.execute(delete(database.Members).where(database.Members.grpName == groupname))
         exists = db.execute(select(database.Group).where(database.Group.name == groupname)).scalars().one_or_none()
@@ -159,6 +167,13 @@ def add_mem(group : str, db : Session = Depends(get_db), payload = Depends(verif
     
 @app.post("/delmem")
 def del_user(memberData : database.MemberData, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    owner = db.execute(select(database.Members).where((database.Members.grpName == memberData.grpName) & (database.Members.name == username) & (database.Members.role == "owner")))
+    if not owner:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You are not allowed to remove a member"}])
+    user_del = db.execute(select(database.Members).where((database.Members.grpName == memberData.grpName) & (database.Members.name == memberData.name)))
+    if not user_del:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg" : "User not found"}])
     try:
         db.execute(delete(database.Members).where((database.Members.name == memberData.name) & (database.Members.grpName == memberData.grpName)))
         db.commit()
@@ -189,6 +204,25 @@ def num_members(group : str, db : Session = Depends(get_db)):
         return len(members)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])
+    
+@app.patch("/groups/{groupname}")
+
+def update_group(groupname: str, data: database.GrpUpdate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    group = db.execute(select(database.Group).where(database.Group.name == groupname)).scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Group not found"}])
+    owner = db.execute(select(database.Group).where((database.Members.grpName == groupname) & (database.Members.name == username) & (database.Members.role == "owner"))).scalar_one_or_none()
+    if not owner:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You are not allowed to change details of this group"}])
+    updates = {key: val for key, val in data.model_dump(exclude_unset=True).items() if val is not None}
+    if len(updates) == 0:
+        return {"msg": "Success", "details": "No changes"}
+    try:
+        db.execute(update(database.Group).where(database.Group.name == groupname).values(**updates))
+    except:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg": "Could not update realm"}])
+    return {"msg": "Success", "details": "Realm updated"}
 
 
 class ConnectionManager:
