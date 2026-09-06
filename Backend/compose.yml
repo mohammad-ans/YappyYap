@@ -11,7 +11,8 @@ services:
     ports:
      - "8001:8000"
     depends_on:
-     - auth-db
+     auth-db:
+      condition: service_healthy
     environment:
      AUTH_DATABASE_URL: ${AUTH_DATABASE_URL}
      WATCHFILES_FORCE_POLLING: true
@@ -28,8 +29,10 @@ services:
     ports:
      - "8002:8000"
     depends_on:
-      - tchat-db
-      - auth
+      tchat-db:
+        condition: service_healthy
+      auth:
+        condition: service_started
     environment:
      TCHAT_DATABASE_URL: ${TCHAT_DATABASE_URL}
      AUTH_URL: http://auth:8000
@@ -43,8 +46,10 @@ services:
     ports:
      - "8003:8000"
     depends_on:
-      - vchat-db
-      - auth
+      vchat-db:
+        condition: service_healthy
+      auth:
+        condition: service_started
     environment:
      DB_URL: ${TCHAT_DATABASE_URL}
      AUTH_URL: http://auth:8000
@@ -58,8 +63,10 @@ services:
     ports:
      - "8004:8000"
     depends_on:
-     - groups-db
-     - auth
+     groups-db:
+      condition: service_healthy
+     auth:
+      condition: service_started
     environment:
       DATABASE_URL: ${GROUPS_DATABASE_URL}
       AUTH_URL: http://auth:8000
@@ -73,8 +80,10 @@ services:
     ports:
      - "8005:8000"
     depends_on:
-     - auth
-     - personal-db
+     auth:
+      condition: service_started
+     personal-db:
+      condition: service_healthy
     environment:
       DATABASE_URL: ${PERSONAL_DATABASE_URL}
       AUTH_URL: http://auth:8000
