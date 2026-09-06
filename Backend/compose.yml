@@ -13,7 +13,7 @@ services:
     depends_on:
      - auth-db
     environment:
-     DATABASE_URL: ${AUTH_DATABASE_URL}
+     AUTH_DATABASE_URL: ${AUTH_DATABASE_URL}
      WATCHFILES_FORCE_POLLING: true
      GOOGLE_CLIENT: ${GOOGLE_CLIENT}
      CLIENT_SECRET : ${CLIENT_SECRET}
@@ -31,7 +31,7 @@ services:
       - tchat-db
       - auth
     environment:
-     DATABASE_URL: ${TCHAT_DATABASE_URL}
+     TCHAT_DATABASE_URL: ${TCHAT_DATABASE_URL}
      AUTH_URL: http://auth:8000
      WATCHFILES_FORCE_POLLING: true
     volumes:
@@ -46,7 +46,7 @@ services:
       - vchat-db
       - auth
     environment:
-     DATABASE_URL: ${TCHAT_DATABASE_URL}
+     DB_URL: ${TCHAT_DATABASE_URL}
      AUTH_URL: http://auth:8000
      WATCHFILES_FORCE_POLLING: true
     volumes:

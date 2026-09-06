@@ -4,7 +4,6 @@ from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
-import secrets
 from typing import Optional
 
 load_dotenv()

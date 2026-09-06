@@ -15,6 +15,7 @@ app = FastAPI()
 # app.include_router(components.router)
 
 origins = [
+    "http://localhost:5173",
     "https://yappyyap.xyz",
     "https://www.yappyyap.xyz"
 ]
