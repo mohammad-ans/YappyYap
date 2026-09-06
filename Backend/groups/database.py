@@ -2,7 +2,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import create_engine, Column, String, Integer, Boolean, LargeBinary, DateTime, ForeignKey
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
-import os
+import os, uuid
 from dotenv import load_dotenv
 from typing import Optional
 
@@ -13,6 +13,21 @@ DB_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DB_URL)
 Base = declarative_base()
 session = sessionmaker(bind=engine)
+
+class Realm(Base):
+    __tablename__ = "realms"
+    id = Column(String, primary_key=True, default=uuid.uuid4())
+    name = Column(String)
+    description = Column(String, nullable=True, default="")
+    owner = Column(String, index=True)
+    createdAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+
+class RMembers(Base):
+    __tablename__ = "realm_members"
+    realm_id = Column(String, ForeignKey("realms.id"), primary_key=True)
+    username = Column(String, primary_key=True)
+    role = Column(String, default="member")
+    joinedAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
 class Group(Base):
     __tablename__ = "groups"
