@@ -65,6 +65,42 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.post("/realm")
+def create_realm(data: database.RealmCreate, db: Session = Depends(get_db), payload= Depends(verify_session_token)):
+    username = payload["username"]
+    realm = database.Realm(
+        name=data.name,
+        description = data.description or "",
+        owner = username
+    )
+    db.add(realm)
+    db.flush()
+    db.add(database.RMembers(
+        realm_id = realm.id,
+        username = username,
+        role = "owner"
+    ))
+    db.commit()
+    return realm
+
+@app.delete("/realms/{id}")
+def del_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    realm = db.execute(select(database.Realm).where(database.Realm.id == id)).scalar_one_or_none()
+    if not realm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "realm does not exists"}])
+    mem = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not mem or mem.role != "owner":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to delete this realm"}])
+    channels = select(database.Group).where(database.Group.realmId == id)
+    db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId.in_(channels)))
+    db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId.in_(channels)))
+    db.execute(delete(database.Group).where(database.Group.realm_id == id))
+    db.execute(delete(database.Members).where(database.RMembers.realm_id == id))
+    db.execute(delete(database.Realm).where(database.Realm.id == id))
+    db.commit()
+    return {"msg": "Success"}
+
 @app.get("/groups")
 def return_groups(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     try:

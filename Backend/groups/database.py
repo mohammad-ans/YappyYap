@@ -31,7 +31,8 @@ class RMembers(Base):
 
 class Group(Base):
     __tablename__ = "groups"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    realm_id = Column(String , ForeignKey("realms.id")) 
+    id = Column(Integer, primary_key=True, default=uuid.uuid4())
     name = Column(String, unique=True)
     owner = Column(String)
     liveCount = Column(Boolean, default=True)
@@ -46,13 +47,10 @@ class Group(Base):
 class Members(Base):
     __tablename__ = "members"
     name = Column(String, primary_key=True)
-    grpName = Column(String, ForeignKey("groups.name"), primary_key=True)
+    grpId = Column(String, ForeignKey("groups.id"), primary_key=True)
     role = Column(String, default="member")
     joinedAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
-class MemberData(BaseModel):
-    name : str
-    grpName : str
 
 class grpMsgBase:
     @staticmethod
@@ -62,7 +60,7 @@ class grpMsgBase:
     username = Column(String)
     time_sent = Column(DateTime(timezone=True))
     expiry = Column(DateTime(timezone=True))
-    grpName = Column(String, ForeignKey("groups.name"))
+    grpId = Column(String, ForeignKey("groups.id"))
 
 class grpMsgsT(Base, grpMsgBase):
     __tablename__ = "texts"
@@ -102,3 +100,7 @@ class GrpUpdate(BaseModel):
     minDuration: Optional[int] = None
     grpType: Optional[str] = None
     inviteType: Optional[str] = None
+
+def RealmCreate(BaseModel):
+    name: str
+    description: Optional[str]
