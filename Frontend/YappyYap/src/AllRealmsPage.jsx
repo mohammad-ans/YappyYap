@@ -8,7 +8,13 @@ export default function AllRealmsPage() {
     const [loading, setLoading] = useState(true)
     const {setError, setTrigger} = useChatAuth()
     const [realms, setRealms] = useState([])
+    const [joinId, setJoinId] = useState()
+    const [submitting, setSubmitting] = useState(false)
     const [openRealms, setOpenRealms] = useState([])
+    const [name, setName] = useState("")
+    const [description, setDescription] = useState("")
+    const [inviteType, setInviteType] = useState("")
+    const [creating, setCreating] = useState(false)
     const axios = useAxios()
     const navigate = useNavigate()
     async function loadrealms() {
@@ -21,10 +27,11 @@ export default function AllRealmsPage() {
             setOpenRealms(all.data.filter(realm => !joinedIds.has(realm.id)))
         }
         catch(err) {
-            if(err.response && err.response.data) {
+            if(err.response && err.response.data)
                 setError(err.response.data.detail[0].msg)
-                setTrigger(pre => !pre)
-            }
+            else
+                setError(pre => "An error occured while loading realms")
+            setTrigger(pre => !pre)
         }
         finally{
             setLoading(false)
@@ -33,12 +40,54 @@ export default function AllRealmsPage() {
     useEffect(()=> {
         loadrealms()
     }, [])
+    async function joinOpenRealms(id) {
+        setJoinId(id)        
+        try{
+            await axios.post(`http://localhost:8004/realms/${id}/join`)
+            navigate(`/chat/realms/${id}`)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                setError(err.response.data.detail[0].msg)
+            else
+                setError("Error occured while joining realm")
+            setTrigger(pre => !pre)
+        }
+        finally{
+            setJoinId(null)
+        }
+    }
+    async function createRealm(e) {
+        e.preventDefault()
+        if (submitting)
+            return
+        setSubmitting(true)
+        try{
+            const res = await axios.post("http://localhost:8004/realms", {
+                name: name.trim(),
+                description: description.trim(),
+                inviteType: inviteType
+            })
+            setCreating(false)
+            setName("")
+            setDescription("")
+            setInviteType("invite")
+            navigate(`/chat/realms/${res.data.id}`)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                setError(err.response.data.detail[0].msg)
+            else
+                setError("An error occured while creating the realm")
+            setTrigger(pre => !pre)
+        }
+    }
 
     return (
         <div className="realms-page">
             <div className="realms-page-header">
                 <h2>Your Realms</h2>
-                <button>New Realm</button>
+                <button onClick={() => setCreating(true)}>New Realm</button>
             </div>
             <ul className="realms-list">
                 <li className="realm-card">
@@ -46,7 +95,7 @@ export default function AllRealmsPage() {
                     <p>The public global realm with global voice and text chat channels.</p>
                 </li>
                 {loading && <li className="realm-card realms-loading">Loading...</li>}
-                {realms.map(realm => (
+                {!loading && realms.map(realm => (
                     <li className="realm-card" key={realm.id} onClick={()=> navigate(`/chat/realms/${realm.id}`)}>
                         <h3>{realm.name}</h3>
                         <div className="realm-details">
@@ -62,19 +111,33 @@ export default function AllRealmsPage() {
                     </li>
                 )}
             </ul>
-                {openRealms.length > 0 && (
-                    <>
-                    <h3 className="new-realms-heading">Discover open realms</h3>
-                    <ul className="realms-list">
-                        {openRealms.map(realm => (
-                            <li className="realm-card">
-                                <h3>{realm.name}</h3>
-                                <button>Join</button>
-                            </li>
-                        ))}
-                    </ul>
-                    </>
-                )}
+            {openRealms.length > 0 && (
+                <>
+                <h3 className="new-realms-heading">Discover open realms</h3>
+                <ul className="realms-list">
+                    {openRealms.map(realm => (
+                        <li className="realm-card">
+                            <h3>{realm.name}</h3>
+                            <button onClick={() => joinOpenRealms(realm.id)} disabled={joinId == realm.id}> {joinId == realm.id ? "Joining..." : "Join"} </button>
+                        </li>
+                    ))}
+                </ul>
+                </>
+            )}
+            {(creating && <div className="realms-page-overlay">
+                    <form className="realms-create-form" onSubmit={createRealm}>
+                        <p className="cancel-cross">X</p>
+                        <h2>Create a Realm</h2>
+                        <input type="text" placeholder="Realm name" value={name} minLength={2} maxLength={40} required onChange={e => setName(e.target.value)}/>
+                        <textarea placeholder="Realm Description" value={description} maxLength={250} rows={2} onChange={e => setDescription(e.target.value)}/>
+                        <select value={inviteType} onChange={e => setInviteType(e.target.value)}>
+                            <option value="invite">Invited people can join only</option>
+                            <option value="open">Everyone can join</option>
+                        </select>
+                        <button type="submit" disabled={submitting}>{submitting ? "Creating...": "Create Realm"}</button>
+                    </form>
+                </div>
+            )}
         </div>
     )
 }

@@ -73,6 +73,14 @@ def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_t
 def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     pass
 
+@app.post("/realms/{id}/join")
+def join_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
+@app.post("/realms")
+def create_realm(data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
 @app.post("/realm")
 def create_realm(data: database.RealmCreate, db: Session = Depends(get_db), payload= Depends(verify_session_token)):
     username = payload["username"]
