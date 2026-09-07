@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import "./Chat.css"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { Routes, Route, Navigate } from "react-router-dom"
 import ChatSideBar from "./Chat-Modules/ChatSideBar"
 import ChatHeader from "./Chat-Modules/ChatHeader"
@@ -60,7 +60,7 @@ export default function Chat(props) {
                 url: grp.grpType == "text" ? "localhost:8004" : "localhost:8004/voice",
                 owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType
             }))
-            setGroups(pre => ({...pre, "Channels": groups}))
+            setGroups(pre => ({...pre, "Groups": groups}))
             return groups
         }
         catch(err){
@@ -272,8 +272,11 @@ export default function Chat(props) {
         }
         catch { }
     }
+    function getGroups() {
+        setCurrentRealm(currRealm)
+    }
     return (
-        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups }}>
+        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, currRealm, realmDetails, setCurrentRealm}}>
             <main className="chat-area nav-close-styles" onClick={clearClick}>
                 {props.chatInstructions ? <div className="instructions-overlay">
                     <div className="instructions">
@@ -305,18 +308,66 @@ export default function Chat(props) {
                         {
                             groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)
                         }
-                        {
-                            groups["Realms"].map(element => <Route
-                                key={`${element["name"]}-realm`} path={`/${element["name"]}`} element={element["grpType"] == "text" ? (<Global key={`${element["name"]}-realm`} url={element["url"]} realm={element} />) : (<Voice key={`${element["name"]}-realm`} url={element["url"]} realm={element} />)}
-                            />)
-                        }
+                        <Route path="/realms" element={<RealmPage/>} />
+                        <Route path="/realms/:realmId/:groupKey" element={<ChannelRoute/>} />
                         <Route path="*" element={<DefaultRoot />} />
                     </Routes>
-                    {/* {realm === "global-realm" ? <Global/> : <Voice/>} */}
                 </div>
             </main>
         </ChatContext.Provider>
     )
+}
+
+function RealmPage(){
+    const {realm} = useParams()
+    const navigate = useNavigate()
+    const {setCurrRealm} = useContext(ChatContext)
+
+    useEffect(()=> {
+        async function move() {
+            const grps = await setCurrRealm(realm)
+            if (grps & grps.length > 0) {
+                navigate(`/chat/realms/${realm}/c/${grps[0].name}`, {replace: true})
+            }
+        }
+        move()
+    }, [realm])
+    return (
+        <div className="realm-empty">
+            <p>This realm has no groups yet, you can create one from the sidebar.</p>
+        </div>
+    )
+}
+function ChannelRoute() {
+    const {realm, groupKey} = useParams()
+    const {groups, currRealm, setCurrRealm} = useContext(ChatContext)
+    const [group, setGroup] = useState(null)
+    const [notFound, setFound] = useState(false)
+
+    useEffect(()=> {
+        async function setGrp() {
+            let list = groups["Groups"]
+            if(currRealm !== realm) {
+                list = await setCurrRealm(realm)
+            }
+            const found = (list || []).find(grp => grp.name === groupKey)
+            if (found)
+                setGroup(found)
+            else
+                setFound(true)
+        }
+        setGrp()
+    }, [realm, channel])
+    if (notFound)
+        return (<div className="realm-empty">
+            <p>Group Not Found</p>
+        </div>)
+    if (!group)
+        return (<div>
+            <p>Loading...</p>
+        </div>)
+    return group.grpType == "text" ? <Global key={`${group.name}-realm`} url={group.url} realm={group}/> : <Voice key={`${group.name}-realm`} url={group.url} realm={group} />
+
 }
 function DefaultRoot() {
     return (
