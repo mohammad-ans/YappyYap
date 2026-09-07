@@ -1,20 +1,21 @@
 import { useContext, useEffect, useState } from "react"
 import default_image from "./../assets/default_img.png"
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import AddGroup from "./../AddGroup";
+import { Link, useNavigate } from "react-router-dom";
 import { ChatContext } from "../ChatContext";
 import useAxios from "../../hooks/useAxios";
 import useChatAuth from "../../hooks/useChatAuth";
+
 export default function ChatSideBar(props) {
-    // const [navOpen, setNavopen] = useState(false);
-    const [addArea, setAddArea] = useState(false);
     const [query, setQuery] = useState("");
     const [searchBy, setSearchBy] = useState(true);
     const {setError, setTrigger} = useChatAuth();
     const [searchResult, setSearchResults] = useState([])
-    const {setDms, getDms, tempDM, getGroups} = useContext(ChatContext);
+    const {setDms, getDms, tempDM, currRealm, realmDetails, setCurrentRealm} = useContext(ChatContext);
     const navigate = useNavigate();
     const axios = useAxios();
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const priviliged = realmDetails && (realmDetails["role"] == "owner" || realmDetails["role"] == "admin")
+    const groupResults = searchBy && query? props.groups["Groups"].filter(group => (group["display"] || group["name"]).toLowerCase().includes(query.toLowerCase())) : []
     function navbarSimulator() {
         if (window.innerWidth <= 1000){
             const element = document.querySelector(".chat-area")
@@ -35,26 +36,12 @@ export default function ChatSideBar(props) {
         }
     }
     function addGroup(e) {
+        e.stopPropagation()
         props.setAddArea(true);
     }
-    async function joinGroup(e) {
+    function goToRealms(e) {
         e.stopPropagation()
-        const group = e.target.parentNode.children[0].innerText;
-        try{
-            const response = await axios.get(`http://localhost:8004/addmem/${group}`)
-            // const response = await axios.get(`https://groups.yappyyap.xyz/addmem/${group}`)
-            getGroups();
-            e.target.innerText = "Joined"   
-        }
-        catch(err){
-            if(err.response.status == 406){
-                setError(err.response.data.detail[0].msg);
-                setTrigger(pre => !pre)
-            }
-            else{
-                e.target.innerText = "Could not join"   
-            }
-        }
+        navigate("/chat/realms")
     }
     useEffect(()=>{
         async function search() {
@@ -98,13 +85,38 @@ export default function ChatSideBar(props) {
     function endPropagation(e) {
         e.stopPropagation();
     }
+    async function openGroup(e, el) {
+        e.stopPropagation()
+        e.preventDefault()
+        try{
+            await axios.post(`http://localhost:8004/realms/${currRealm}/groups/${el.groupId}/join`)
+        }
+        catch(err) {
+            if(err.response && err.response.status !== 409) {
+                if(err.response.data)
+                    setError(err.response.data.msg)
+                else
+                    setError("Could not join channel")
+                setTrigger(pre => !pre)
+                return;
+            }
+        }
+        navigate(`/chat/realms/${currRealm}/c/${element.name}`)
+    }
     return(
         <div className="chat-sidearea" onClick={navbarSimulator}>
-            {addArea && <AddGroup/>}
-            <h2 className="chat-sidearea-heading">
+            <h2 className="chat-sidearea-heading" onClick={goToRealms}>
                 <span className="realms-r-replacement">R</span>
             <span className="ealms">ealms</span>
             </h2>
+            {realmDetails && (
+                <p className="current-realm-name" onClick={endPropagation}><span>{priviliged && <span className="back-to-realms" onClick={()=> setSettingsOpen(true)}>Settings</span>}
+                    <span className="back-to-realms" onClick={goToRealms}>Switch</span>
+                </span></p>
+            )}
+            {settingsOpen && (
+                <div className="settings-realms"></div>
+            )}
             <hr />
             <div className="search-users-groups">
                 <div>
@@ -114,31 +126,24 @@ export default function ChatSideBar(props) {
                     </div>
                 </div>
                 <ul className="results-search">
-                    {searchResult.map(element => {
-                        if(searchBy)
-                            return (
-                                <li key={element["name"]}>
-                                    <span className="name">{element["name"]}</span>
-                                    {element["inviteType"] == "all" ? 
-                                    (<button className="join-group" onClick={joinGroup}>Join Group</button>)
-                                    : (<button className="join-group" style={{cursor : "text"}} disabled={true}>Invite only</button>)
-                                    }
-                                </li>
-                            )
-                        return (
-                            <li key={element["name"]}>
-                                <span className="name">{element["name"]}</span>
-                                <button className="message-user" onClick={dmUser}>Message</button>
-                            </li>
-                        )
-                    })}
+                    {searchBy && groupResults.map(element => (
+                        <li key={element["name"]}>
+                            <span className="name">{element["display"] || element["name"]}</span>
+                            <button className="join-group" onClick={e => openGroup(e, element)}></button>
+                        </li>
+                    ))}
+                    {!searchBy && searchResult.map(element => (
+                        <li key={element["name"]}>
+                            <span className="name">{element["name"]}</span>
+                            <button className="message-user" onClick={dmUser}>Message</button>
+                        </li>
+                    ))}
                 </ul>
             </div>
             <div className="scroll-area">
-
-            <button className="add-group" onClick={addGroup}>+ Add your own Realm</button>
+            {currRealm != "global" && <button className="add-group" onClick={addGroup}>+ Add your own Group</button>}
             <ul className="realms-list">
-                {props.groups["Realms"].map(element => <Link to={`/chat/${element["name"]}`} key={`${element["name"]}-realm`} className={`${element["name"]}-realm`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">{element["name"]}</span></li></Link>)}
+                {props.groups["Groups"].map(element => <Link to={`/chat/realms/${currRealm}/c/${element["name"]}`} key={`${element["name"]}-realm`} className={`${element["name"]}-realm`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">{element["display"] || element["name"]}</span></li></Link>)}
 
             </ul>
             {("Direct Messages" in props.groups) && (<><h3 className="personal-msg-heading">Personal Messages</h3><ul className="dms">

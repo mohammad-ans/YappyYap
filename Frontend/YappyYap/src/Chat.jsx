@@ -24,7 +24,7 @@ export default function Chat(props) {
     const [addArea, setAddArea] = useState(false);
     const {setError, setTrigger} = useChatAuth();
     const globalChannels = [{ "name": "global-text", display: "Global Chat", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all", channel: null, role: "member"}, { "name": "global-voice", display: "Global Voice","grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all", channel: null, role: "member" }]
-    const [groups, setGroups] = useState({"Direct Messages": []})
+    const [groups, setGroups] = useState({"Direct Messages": [], "Groups": []})
     // const [groups, setGroups] = useState()
     const dmUsersRef = useRef([]);
     const [dmMsgs, setDmMsgs] = useState([]);
@@ -49,7 +49,7 @@ export default function Chat(props) {
     const setRealmGrps = useCallback(async (id) => {
         if(id == "global"){
             setRealmDetails({id: "global", name: "Global", role: "member", isGlobal: true})
-            setGroups(pre => ({...pre, "Channels": globalChannels}))
+            setGroups(pre => ({...pre, "Groups": globalChannels}))
             return globalChannels
         }
         try{
