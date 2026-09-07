@@ -12,6 +12,7 @@ import useAxios from "../hooks/useAxios"
 import Personal from "./Personal"
 import { ChatContext } from "./ChatContext"
 import default_image from "./assets/default_img.png"
+import AllRealmsPage from "./AllRealmsPage"
 
 export default function Chat(props) {
     const { username } = useChatAuth();
@@ -308,7 +309,8 @@ export default function Chat(props) {
                         {
                             groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)
                         }
-                        <Route path="/realms" element={<RealmPage/>} />
+                        <Route path="/realms/:realmId" element={<RealmPage/>} />
+                        <Route path="/realms" element={<AllRealmsPage/>} />
                         <Route path="/realms/:realmId/:groupKey" element={<ChannelRoute/>} />
                         <Route path="*" element={<DefaultRoot />} />
                     </Routes>

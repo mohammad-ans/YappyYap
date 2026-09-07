@@ -65,6 +65,14 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.get("/realms")
+def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
+@app.get("/realms/mine")
+def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
 @app.post("/realm")
 def create_realm(data: database.RealmCreate, db: Session = Depends(get_db), payload= Depends(verify_session_token)):
     username = payload["username"]
