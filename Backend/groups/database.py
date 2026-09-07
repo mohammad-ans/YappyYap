@@ -101,6 +101,17 @@ class GrpUpdate(BaseModel):
     grpType: Optional[str] = None
     inviteType: Optional[str] = None
 
-def RealmCreate(BaseModel):
+class RealmCreate(BaseModel):
     name: str
     description: Optional[str]
+
+class RealmDetails(BaseModel):
+    id: str
+    name: str
+    owner: str
+    createdAt: str
+    inviteType: str
+    role: str
+    members: int = 0
+    groups: int = 0
+    model_config = {"from_attributes": True}

@@ -22,8 +22,9 @@ export default function Chat(props) {
     const [theme, setTheme] = useState("blue");
     const [addArea, setAddArea] = useState(false);
     const {setError, setTrigger} = useChatAuth();
-    const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
-    // const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
+    const globalChannels = [{ "name": "global-text", display: "Global Chat", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all", channel: null, role: "member"}, { "name": "global-voice", display: "Global Voice","grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all", channel: null, role: "member" }]
+    const [groups, setGroups] = useState()
+    // const [groups, setGroups] = useState()
     const dmUsersRef = useRef([]);
     const [dmMsgs, setDmMsgs] = useState([]);
     // const [notifications, setNotifications] = useState([]);
@@ -35,6 +36,8 @@ export default function Chat(props) {
     const location = useLocation();
     const liveCount = useRef(true);
     const navigate = useNavigate()
+    const [currRealm, setCurrRealm] = useState("global")
+    const [realmDetails, setRealmDetails] = useState(null)
     useEffect(() => {
         let temp = localStorage.getItem("theme");
         if (temp) {
@@ -42,44 +45,36 @@ export default function Chat(props) {
             props.setChatInstructions(false);
         }
     }, [])
-    async function getGroups() {
-        try {
-            const response = await axios.get(`http://localhost:8004/groups/all/${username}`);
-            // const response = await axios.get(`https://groups.yappyyap.xyz/groups/all/${username}`);
-            // console.log(response.data)
-            const tempGroups = response.data;
-            console.log(tempGroups)
-            tempGroups.map((element) => {
-                if (element.grpType == "text")
-                    element["url"] = "localhost:8004";
-                    // element["url"] = "groups.yappyyap.xyz";
-                else
-                    element["url"] = "localhost:8004/voice";
-                    // element["url"] = "groups.yappyyap.xyz/voice";
-
-                return element
-            })
-            
-            const realms = [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
-            // const realms = [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
-            console.log(realms)
-            setGroups((pre) => {
-                return { ...pre, "Realms": realms }
-            })
+    const setRealmGrps = useCallback(async (id) => {
+        if(id == "global"){
+            setRealmDetails({id: "global", name: "Global", role: "member", isGlobal: true})
+            setGroups(pre => ({...pre, "Channels": globalChannels}))
+            return globalChannels
         }
-        catch (err) {
-                if (err.response && err.response.data) {
-                    setError(pre => err.response.data.detail[0].msg);
-                    setTrigger(t => !t);
-                    if (ws.current && ws.current.readyState == WebSocket.OPEN)
-                        ws.current.close();
-                    navigate("/signin")
-                }
+        try{
+            const realm = await axios.get(`http://localhost:8004/realms/${id}`)
+            const res = await axios.get(`http://localhost:8004/realms/${id}/groups`)
+            setRealmDetails(realm.data)
+            const groups = res.data.map(grp => ({
+                name: grp.id, display: grp.name, groupId: grp.id, realmId: id, grpType: grp.grpType,
+                url: grp.grpType == "text" ? "localhost:8004" : "localhost:8004/voice",
+                owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType
+            }))
+            setGroups(pre => ({...pre, "Channels": groups}))
+            return groups
         }
-    }
-    useEffect(() => {
-        getGroups()
+        catch(err){
+            if (err.response && err.response.data) {
+                setError(pre => err.response.data.detail[0].msg)
+                setTrigger(t => !t)
+            }
+            return []
+        }  
     }, [])
+    const setCurrentRealm = useCallback(async (id) => {
+        setCurrRealm(id)
+        return await setRealmGrps(id)
+    }, [setRealmGrps])
     async function getDms() {
         try {
             // const response = await axios.get("https://chat.yappyyap.xyz/dms")

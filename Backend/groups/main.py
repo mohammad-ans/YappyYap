@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Cookie
 from sqlalchemy.orm import Session
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, func
 from database import session, engine, Base
 import database
 from coolname import generate_slug
@@ -100,6 +100,34 @@ def del_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_s
     db.execute(delete(database.Realm).where(database.Realm.id == id))
     db.commit()
     return {"msg": "Success"}
+
+@app.get("/realms/{id}")
+def get_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    realm = db.execute(select(database.Realm).where(database.Realm.id == id)).scalar_one_or_none()
+    if not realm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Realm not found"}])
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not a member of this realm"}])
+    details = database.RealmDetails.model_validate(realm)
+    details.role = member.role
+    details.groups = db.execute(select(func.count()).select_from(database.Group).where(database.Group.realm_id == id)).scalar_one()
+    details.members = db.execute(select(func.count()).select_from(database.RMembers).where(database.RMembers.realm_id == id)).scalar_one()
+    return details
+
+@app.get("/realms/{id}/groups")
+def get_groups(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    realm = db.execute(select(database.Realm).where(database.Realm.id == id)).scalar_one_or_none()
+    if not realm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Realm does not exists"}])
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not member of this realm"}])
+    channels = select(database.Members.grpId).where(database.Members.name == username)
+    channels_details = db.execute(select(database.Group).where((database.Group.realm_id == id) & ((database.Group.id.in_(channels)) | (database.Group.inviteType == "all")))).scalars().all()
+    return channels_details
 
 @app.get("/groups")
 def return_groups(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
