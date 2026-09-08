@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useContext } from "react"
 import useChatAuth from "../../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import { ChatContext } from "../ChatContext";
+import GroupSettings from "./GroupSettings";
 export default function ChatHeader(props) {
     const [online, setOnline] = useState(0);
     const [members, setMembers] = useState(0);
@@ -118,9 +119,7 @@ export default function ChatHeader(props) {
                         </div>
                         <span>{online}</span>
                 </div>}
-                {settingsOpen && isGrp && <div className="settings">
-
-                    </div>}
+                {settingsOpen && isGrp && <GroupSettings realm={currRealm} group={currGrp}/>}
             </div>
     )
 }
