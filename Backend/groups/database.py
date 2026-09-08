@@ -20,6 +20,7 @@ class Realm(Base):
     name = Column(String)
     description = Column(String, nullable=True, default="")
     owner = Column(String, index=True)
+    inviteType = Column(String)
     createdAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
 class RMembers(Base):
@@ -104,6 +105,7 @@ class GrpUpdate(BaseModel):
 class RealmCreate(BaseModel):
     name: str
     description: Optional[str]
+    inviteType: str
 
 class RealmDetails(BaseModel):
     id: str

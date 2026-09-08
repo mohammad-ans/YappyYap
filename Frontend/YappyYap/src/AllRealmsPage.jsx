@@ -132,7 +132,7 @@ export default function AllRealmsPage() {
                         <textarea placeholder="Realm Description" value={description} maxLength={250} rows={2} onChange={e => setDescription(e.target.value)}/>
                         <select value={inviteType} onChange={e => setInviteType(e.target.value)}>
                             <option value="invite">Invited people can join only</option>
-                            <option value="open">Everyone can join</option>
+                            <option value="all">Everyone can join</option>
                         </select>
                         <button type="submit" disabled={submitting}>{submitting ? "Creating...": "Create Realm"}</button>
                     </form>

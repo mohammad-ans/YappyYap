@@ -67,19 +67,38 @@ client = httpx.AsyncClient()
 
 @app.get("/realms")
 def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
+    return db.execute(select(database.Relam).wehre(database.Realm)).scalars().all()
 
 @app.get("/realms/mine")
 def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
+    username = payload["username"]
+    members = db.execute(select(database.RMembers).where(database.RMembers.username == username)).scalars().all()
+    details = []
+    for member in members:
+        realm = db.get(database.Realm, member.realm_id)
+        if not realm:
+            continue
+        detail = database.RealmDetails.model_validate(realm)
+        detail.role = member.role
+        detail.groups = db.execute(select(func.count()).select_from(database.Group).where(database.Group.realm_id == realm.id)).scalar_one()
+        detail.members = db.execute(select(func.count()).select_from(database.RMembers).where(database.RMembers.realm_id == realm.id)).scalar_one()
+        details.append(detail)
+    return details
 
 @app.post("/realms/{id}/join")
 def join_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
-
-@app.post("/realms")
-def create_realm(data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
+    username = payload["username"]
+    realm = db.execute(select(database.Realm).where(database.Realm.id == id)).scalar_one_or_none()
+    if not realm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Realm not found"}])
+    if realm.inviteType != "all":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You need an invite to join this realm"}])
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "You are already a member of this realm"}])
+    db.add(database.RMembers(realm_id = id, role = "member", username = username))
+    db.commit()
+    return {"msg": "Sucess"}
 
 @app.post("/realms/{id}/channel/{group}/join")
 def join_group(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -108,7 +127,8 @@ def create_realm(data: database.RealmCreate, db: Session = Depends(get_db), payl
     realm = database.Realm(
         name=data.name,
         description = data.description or "",
-        owner = username
+        owner = username,
+        inviteType=data.inviteType
     )
     db.add(realm)
     db.flush()
@@ -118,6 +138,7 @@ def create_realm(data: database.RealmCreate, db: Session = Depends(get_db), payl
         role = "owner"
     ))
     db.commit()
+    db.refresh(realm)
     return realm
 
 @app.delete("/realms/{id}")
