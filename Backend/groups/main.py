@@ -65,6 +65,11 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.get("/groups/{id}/numMembers")
+def get_members(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == id)).scalar_one()
+    return count
+
 @app.get("/realms")
 def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     return db.execute(select(database.Relam).wehre(database.Realm)).scalars().all()

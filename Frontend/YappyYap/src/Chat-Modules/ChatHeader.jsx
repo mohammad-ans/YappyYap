@@ -11,7 +11,11 @@ export default function ChatHeader(props) {
     const {setError, setTrigger} = useChatAuth();
     const [displayname, setDisplay] = useState("");
     const navigate = useNavigate();
-    const {realmType} = useContext(ChatContext);
+    const {realmType, currRealm, groups} = useContext(ChatContext);
+    const currGrp = props.realmRef.current && props.realmref.current.endsWith("-realm") ? props.realmRef.current.slice(0, -6) : null
+    const isGrp = currRealm !== "global" && currGrp && props.realmRef.current !== "dms"
+    const display = (groups["Groups"].find(grp => grp["name"] == currGrp) || {})["display"]
+    const [settingsOpen, setSettingsOpen] = useState(false)
     const getOnline = useCallback(async ()=> {
         try{
             let response;
@@ -33,8 +37,8 @@ export default function ChatHeader(props) {
                     initialPath = `4/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
                     // initialPath = `groups.yappyyap.xyz/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
                     document.querySelector(".members").style.display = "block";
-                    const tempMembers = await axios.get(`http://localhost:800${initialPath}/numMembers`);
-                    // const tempMembers = await axios.get(`https://${initialPath}/numMembers`);
+                    const tempMembers = await axios.get(`http://localhost:8004/groups/${currGrp}/numMembers`);
+                    // const tempMembers = await axios.get(`https://groups.yappyyap.xyz/groups/${currGrp}/numMembers`);
                     setMembers(tempMembers.data);
                 }
                 response = await axios.get(`http://localhost:800${initialPath}/livecount`);
@@ -62,13 +66,14 @@ export default function ChatHeader(props) {
         return ()=> clearInterval(onlineInterval);
     }, [])
     useEffect(()=>{
-        if(props.realm == "dms") {
+        if(props.realm == "dms") 
             setDisplay(`Personal Msg: ${props.user.current}`)
-        }
-        else {
-            setDisplay(props.realm.toUpperCase())
-        }
-    }, [props.realm, props.user.current])
+        else if(display)
+            setDisplay(display.toUpperCase())
+        else 
+            setDisplay((props.realm || "").toUpperCase())
+        
+    }, [props.realm, props.user.current, display])
     function changeTheme(e) {
         let temp = e.target.value;
         localStorage.setItem("theme", temp);
@@ -103,16 +108,19 @@ export default function ChatHeader(props) {
                     <option value="green">Green</option>
                     <option value="beige">Beige</option>
                 </select>
-                {/* <div className="setting">
-                    <input type="color"/>
-                    </div> */}
+                {isGrp && <div className="realm-settings" onClick={() => setSettingsOpen(true)}>
+                    Settings
+                    </div>}
                 </div>
-                        {props.liveCount.current && <div className="online-count">
-                        <div className="members" onClick={showMembers}>{`${members} Members`}</div>
-                                <div className="online-count-dot">
-                                </div>
-                                <span>{online}</span>
-                        </div>}
+                {props.liveCount.current && <div className="online-count">
+                <div className="members" onClick={showMembers}>{`${members} Members`}</div>
+                        <div className="online-count-dot">
+                        </div>
+                        <span>{online}</span>
+                </div>}
+                {settingsOpen && isGrp && <div className="settings">
+
+                    </div>}
             </div>
     )
 }
