@@ -104,6 +104,17 @@ export default function GroupSettings(props) {
             showStatus("Could not remove member")
         }
     }
+    async function deleteChannel() {
+        try{
+             await axios.delete(`http://localhost/realms/${props.realm}/groups/${props.group}`)
+             await setCurrentRealm()
+        }
+        catch(err) {
+            if (err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not delete channel")
+        }
+    }
     return(
         <div className="grpsettings-overlay">
             <div className="grp-settings">
@@ -148,7 +159,7 @@ export default function GroupSettings(props) {
                     {details.role == "owner" && <button onClick={()=> setDelConfirm(true)}>Delete Channel</button>}
                     {details.role == "owner" && delConfirm && (<>
                         <p>Delete #{details.name}? This cannot be undone</p>
-                        <button>Yes</button>
+                        <button onClick={deleteChannel}>Yes</button>
                         <button onClick={()=> setDelConfirm(false)}>Cancel</button>
                     </>)}
                 </div>

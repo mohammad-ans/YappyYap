@@ -65,21 +65,34 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
-@app.patch("/realms/{id}/groups/{group}")
-def update_group(id: str, group: str, data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
-
-@app.pathc("/realms/{id}/groups/{group}/members")
-def update_mem(id: str, group: str, data, db: Session = Depends(get_db), payload= Depends(verify_session_token)):
-    pass
+@app.patch("/realms/{id}/groups/{group}/members")
+def update_mem(id: str, group: str, data: database.MemberUpdate, db: Session = Depends(get_db), payload= Depends(verify_session_token)):
+    username = payload["username"]
+    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
+    if not (member and member.role != "owner") and not (grp_member and grp_member.role != "owner"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to change role of members"}])
+    update_user = db.execute(select(database.Members).where((database.Members.name == data.name) & (database.Members.grpId == group))).scalar_one_or_none()
+    if not update_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "User not found"}])
 
 @app.post("/realms/{id}/group/{group}/leave")
 def leave_group(id: str, group: str, data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
-
-@app.post("/realm/{id}/groups/{group}/members/leave")
-def remove_mem(id: str, group: str, data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
+    username = payload["username"]
+    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
+    member = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpId == group))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "You are not a member of this channel"}])
+    if member.role == "owner":
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Owner cannot leave channel, delete the group"}])
+    db.execute(delete(database.Members).where((database.Members.name == username) & (database.Members.grpId == group)))
+    db.commit()
+    return {"msg": "Success"}
 
 @app.get("/groups/{id}/numMembers")
 def get_members(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -307,18 +320,23 @@ def add_mem(group : str, db : Session = Depends(get_db), payload = Depends(verif
         raise
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "User could not be added"}])
+
     
-@app.post("/delmem")
-def del_user(memberData : database.MemberData, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+@app.post("/realm/{id}/groups/{group}/members/leave")
+def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
-    owner = db.execute(select(database.Members).where((database.Members.grpName == memberData.grpName) & (database.Members.name == username) & (database.Members.role == "owner")))
-    if not owner:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You are not allowed to remove a member"}])
-    user_del = db.execute(select(database.Members).where((database.Members.grpName == memberData.grpName) & (database.Members.name == memberData.name)))
+    group = db.execute(select(database.Group).where((database.Group.relam_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    grp_member = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpId == group))).scalar_one_or_none()
+    if not (member and (member.role == "admin" or member.role == "owner")) and not (grp_member and (grp_member.role == "admin" or grp_member.role == "owner")):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to remove members"}])
+    user_del = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == data.username))).scalar_one_or_none()
     if not user_del:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg" : "User not found"}])
     try:
-        db.execute(delete(database.Members).where((database.Members.name == memberData.name) & (database.Members.grpName == memberData.grpName)))
+        db.execute(delete(database.Members).where((database.Members.name == data.username) & (database.Members.grpId == group)))
         db.commit()
     except:
        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "User could not be deleted"}])
@@ -331,42 +349,27 @@ def get_members(group : str, db : Session = Depends(get_db)):
         return members
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])
- 
-@app.get("/global/{group}/numMembers")
-def num_members(group : str, db : Session = Depends(get_db)):
-    try:
-        members = db.execute(select(database.Members).where(database.Members.grpName == group)).scalars().all()
-        return len(members)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])
     
-@app.get("/voice/{group}/numMembers")
-def num_members(group : str, db : Session = Depends(get_db)):
-    try:
-        members = db.execute(select(database.Members).where(database.Members.grpName == group)).scalars().all()
-        return len(members)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])
-    
-@app.patch("/groups/{groupname}")
 
-def update_group(groupname: str, data: database.GrpUpdate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    username = payload["username"]
-    group = db.execute(select(database.Group).where(database.Group.name == groupname)).scalar_one_or_none()
+@app.patch("/realms/{id}/groups/{group}")
+def update_group(id: str, group: str, data: database.GrpUpdate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload[username]
+    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
     if not group:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Group not found"}])
-    owner = db.execute(select(database.Group).where((database.Members.grpName == groupname) & (database.Members.name == username) & (database.Members.role == "owner"))).scalar_one_or_none()
-    if not owner:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You are not allowed to change details of this group"}])
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel does not exists"}])
+    grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
+    member = db.execute(select(database.RMmebers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not (member and (member.role == "admin" or member.role == "owner") ) or not (grp_member and (grp_member.role == "admin" or grp_member.role == "owner")):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to update channel details, only owner and admin can do that"}])
     updates = {key: val for key, val in data.model_dump(exclude_unset=True).items() if val is not None}
     if len(updates) == 0:
         return {"msg": "Success", "details": "No changes"}
     try:
-        db.execute(update(database.Group).where(database.Group.name == groupname).values(**updates))
+        db.execute(update(database.Group).where(database.Group.name == group).values(**updates))
+        db.commit()
     except:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg": "Could not update realm"}])
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg": "Could not update channel"}])
     return {"msg": "Success", "details": "Realm updated"}
-
 
 class ConnectionManager:
     def __init__(self):

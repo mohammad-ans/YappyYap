@@ -117,3 +117,10 @@ class RealmDetails(BaseModel):
     members: int = 0
     groups: int = 0
     model_config = {"from_attributes": True}
+
+class RemoveMember(BaseModel):
+    username: str
+
+class MemberUpdate:
+    name: str
+    role: str
