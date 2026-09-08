@@ -9,11 +9,13 @@ export default function GroupSettings(props) {
     const [description, setDescription] = useState("")
     const [status, setStatus] = useState("")
     const [delConfirm, setDelConfirm] = useState(false)
+    const [loading, setLoading] = useState(true)
     const {username} = useChatAuth()
     const axios = useAxios()
     const priviliged = details.role && (details.role == "admin" || details.role == "owner")
     const {setCurrentRealm} = useContext(ChatContext)
     async function load() {
+        setLoading(true)
         try{
             const members = axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`)
             const details = axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/details`)
@@ -25,6 +27,9 @@ export default function GroupSettings(props) {
             if(err.response && err.response.data)
                 setStatus(err.response.data.detail[0].msg)
             setStatus("Could not load channel settings")
+        }
+        finally{
+            setLoading(false)
         }
     }
     useEffect(()=> {
@@ -85,6 +90,7 @@ export default function GroupSettings(props) {
         try{
             await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/leave`)
             await setCurrentRealm(props.realm)
+            props.onDeleted()
         }   
         catch(err) {
             if(err.response && err.response.data)
@@ -108,6 +114,7 @@ export default function GroupSettings(props) {
         try{
              await axios.delete(`http://localhost/realms/${props.realm}/groups/${props.group}`)
              await setCurrentRealm()
+             props.onDeleted()
         }
         catch(err) {
             if (err.response && err.response.data)
@@ -115,10 +122,25 @@ export default function GroupSettings(props) {
             showStatus("Could not delete channel")
         }
     }
+    if(loading)
+        return(
+            <div className="grpsettings-overlay">
+                <div className="grp-settings">Loading...</div>
+            </div>
+        )
+    if(!details)
+        return(
+            <div className="grpsettings-overlay">
+                <div className="grp-settings">
+                    <p className="cancel-cross" onClick={props.onClose}>X</p>
+                    <p className="status">{status || "Could not load settings"}</p>
+                </div>
+            </div>
+        )
     return(
         <div className="grpsettings-overlay">
             <div className="grp-settings">
-                <p className="cancel-cross">X</p>
+                <p className="cancel-cross" onClick={props.onClose}>X</p>
                 <h2>{details.name}</h2>
                 <p className="mem-role">You: {details.role || "viewer"}</p>
                 {status && <p className="group-settings-status">{status}</p>}

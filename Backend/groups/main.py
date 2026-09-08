@@ -80,7 +80,7 @@ def update_mem(id: str, group: str, data: database.MemberUpdate, db: Session = D
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "User not found"}])
 
 @app.post("/realms/{id}/group/{group}/leave")
-def leave_group(id: str, group: str, data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+def leave_group(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
     group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
     if not group:

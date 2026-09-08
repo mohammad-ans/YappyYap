@@ -119,7 +119,10 @@ export default function ChatHeader(props) {
                         </div>
                         <span>{online}</span>
                 </div>}
-                {settingsOpen && isGrp && <GroupSettings realm={currRealm} group={currGrp}/>}
+                {settingsOpen && isGrp && <GroupSettings realm={currRealm} group={currGrp} onClose={() => setSettingsOpen(false)} onDeleted={()=> {
+                    setSettingsOpen(false)
+                    navigate(`/chat/realms/${currRealm}`)
+                }}/>}
             </div>
     )
 }
