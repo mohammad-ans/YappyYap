@@ -135,7 +135,7 @@ export default function GroupSettings(props) {
             const res = await axios.post(`http:localhost:8004/invites/group/${props.realm}/${props.group}`, {
                 username: target
             })
-            const link = `http://localhost:8004/invite/${res.data.token}`
+            const link = `http://localhost:8004/invite/${res.data.token}/redeem`
             setInviteLink(link)
             setInviteUsername("")
             const delivered = sendInviteDM(target, `#${details.name}`, link)

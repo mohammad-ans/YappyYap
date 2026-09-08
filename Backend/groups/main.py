@@ -89,9 +89,42 @@ def invite_user(id: str, group: str, data: database.InviteCreate, db: Session = 
     db.refresh(invite)
     return invite
 
+def valid_invite(invite: database.Invite, username: str):
+    if invite.used:
+        return False, "Invite is used"
+    if invite.canceled:
+        return False, "Invite is cancelled"
+    if invite.expiresAt and invite.expiresAt < datetime.now(timezone.utc):
+        return False, "Invite is expired"
+    if invite.username != username:
+        return False, f"Invite is for {invite.username}"
+    return True
+
 @app.post("/invites/{token}/redeem")
 def use_invite(token: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
+    username = payload["username"]
+    invite = db.execute(select(database.Invite).where(database.Invite.token == token)).scalar_one_or_none()
+    if not invite:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "No invite found"}])
+    valid, reason = valid_invite(invite, username)
+    if not valid:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": reason}])
+    group = db.execute(select(database.Group).where((database.Group.id == invite.grpId) & (database.Group.realm_id == invite.realm_id))).scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel could have been deleted as it does not exists"}])
+    count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == invite.grpId)).scalar_one()
+    if count >= group.maxGrpSize:
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Channel has reached max size"}])
+    member = db.execute(select(database.RMembers).where(database.RMembers.realm_id == invite.realm_id)).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "You need to be in the realm to join its channels"}])
+    grp_member = db.execute(select(database.Members).where(database.Members.grpId == invite.grpId)).scalar_one_or_none()
+    if not grp_member:
+        db.add(database.Members(grpId = invite.grpId, name = username, role = "member"))
+    invite.used = True
+    invite.usedAt = datetime.now(timezone.utc)
+    db.commit()
+    return {"msg": "Success", "realm_id": invite.realm_id, "grpId": invite.grpId}
 
 @app.patch("/realms/{id}/groups/{group}/members")
 def update_mem(id: str, group: str, data: database.MemberUpdate, db: Session = Depends(get_db), payload= Depends(verify_session_token)):
