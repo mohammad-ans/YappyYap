@@ -21,7 +21,7 @@ export default function GroupSettings(props) {
     async function load() {
         setLoading(true)
         try{
-            const members = axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`)
+            const members = await axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`)
             const details = axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/details`)
             setDetails(details.data)
             setDescription((await details).data.description || "")

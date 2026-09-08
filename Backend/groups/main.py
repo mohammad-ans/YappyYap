@@ -65,11 +65,25 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.get("/realms/{id}/groups/{group}/details")
+def grp_details(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not grp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
+    member = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpId == group))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "You are not a member of this channel"}])
+    details = database.GroupDetails.model_validate(grp)
+    details.memberCount = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == group)).scalar_one()
+    details.role = member.role
+    return details
+
 @app.post("/realms/{id}/groups/{group}/make-owner")
 def make_owner(id: str, group: str, data: database.MakeOwner, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
-    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
-    if not group:
+    grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     owner = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
     if not owner or owner.role != "owner":
@@ -79,15 +93,15 @@ def make_owner(id: str, group: str, data: database.MakeOwner, db: Session = Depe
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Selected user for owner not found"}])
     owner.role = "admin"
     member.role = "owner"
-    group.owner = data.username
+    grp.owner = data.username
     db.commit()
     return {"msg": "Success"}
 
 @app.post("/invites/group/{id}/{group}")
 def invite_user(id: str, group: str, data: database.InviteCreate, db: Session = Depends(get_db), payload=Depends(verify_session_token)):
     username = payload["username"]
-    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
-    if not group:
+    grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found")
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
@@ -97,7 +111,7 @@ def invite_user(id: str, group: str, data: database.InviteCreate, db: Session = 
     if invited:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "User is already in the channel"}])
     count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == group)).scalar_one()
-    if count >= group.maxGrpSize:
+    if count >= grp.maxGrpSize:
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Max channel size reached"}])
     invite = database.Invite(
         scope = "group", realm_id = id, grpId = group, invitedBy = username, username = data.username, expiresAt = datetime.now(timezone.utc) + timedelta(hours=data.expiresInHours)
@@ -127,11 +141,11 @@ def use_invite(token: str, db: Session = Depends(get_db), payload = Depends(veri
     valid, reason = valid_invite(invite, username)
     if not valid:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": reason}])
-    group = db.execute(select(database.Group).where((database.Group.id == invite.grpId) & (database.Group.realm_id == invite.realm_id))).scalar_one_or_none()
-    if not group:
+    grp = db.execute(select(database.Group).where((database.Group.id == invite.grpId) & (database.Group.realm_id == invite.realm_id))).scalar_one_or_none()
+    if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel could have been deleted as it does not exists"}])
     count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == invite.grpId)).scalar_one()
-    if count >= group.maxGrpSize:
+    if count >= grp.maxGrpSize:
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Channel has reached max size"}])
     member = db.execute(select(database.RMembers).where(database.RMembers.realm_id == invite.realm_id)).scalar_one_or_none()
     if not member:
@@ -147,8 +161,8 @@ def use_invite(token: str, db: Session = Depends(get_db), payload = Depends(veri
 @app.patch("/realms/{id}/groups/{group}/members")
 def update_mem(id: str, group: str, data: database.MemberUpdate, db: Session = Depends(get_db), payload= Depends(verify_session_token)):
     username = payload["username"]
-    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
-    if not group:
+    grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
@@ -161,8 +175,8 @@ def update_mem(id: str, group: str, data: database.MemberUpdate, db: Session = D
 @app.post("/realms/{id}/group/{group}/leave")
 def leave_group(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
-    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
-    if not group:
+    grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     member = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpId == group))).scalar_one_or_none()
     if not member:
@@ -216,19 +230,19 @@ def join_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_
 @app.post("/realms/{id}/channel/{group}/join")
 def join_group(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
-    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
-    if not group:
+    grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You need to be a part of realm and then join its channels"}])
-    if group.inviteType != "all":
+    if grp.inviteType != "all":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "To join this channel you need an invite first"}])
     member = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpId == group))).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "You are already in the channel"}])
     total_mems = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == group)).scalar_one()
-    if total_mems >= group.maxGrpSize:
+    if total_mems >= grp.maxGrpSize:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "Channel has reached max members"}])
     db.add(database.Members(name = username, grpId = group, role = "member"))
     db.commit()
@@ -404,8 +418,8 @@ def add_mem(group : str, db : Session = Depends(get_db), payload = Depends(verif
 @app.post("/realm/{id}/groups/{group}/members/leave")
 def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
-    group = db.execute(select(database.Group).where((database.Group.relam_id == id) & (database.Group.id == group))).scalar_one_or_none()
-    if not group:
+    grp = db.execute(select(database.Group).where((database.Group.relam_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     grp_member = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpId == group))).scalar_one_or_none()
@@ -433,8 +447,8 @@ def get_members(group : str, db : Session = Depends(get_db)):
 @app.patch("/realms/{id}/groups/{group}")
 def update_group(id: str, group: str, data: database.GrpUpdate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload[username]
-    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
-    if not group:
+    grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel does not exists"}])
     grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
     member = db.execute(select(database.RMmebers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()

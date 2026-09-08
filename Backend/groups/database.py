@@ -45,6 +45,24 @@ class Group(Base):
     inviteType = Column(String)
     description = Column(String, nullable=True, default="")
 
+class GroupDetails(BaseModel):
+    id: str
+    realm_id: str
+    name: str
+    description: Optional[str] = ""
+    owner: str
+    createdAt: datetime
+    liveCount: bool
+    anyonymity: bool
+    maxGrpSize: int
+    maxDuration: int
+    minDuration: int
+    grpType: str
+    inviteType: str
+    role: Optional[str] = None
+    memberCount: int = 0
+    model_config = {"from_attributes": True}
+
 class Members(Base):
     __tablename__ = "members"
     name = Column(String, primary_key=True)
