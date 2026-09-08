@@ -1,8 +1,8 @@
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import create_engine, Column, String, Integer, Boolean, LargeBinary, DateTime, ForeignKey
 from datetime import datetime, timezone, timedelta
-from pydantic import BaseModel
-import os, uuid
+from pydantic import BaseModel, Field
+import os, uuid, secrets
 from dotenv import load_dotenv
 from typing import Optional
 
@@ -52,6 +52,19 @@ class Members(Base):
     role = Column(String, default="member")
     joinedAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
+class Invite(Base):
+    __tablename__ = "invites"
+    token = Column(String, primary_key=True, default=secrets.token_urlsafe(16))
+    scope = Column(String)
+    realm_id = Column(String, ForeignKey("realms.id"))
+    grpId = Column(String, ForeignKey("groups.id"), nullable=True)
+    invitedBy = Column(String)
+    username = Column(String)
+    createdAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    expiresAt = Column(DateTime(timezone=True), nullable=True)
+    used = Column(Boolean, default=False)
+    usedAt = Column(DateTime(timezone=True), nullable=True)
+    canceled = Column(Boolean, default=False)
 
 class grpMsgBase:
     @staticmethod
@@ -124,3 +137,7 @@ class RemoveMember(BaseModel):
 class MemberUpdate:
     name: str
     role: str
+
+class InviteCreate(BaseModel):
+    username: str
+    expiresInHours: Optional[int] = Field(default=48, ge=1, le=24 * 15)

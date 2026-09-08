@@ -65,6 +65,34 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.post("/invites/group/{id}/{group}")
+def invite_user(id: str, group: str, data: database.InviteCreate, db: Session = Depends(get_db), payload=Depends(verify_session_token)):
+    username = payload["username"]
+    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found")
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
+    if not (member and (member.role != "admin" or member.role != "admin")) and not (grp_member and (grp_member.role != "admin" or grp_member.role != "owner")):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You are not allowed to invite users")
+    invited = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == data.username))).scalar_one_or_none()
+    if invited:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "User is already in the channel"}])
+    count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == group)).scalar_one()
+    if count >= group.maxGrpSize:
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Max channel size reached"}])
+    invite = database.Invite(
+        scope = "group", realm_id = id, grpId = group, invitedBy = username, username = data.username, expiresAt = datetime.now(timezone.utc) + timedelta(hours=data.expiresInHours)
+    )
+    db.add(invite)
+    db.commit()
+    db.refresh(invite)
+    return invite
+
+@app.post("/invites/{token}/redeem")
+def use_invite(token: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
 @app.patch("/realms/{id}/groups/{group}/members")
 def update_mem(id: str, group: str, data: database.MemberUpdate, db: Session = Depends(get_db), payload= Depends(verify_session_token)):
     username = payload["username"]
@@ -187,8 +215,8 @@ def del_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_s
     channels = select(database.Group).where(database.Group.realmId == id)
     db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId.in_(channels)))
     db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId.in_(channels)))
-    db.execute(delete(database.Group).where(database.Group.realm_id == id))
     db.execute(delete(database.Members).where(database.RMembers.realm_id == id))
+    db.execute(delete(database.Group).where(database.Group.realm_id == id))
     db.execute(delete(database.Realm).where(database.Realm.id == id))
     db.commit()
     return {"msg": "Success"}

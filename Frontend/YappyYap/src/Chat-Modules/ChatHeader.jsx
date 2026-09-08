@@ -13,7 +13,7 @@ export default function ChatHeader(props) {
     const [displayname, setDisplay] = useState("");
     const navigate = useNavigate();
     const {realmType, currRealm, groups} = useContext(ChatContext);
-    const currGrp = props.realmRef.current && props.realmref.current.endsWith("-realm") ? props.realmRef.current.slice(0, -6) : null
+    const currGrp = props.realmRef.current && props.realmRef.current.endsWith("-realm") ? props.realmRef.current.slice(0, -6) : null
     const isGrp = currRealm !== "global" && currGrp && props.realmRef.current !== "dms"
     const display = (groups["Groups"].find(grp => grp["name"] == currGrp) || {})["display"]
     const [settingsOpen, setSettingsOpen] = useState(false)

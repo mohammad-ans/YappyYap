@@ -13,7 +13,11 @@ export default function GroupSettings(props) {
     const {username} = useChatAuth()
     const axios = useAxios()
     const priviliged = details.role && (details.role == "admin" || details.role == "owner")
-    const {setCurrentRealm} = useContext(ChatContext)
+    const {setCurrentRealm, ws} = useContext(ChatContext)
+    const [target, setTarget] = useState(null)
+    const [inviteUsername, setInviteUsername] = useState("")
+    const [inviteLink, setInviteLink] = useState(null)
+
     async function load() {
         setLoading(true)
         try{
@@ -122,6 +126,46 @@ export default function GroupSettings(props) {
             showStatus("Could not delete channel")
         }
     }
+    async function sendInvite(e) {
+        e.preventDefault()
+        const target = inviteUsername.trim()
+        if(!target)
+            return
+        try{
+            const res = await axios.post(`http:localhost:8004/invites/group/${props.realm}/${props.group}`, {
+                username: target
+            })
+            const link = `http://localhost:8004/invite/${res.data.token}`
+            setInviteLink(link)
+            setInviteUsername("")
+            const delivered = sendInviteDM(target, `#${details.name}`, link)
+            showStatus(delivered ? `Invite sent to ${target} as a DM, they can also use the link below`: `Invite created for ${target}, could not DM it automatically, so copy the link below and send it manually.`)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not create invite")
+        }
+    }
+    function sendInviteDM(username, grpName, link) {
+        if(!ws.current || ws.current.readyState !== WebSocket.OPEN)
+            return false
+        try{
+            const message = {recipient: username, expiration: false, duration: 86400, 
+                msg: `You have been invited to ${grpName} <a href="${link}" target="_blank" rel="noopener" class="invite-link">Click to join</a>`
+            }
+        }
+        catch{
+            return false
+        }
+    }
+    function copyLastInvite() {
+        if(!inviteLink)
+            return
+        navigator.clipboard?.writeText(inviteLink)
+        showStatus("Invite link copied")
+    }
+
     if(loading)
         return(
             <div className="grpsettings-overlay">
@@ -157,6 +201,21 @@ export default function GroupSettings(props) {
                     </select>)
                         : (<p>{details.inviteType == "all" ? "Anyone in realm": "Invite only"}</p>)}
                 </div>
+                {priviliged && <div className="single-setting">
+                    <h3>Invite Someone</h3>
+                    <p className="low-text">Invites can only be used by the person to whom they were intended to send, nobody else can use it</p>
+                    <form className="invite-area" onSubmit={sendInvite}>
+                        <input type="text" placeholder="username" value={inviteUsername} onChange={e => setInviteUsername(e.target.value)}/>
+                        <button type="submit">Create Invite</button>
+                    </form>
+                    {inviteLink && (
+                        <div className="invite-actions">
+                            <code className="invite-code">{inviteLink}</code>
+                            <button onClick={copyLastInvite}>Copy</button>
+                        </div>
+                    )}
+                </div>
+                }
                 <div className="single-setting">
                     <h3>Members ({members.length}/{details.maxGrpSize})</h3>
                     <ul className="group-members-list">
