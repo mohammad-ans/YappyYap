@@ -1,6 +1,7 @@
-import {useEffect, useState} from "react"
+import {useContext, useEffect, useState} from "react"
 import useAxios from "../../hooks/useAxios"
 import useChatAuth from "../../hooks/useChatAuth"
+import { ChatContext } from "../ChatContext"
 
 export default function GroupSettings(props) {
     const [members, setMembers] = useState([])
@@ -11,6 +12,7 @@ export default function GroupSettings(props) {
     const {username} = useChatAuth()
     const axios = useAxios()
     const priviliged = details.role && (details.role == "admin" || details.role == "owner")
+    const {setCurrentRealm} = useContext(ChatContext)
     async function load() {
         try{
             const members = axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`)
@@ -28,7 +30,80 @@ export default function GroupSettings(props) {
     useEffect(()=> {
         load()
     }, [props.group])
-
+    async function saveInviteType(value) {
+        try{
+            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}`, {inviteType: value})
+            setDetails(pre => ({...pre, inviteType: value}))
+            showStatus("Updated invite type")
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not update invite type")
+        }
+    }
+    function showStatus(msg) {
+        setStatus(msg)
+        setTimeout(() => setStatus(""), 3000)
+    }
+    async function saveDescription() {
+        try{
+            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}`, {description})
+            showStatus("Updated description")
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not update description")
+        }
+    }
+    async function promote(name) {
+        try{
+            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`, {username: name, role: "admin"})
+            setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "admin"} : mem))
+            showStatus(`${name} promoted to admin`)
+        }
+        catch{
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not promote to admin")
+        }
+    }
+    async function demote(name) {
+        try{
+            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`, {username: name, role: "member"})
+            setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "member"}: mem))
+            showStatus(`${name} demoted to member`)
+        }
+        catch(err) {
+            if (err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not demote to member")
+        }
+    }
+    async function leave() {
+        try{
+            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/leave`)
+            await setCurrentRealm(props.realm)
+        }   
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not leave channel")
+        }
+    }
+    async function removeMember(name) {
+        try{
+            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members/remove`, {username: name})
+            setMembers(pre => pre.filter(pre => pre.username != name))
+            showStatus(`Removed ${name}`)
+        }
+        catch(err) {
+            if (err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not remove member")
+        }
+    }
     return(
         <div className="grpsettings-overlay">
             <div className="grp-settings">
@@ -39,11 +114,11 @@ export default function GroupSettings(props) {
                 <div className="single-setting">
                     <h3>Description</h3>
                     <textarea rows={2} maxLength={250} value={description} disabled={!priviliged} onChange={e => setDescription(e.target.value)}></textarea>
-                    {priviliged && <button>Save</button>}
+                    {priviliged && <button onClick={saveDescription}>Save</button>}
                 </div>
                 <div className="single-setting">
                     <h3>Who can Join</h3>
-                    {priviliged ? (<select>
+                    {priviliged ? (<select value={details.inviteType} onChange={e => saveInviteType(e.target.value)}>
                         <option value="all">Any realm member can join</option>
                         <option value="invite">Only invited people can join</option>
                     </select>)
@@ -57,19 +132,19 @@ export default function GroupSettings(props) {
                             <span className={`group-member-role role-${mem.role}`}>{mem.role}</span>
                             {details.owner == username && mem.role !== "owner" && (
                                 <span className="group-member-settings">
-                                    {mem.role == "member"? <button>Make Admin</button>: <button>Remove Admin</button>}
-                                    <button>Make Owner</button>
-                                    <button>Remove</button>
+                                    {mem.role == "member"? <button onClick={()=> promote(mem.username)}>Make Admin</button>: <button>Remove Admin</button>}
+                                    <button onClick={()=> demote(mem.username)}>Make Owner</button>
+                                    <button onClick={()=> removeMember(mem.username)}>Remove</button>
                                 </span>
                             )}
                             {priviliged && details.owner != username && mem.role == "member" && <span className="group-member-settings">
-                                    <button>Remove</button>
+                                    <button onClick={() => removeMember(mem.username)}>Remove</button>
                                 </span>}
                             </li>)}
                     </ul>
                 </div>
                 <div className="single-setting">
-                    {details.role != "owner" && <button>Leave Channel</button>}
+                    {details.role != "owner" && <button onClick={leave}>Leave Channel</button>}
                     {details.role == "owner" && <button onClick={()=> setDelConfirm(true)}>Delete Channel</button>}
                     {details.role == "owner" && delConfirm && (<>
                         <p>Delete #{details.name}? This cannot be undone</p>

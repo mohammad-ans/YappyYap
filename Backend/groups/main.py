@@ -65,6 +65,22 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.patch("/realms/{id}/groups/{group}")
+def update_group(id: str, group: str, data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
+@app.pathc("/realms/{id}/groups/{group}/members")
+def update_mem(id: str, group: str, data, db: Session = Depends(get_db), payload= Depends(verify_session_token)):
+    pass
+
+@app.post("/realms/{id}/group/{group}/leave")
+def leave_group(id: str, group: str, data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
+@app.post("/realm/{id}/groups/{group}/members/leave")
+def remove_mem(id: str, group: str, data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
 @app.get("/groups/{id}/numMembers")
 def get_members(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == id)).scalar_one()
