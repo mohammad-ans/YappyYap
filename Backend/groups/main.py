@@ -65,6 +65,24 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.post("/realms/{id}/groups/{group}/make-owner")
+def make_owner(id: str, group: str, data: database.MakeOwner, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    group = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
+    owner = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
+    if not owner or owner.role != "owner":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to transfer ownership"}])
+    member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == data.username))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Selected user for owner not found"}])
+    owner.role = "admin"
+    member.role = "owner"
+    group.owner = data.username
+    db.commit()
+    return {"msg": "Success"}
+
 @app.post("/invites/group/{id}/{group}")
 def invite_user(id: str, group: str, data: database.InviteCreate, db: Session = Depends(get_db), payload=Depends(verify_session_token)):
     username = payload["username"]
@@ -150,7 +168,7 @@ def leave_group(id: str, group: str, db: Session = Depends(get_db), payload = De
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "You are not a member of this channel"}])
     if member.role == "owner":
-        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Owner cannot leave channel, delete the group"}])
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Owner cannot leave channel, delete the channel or make someone else owner of the channel"}])
     db.execute(delete(database.Members).where((database.Members.name == username) & (database.Members.grpId == group)))
     db.commit()
     return {"msg": "Success"}

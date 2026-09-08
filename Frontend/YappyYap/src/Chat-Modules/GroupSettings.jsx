@@ -14,7 +14,7 @@ export default function GroupSettings(props) {
     const axios = useAxios()
     const priviliged = details.role && (details.role == "admin" || details.role == "owner")
     const {setCurrentRealm, ws} = useContext(ChatContext)
-    const [target, setTarget] = useState(null)
+    const [transferTarget, setTarget] = useState(null)
     const [inviteUsername, setInviteUsername] = useState("")
     const [inviteLink, setInviteLink] = useState(null)
 
@@ -166,6 +166,24 @@ export default function GroupSettings(props) {
         showStatus("Invite link copied")
     }
 
+    async function makeOwner() {
+        if(!transferTarget)
+            return
+        try{
+            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/make-owner`, {
+                username: transferTarget
+            })
+            showStatus(`${transferTarget} is now the owner of the channel`)
+            setTarget(null)
+            load()
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not make the other user owner of the channel")
+        }
+    }
+
     if(loading)
         return(
             <div className="grpsettings-overlay">
@@ -226,6 +244,7 @@ export default function GroupSettings(props) {
                                 <span className="group-member-settings">
                                     {mem.role == "member"? <button onClick={()=> promote(mem.username)}>Make Admin</button>: <button>Remove Admin</button>}
                                     <button onClick={()=> demote(mem.username)}>Make Owner</button>
+                                    <button onClick={() => setTarget(mem.username)}>Make Channel Owner</button>
                                     <button onClick={()=> removeMember(mem.username)}>Remove</button>
                                 </span>
                             )}
@@ -235,6 +254,13 @@ export default function GroupSettings(props) {
                             </li>)}
                     </ul>
                 </div>
+                {transferTarget && (
+                    <div className="transfer-confirm">
+                        <p>Make <b>{transferTarget}</b> the new channel owner and demote yourself to an admin?</p>
+                        <button onClick={makeOwner}>Confirm</button>
+                        <button onClick={()=> setTarget(null)}>Cancel</button>
+                    </div>
+                )}
                 <div className="single-setting">
                     {details.role != "owner" && <button onClick={leave}>Leave Channel</button>}
                     {details.role == "owner" && <button onClick={()=> setDelConfirm(true)}>Delete Channel</button>}
