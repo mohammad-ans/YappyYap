@@ -10,6 +10,7 @@ export default function RealmSettings(props) {
     const [members, setMembers] = useState([])
     const [confirmDel, setDelete] = useState(false)
     const [loading, setLoading] = useState(true)
+    const [removeUser, setRemoveUser] = useState(null)
     const axios = useAxios()
     const priviliged = details.role && (details.role == "owner" || details.role == "admin")
     async function load() {
@@ -62,6 +63,48 @@ export default function RealmSettings(props) {
             showStatus("Could not leave the realm, try again later")
         }
     }
+
+    async function promote(name) {
+        try{
+            await axios.patch(`http://localhost:8004/realms/${props.realm}/members`, {name: name, role: "admin"})
+            setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "admin"}: mem))
+            showStatus(`Promoted ${name} to admin`)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Promoting selected user failed, try again")
+        }
+    }
+
+    async function demote(name) {
+        try{
+            await axios.patch(`http://localhost:8004/realms/${props.realm}/members`, {name: name, role: "member"})
+            setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "member"}: mem))
+            showStatus(`Demoted ${name} to member`)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Demoting selected user failed, try again")
+        }
+    }
+
+    async function remove(){
+        if(!removeUser)
+            return
+        try{
+            await axios.post(`http:localhost:8004/realms/${props.realm}/members/${removeUser}/remove`)
+            setMembers(pre => pre.filter(mem => mem != removeUser))
+            showStatus(`Removed user ${removeUser} from realm`)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Removing user from realm failed, try again")
+        }
+    }
+
     if(loading)
         return (
             <div className="realm-settings-overlay">
@@ -108,14 +151,24 @@ export default function RealmSettings(props) {
                                 <span className={`realm-member-role realm-member-role-${mem.role}`}>{mem.role}</span>
                                 {details.role == "owner" && mem.role != "owner" && (
                                     <span className="realm-member-actions">
-                                        {mem.role =="member"? <button>Promote to admin</button>: <button>Demote to member</button>}
-                                        <button>Remove User</button>
+                                        {
+                                            mem.role =="member"? 
+                                            <button onClick={() => promote(mem.username)}>Promote to admin</button> : <button onClick={() => demote(mem.username)}>Demote to member</button>
+                                        }
+                                        <button onClick={() => setRemoveUser(true)}>Remove User</button>
                                     </span>
                                 )}
                             </li>
                         ))}
                     </ul>
                 </div>
+                {removeUser &&
+                    <div className="realm-setting">
+                        <p>Remove <b>{removeUser}</b> from everything in realm, delete their owned channel and remove them from every channel</p>
+                        <button onClick={remove}>Remove</button>
+                        <button onClick={() => setRemoveUser(null)}>Cancel</button>
+                    </div>
+                }
                 <div className="realm-setting">
                     {details.role != "owner" && <button onClick={leaveRealm}>Leave Realm</button>}
                     {details.role == "owner" && !confirmDel && <button onClick={()=> setDelete(true)}>Delete Realm</button>}

@@ -84,6 +84,25 @@ def leave_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify
     db.commit()
     return {"msg": "Success"}
 
+@app.patch("/realms/{id}/members")
+def mem_role_realm(id: str, data: database.MemberUpdate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not member or member.role != "owner":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owner can update roles "}])
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == data.name))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "User is not a member of this realm"}])
+    if member.role == "owner":
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "You cannot change role of owner, owner can transfer its ownership"}])
+    member.role = data.role
+    db.commit()
+    return {"msg": "Success"}
+
+@app.post("/realms/{id}/members/{user}/remove")
+def remove_user(id: str, user: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
 @app.get("/realms/{id}/groups/{group}/details")
 def grp_details(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
