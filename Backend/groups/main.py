@@ -301,6 +301,14 @@ def get_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_s
     details.members = db.execute(select(func.count()).select_from(database.RMembers).where(database.RMembers.realm_id == id)).scalar_one()
     return details
 
+@app.get("/realms/{id}/members")
+def realm_members(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not a member of this realm"}])
+    return db.execute(select(database.RMembers).where(database.RMembers.realm_id == id)).scalars().all()
+
 @app.get("/realms/{id}/groups")
 def get_groups(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
