@@ -9,9 +9,11 @@ export default function RealmSettings(props) {
     const [name, setName] = useState()
     const [members, setMembers] = useState([])
     const [confirmDel, setDelete] = useState(false)
+    const [loading, setLoading] = useState(true)
     const axios = useAxios()
     const priviliged = details.role && (details.role == "owner" || details.role == "admin")
     async function load() {
+        setLoading(true)
         try{
             const details = await axios.get(`http://localhost:8004/realms/${props.realm}`)
             const members = await axios.get(`http://localhost:8004/realms/${props.realm}/members`)
@@ -24,10 +26,30 @@ export default function RealmSettings(props) {
                 setStatus(err.response.data)
             setStatus("Could not load realm settings")
         }
+        finally{
+            setLoading(false)
+        }
     }
     useEffect(()=> {
         load()
     }, [props.realm])
+    if(loading)
+        return (
+            <div className="realm-settings-overlay">
+                <div className="realm-settings">
+                    Loading...
+                </div>
+            </div>        
+        )
+    if(!details)
+        return(
+            <div className="realm-settings-overlay">
+                <div className="realm-settings">
+                    <p className="cancel-cross">X</p>
+                    <p>{status || "Could not load the realm's settings"}</p>
+                </div>
+            </div>
+        )
     return (
         <div className="realm-settings-overlay">
             <div className="realm-settings">
@@ -68,11 +90,13 @@ export default function RealmSettings(props) {
                 <div className="realm-setting">
                     {details.role != "owner" && <button>Leave Realm</button>}
                     {details.role == "owner" && !confirmDel && <button onClick={()=> setDelete(true)}>Delete Realm</button>}
-                    {details.role == "owner" && confirmDel && <>
-                        <p>Delete {details.name}. Everything in the whole realm will be deleted</p>
-                        <button>Delete it</button>
-                        <button onClick={()=> setDelete(false)}>Cancel</button>
-                    </>}
+                    {details.role == "owner" && confirmDel && 
+                        <>
+                            <p>Delete {details.name}. Everything in the whole realm will be deleted</p>
+                            <button>Delete it</button>
+                            <button onClick={()=> setDelete(false)}>Cancel</button>
+                        </>
+                    }
                 </div>
             </div>
         </div>
