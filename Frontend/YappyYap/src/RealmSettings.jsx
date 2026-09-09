@@ -23,8 +23,8 @@ export default function RealmSettings(props) {
         }
         catch(err) {
             if(err.response && err.response.data)
-                setStatus(err.response.data)
-            setStatus("Could not load realm settings")
+                showStatus(err.response.data)
+            showStatus("Could not load realm settings")
         }
         finally{
             setLoading(false)
@@ -33,6 +33,35 @@ export default function RealmSettings(props) {
     useEffect(()=> {
         load()
     }, [props.realm])
+
+    function showStatus(msg) {
+        setStatus(msg)
+        setTimeout(() => setStatus(""), 3000)
+    }
+
+    async function delRealm() {
+        try{
+            await axios.delete(`http://localhost:8004/realms/${props.realm}`)
+            props.onDelete()
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not delete the realm, try again in a while")
+        }
+    }
+
+    async function leaveRealm() {
+        try{
+            await axios.post(`http://localhost:8004/realms/${props.realm}/leave`)
+            props.onDelete()
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not leave the realm, try again later")
+        }
+    }
     if(loading)
         return (
             <div className="realm-settings-overlay">
@@ -45,7 +74,7 @@ export default function RealmSettings(props) {
         return(
             <div className="realm-settings-overlay">
                 <div className="realm-settings">
-                    <p className="cancel-cross">X</p>
+                    <p className="cancel-cross" onClick={props.onClose}>X</p>
                     <p>{status || "Could not load the realm's settings"}</p>
                 </div>
             </div>
@@ -53,7 +82,7 @@ export default function RealmSettings(props) {
     return (
         <div className="realm-settings-overlay">
             <div className="realm-settings">
-                <p className="cancel-cross">X</p>
+                <p className="cancel-cross" onClick={props.onClose}>X</p>
                 <h2>Realm Settings</h2>
                 <p>You: {details.role}</p>
                 {status && <p>{status}</p>}
@@ -88,12 +117,12 @@ export default function RealmSettings(props) {
                     </ul>
                 </div>
                 <div className="realm-setting">
-                    {details.role != "owner" && <button>Leave Realm</button>}
+                    {details.role != "owner" && <button onClick={leaveRealm}>Leave Realm</button>}
                     {details.role == "owner" && !confirmDel && <button onClick={()=> setDelete(true)}>Delete Realm</button>}
                     {details.role == "owner" && confirmDel && 
                         <>
                             <p>Delete {details.name}. Everything in the whole realm will be deleted</p>
-                            <button>Delete it</button>
+                            <button onClick={delRealm}>Delete it</button>
                             <button onClick={()=> setDelete(false)}>Cancel</button>
                         </>
                     }

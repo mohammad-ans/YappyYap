@@ -65,6 +65,25 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.post("/realms/{id}/leave")
+def leave_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not a member of this realm"}])
+    if member.role == "owner":
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Owner cannot leave realms, make someone else owner or delete the realm"}])
+    owned = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.owner == username))).scalars.all()
+    for group in owned:
+        db.execute(delete(database.Members).where(database.Members.grpId == group.id))
+        db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == group.id))
+        db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId == group.id))
+        db.execute(delete(database.Group).where(database.Group.id == group.id))
+    db.execute(delete(database.Members).where(database.Members.name == username))
+    db.execute(delete(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username)))
+    db.commit()
+    return {"msg": "Success"}
+
 @app.get("/realms/{id}/groups/{group}/details")
 def grp_details(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
@@ -277,11 +296,12 @@ def del_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_s
     mem = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not mem or mem.role != "owner":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to delete this realm"}])
-    channels = select(database.Group).where(database.Group.realmId == id)
-    db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId.in_(channels)))
-    db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId.in_(channels)))
+    groups = select(database.Group).where(database.Group.realmId == id)
+    db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId.in_(groups)))
+    db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId.in_(groups)))
     db.execute(delete(database.Members).where(database.RMembers.realm_id == id))
     db.execute(delete(database.Group).where(database.Group.realm_id == id))
+    db.execute(delete(database.Invite).where(database.Invite.realm_id == id))
     db.execute(delete(database.Realm).where(database.Realm.id == id))
     db.commit()
     return {"msg": "Success"}
@@ -423,7 +443,7 @@ def add_mem(group : str, db : Session = Depends(get_db), payload = Depends(verif
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "User could not be added"}])
 
     
-@app.post("/realm/{id}/groups/{group}/members/leave")
+@app.post("/realm/{id}/groups/{group}/members/remove")
 def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
     grp = db.execute(select(database.Group).where((database.Group.relam_id == id) & (database.Group.id == group))).scalar_one_or_none()

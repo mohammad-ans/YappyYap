@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ChatContext } from "../ChatContext";
 import useAxios from "../../hooks/useAxios";
 import useChatAuth from "../../hooks/useChatAuth";
+import RealmSettings from "../RealmSettings";
 
 export default function ChatSideBar(props) {
     const [query, setQuery] = useState("");
@@ -115,7 +116,14 @@ export default function ChatSideBar(props) {
                 </span></p>
             )}
             {settingsOpen && (
-                <div className="settings-realms"></div>
+                <RealmSettings
+                    realm={currRealm}
+                    onClose={() => setSettingsOpen(false)}
+                    onDelete={() => {
+                        setSettingsOpen(false)
+                        navigate("/chat/realms")
+                    }}
+                 />
             )}
             <hr />
             <div className="search-users-groups">
