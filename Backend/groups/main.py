@@ -65,6 +65,14 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.post("/realms/{id}/members/add")
+def add_mem(data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
+@app.post("/invites/realm/{id}")
+def invite_realm(data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
 @app.post("/realms/{id}/make-owner")
 def make_owner(id: str, data: database.MakeOwner, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]

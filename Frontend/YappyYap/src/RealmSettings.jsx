@@ -12,6 +12,9 @@ export default function RealmSettings(props) {
     const [loading, setLoading] = useState(true)
     const [removeUser, setRemoveUser] = useState(null)
     const [transferUser, setTransferUser] = useState(null)
+    const [inviteUser, setInviteUser] = useState("")
+    const [inviteLink, setInviteLink] = useState(null)
+    const [addUser, setAddUser] = useState("")
     const axios = useAxios()
     const priviliged = details.role && (details.role == "owner" || details.role == "admin")
     async function load() {
@@ -39,6 +42,48 @@ export default function RealmSettings(props) {
     function showStatus(msg) {
         setStatus(msg)
         setTimeout(() => setStatus(""), 3000)
+    }
+
+    async function addMemDirect(e) {
+        e.preventDefault()
+        const user = addUser.trim()
+        if(!user)
+            return
+        try{
+            await axios.post(`http://localhost:8004/realms/${props.realm}/members/add`, {
+                username: user
+            })
+            setStatus(`Added ${user} to the realm`)
+            setAddUser("")
+            load()
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Adding user to realm failed, try again")
+        }
+    }
+
+    async function sendInvite(e) {
+        e.preventDefault()
+        const user = inviteUser.trim()
+        if(!user)
+            return
+        try{
+            const res = await axios.post(`http://localhost:8004/invites/realm/${props.realm}`, {
+                username: user
+            })
+            const link = `http://localhost:8004/invite/${res.data.token}`
+            setInviteLink(link)
+            setInviteUser("")
+            const flag = sendInviteDm(user, details.name, link)
+            showStatus(flag ? `Invite sent to ${user} as DM` :`Invite created for ${target}, could not dm so copy it and manually send them`)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0],msg)
+            showStatus("Failed to create invite for the user, try again")
+        }
     }
 
     async function delRealm() {
@@ -124,6 +169,26 @@ export default function RealmSettings(props) {
         }
     }
 
+    function sendInviteDm(recipient, realm, link) {
+        if(!props.ws.current || props.ws.current.readyState != WebSocket.OPEN)
+            return false
+        try{
+            const msg = {recipient: recipient, defaultExpiration: false, duration: 86400, msg: `You have been invite to the realm ${realm}. Invite Link:  <a href="${link}" target="_blank" rel="noopener"></a>`}
+            props.ws.current.send(JSON.stringify(msg))
+            return true
+        }
+        catch{
+            return false
+        }
+    }
+
+    function copyLink() {
+        if(!inviteLink)
+            return
+        navigator.clipboard?.writeText(inviteLink)
+        showStatus("Invite link copied")
+    }
+
     if(loading)
         return (
             <div className="realm-settings-overlay">
@@ -161,6 +226,30 @@ export default function RealmSettings(props) {
                             <option value="all">Anyone can join without any invitation</option>
                         </select>: <p>{details.inviteType == "all"? "Open realm": "Invite only"}</p>}
                 </div>
+                {priviliged && (
+                    <div className="realm-setting">
+                        <h3>Add Member directly</h3>
+                        <form onSubmit={addMemDirect}>
+                            <input type="text" placeholder="username" value={addUser} onChange={e => setAddUser(e.target.value)}/>
+                            <button type="submit">Add</button>
+                        </form>
+                    </div>
+                )}
+                {priviliged && (
+                    <div className="realm-setting">
+                        <h3>Invite someone to Realm</h3>
+                        <form onSubmit={sendInvite}>
+                            <input type="text" placeholder="username" value={inviteUser} onChange={e => setInviteUser(e.target.value)}/>
+                            <button type="submit">Create Invite</button>
+                        </form>
+                        {inviteLink && (
+                            <div className="invite-action">
+                                <code>{inviteLink}</code>
+                                <button onClick={copyLink}>Copy</button>
+                            </div>
+                        )}
+                    </div>
+                )}
                 <div className="realm-setting">
                     <h3>Members (members.length)</h3>
                     <ul>
