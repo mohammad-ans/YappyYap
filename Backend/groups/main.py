@@ -65,6 +65,10 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.get("/invites/{token}/preview")
+def invite(token: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    pass
+
 @app.post("/realms/{id}/members/add")
 def add_mem(id: str, data: database.Username, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
