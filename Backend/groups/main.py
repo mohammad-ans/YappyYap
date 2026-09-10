@@ -65,6 +65,20 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.post("/realms/{id}/make-owner")
+def make_owner(id: str, data: database.MakeOwner, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    owner = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & (database.RMembers.role == "owner"))).scalar_one_or_none()
+    if not owner:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owner can change ownership of realm"}])
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == data.username))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "User must be a member of realm first to make them owner"}])
+    owner.role = "admin"
+    member.role = "owner"
+    db.commit()
+    return {"msg": "Success"}
+
 @app.post("/realms/{id}/leave")
 def leave_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
@@ -101,7 +115,25 @@ def mem_role_realm(id: str, data: database.MemberUpdate, db: Session = Depends(g
 
 @app.post("/realms/{id}/members/{user}/remove")
 def remove_user(id: str, user: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
+    username = payload["username"]
+    member = db.execute(select(database.RMembers).where((database.RMembers.username == username) & (database.RMembers.realm_id == id))).scalar_one_or_none()
+    if not member or member.role == "member":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owner and admins can delete users"}])
+    del_user = db.execute(select(database.RMembers).where((database.RMembers.username == user) & (database.RMembers.realm_id == id))).scalar_one_or_none()
+    if not del_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "User to be deleted not found"}])
+    if del_user.role == "owner":
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Owner cannot be removed from the realm"}])
+    owned = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.owner == user))).scalar_one_or_none()
+    for grp in owned:
+        db.execute(delete(database.Members).where(database.Members.grpId == grp.id))
+        db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == grp.id))
+        db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId == grp.id))
+        db.execute(delete(database.Group).where(database.Group.id == grp.id))
+    db.execute(delete(database.Members).where(database.Members.name == user))
+    db.execute(delete(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == user)))
+    db.commit()
+    return {"msg": "Success"}
 
 @app.get("/realms/{id}/groups/{group}/details")
 def grp_details(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):

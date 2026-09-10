@@ -11,6 +11,7 @@ export default function RealmSettings(props) {
     const [confirmDel, setDelete] = useState(false)
     const [loading, setLoading] = useState(true)
     const [removeUser, setRemoveUser] = useState(null)
+    const [transferUser, setTransferUser] = useState(null)
     const axios = useAxios()
     const priviliged = details.role && (details.role == "owner" || details.role == "admin")
     async function load() {
@@ -90,6 +91,24 @@ export default function RealmSettings(props) {
         }
     }
 
+    async function transferOwner() {
+        if(!transfer)
+            return
+        try{
+            await axios.post(`http://localhost:8004/realms/${props.realm}/make-owner`, {
+                username: transferUser
+            })
+            showStatus(`${transferUser} is now the new owner`)
+            setTransferUser(null)
+            load()
+        }
+        catch(err){
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            showStatus("Could not make the other user owner")
+        }
+    }
+
     async function remove(){
         if(!removeUser)
             return
@@ -155,6 +174,7 @@ export default function RealmSettings(props) {
                                             mem.role =="member"? 
                                             <button onClick={() => promote(mem.username)}>Promote to admin</button> : <button onClick={() => demote(mem.username)}>Demote to member</button>
                                         }
+                                        <button onClick={()=> setTransferUser(mem.username)}></button>
                                         <button onClick={() => setRemoveUser(true)}>Remove User</button>
                                     </span>
                                 )}
@@ -167,6 +187,13 @@ export default function RealmSettings(props) {
                         <p>Remove <b>{removeUser}</b> from everything in realm, delete their owned channel and remove them from every channel</p>
                         <button onClick={remove}>Remove</button>
                         <button onClick={() => setRemoveUser(null)}>Cancel</button>
+                    </div>
+                }
+                {transferUser &&
+                    <div className="realm-setting">
+                        <p>Make <b>{transferUser} the new realm owner and demote yourself to admin?</b></p>
+                        <button onClick={transferOwner}>Confirm</button>
+                        <button onClick={() => setTransferUser(null)}>Cancel</button>
                     </div>
                 }
                 <div className="realm-setting">
