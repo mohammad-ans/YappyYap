@@ -160,5 +160,5 @@ class InviteCreate(BaseModel):
     username: str
     expiresInHours: Optional[int] = Field(default=48, ge=1, le=24 * 15)
 
-class MakeOwner(BaseModel):
+class Username(BaseModel):
     username: str

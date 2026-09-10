@@ -66,15 +66,36 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 client = httpx.AsyncClient()
 
 @app.post("/realms/{id}/members/add")
-def add_mem(data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
+def add_mem(id: str, data: database.Username, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not member or member.role == "member":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owner and admins can add members"}])
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == data.username))).scalar_one_or_none()
+    if member:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "User is already in realm"}])
+    db.add(database.RMembers(realm_id=id, username=data.username, role="member"))
+    db.commit()
+    return {"msg": "Success"}
 
 @app.post("/invites/realm/{id}")
-def invite_realm(data, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
+def invite_realm(id: str, data: database.InviteCreate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not member or member.role == "member":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "Only realm admins and owner can send invites to members"}])
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == data.username))).scalar_one_or_none()
+    if member:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, status=[{"msg": "User is already in the realm"}])
+    invite = database.Invite(realm_id=id, grpId=None, invitedBy=username, username=data.username, 
+                             expiresAt= datetime.now(timezone.utc) + timedelta(hours=data.expiresInHours), scope="realm")
+    db.add(invite)
+    db.commit()
+    db.refresh(invite)
+    return invite
 
 @app.post("/realms/{id}/make-owner")
-def make_owner(id: str, data: database.MakeOwner, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+def make_owner(id: str, data: database.Username, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
     owner = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & (database.RMembers.role == "owner"))).scalar_one_or_none()
     if not owner:
@@ -158,7 +179,7 @@ def grp_details(id: str, group: str, db: Session = Depends(get_db), payload = De
     return details
 
 @app.post("/realms/{id}/groups/{group}/make-owner")
-def make_owner(id: str, group: str, data: database.MakeOwner, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+def make_owner(id: str, group: str, data: database.Username, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
     grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
     if not grp:
