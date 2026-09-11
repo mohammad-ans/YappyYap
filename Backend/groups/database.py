@@ -162,3 +162,12 @@ class InviteCreate(BaseModel):
 
 class Username(BaseModel):
     username: str
+
+class InvitePreview(BaseModel):
+    scope: str
+    realm_name: str
+    name: str | None
+    valid: bool
+    reason: str | None
+    valid_user: bool
+    invitedBy: str

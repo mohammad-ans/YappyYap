@@ -67,7 +67,17 @@ client = httpx.AsyncClient()
 
 @app.get("/invites/{token}/preview")
 def invite(token: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    pass
+    username = payload["username"]
+    invite = db.execute(select(database.Invite).where(database.Invite.token == token)).scalar_one_or_none()
+    if not invite:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Invite not found"}])
+    realm = db.execute(select(database.Realm).where(database.Realm.id == invite.realm_id)).scalar_one_or_none()
+    grp = None
+    if invite.grpId:
+        grp = db.execute(select(database.Group).where(database.Group.id == invite.grpId)).scalar_one_or_none()
+    valid, reason = valid_invite(invite, username)
+    valid_user = invite.username == username
+    return database.InvitePreview(scope=invite.scope, realm_name=realm.name, name=grp.name if grp else None, invitedBy=invite.invitedBy, valid=valid, reason=reason, valid_user=valid_user)
 
 @app.post("/realms/{id}/members/add")
 def add_mem(id: str, data: database.Username, db: Session = Depends(get_db), payload = Depends(verify_session_token)):

@@ -11,6 +11,8 @@ export default function Invite() {
     const [preview, setPreview] = useState(null)
     const [error, setError] = useState("")
     const [joining, setJoining] = useState(false)
+    const[loadingSc, setLoading] = useState(true)
+
     useEffect(() => {
         if(loading)
             return
@@ -28,9 +30,13 @@ export default function Invite() {
                     setError(err.response.data.detail[0].msg)
                 setError("Invite link not valid")
             }
+            finally{
+                setLoading(true)
+            }
         }
         loadPreview(false)
     }, [token, loading, logged])
+
     async function joinNow() {
         setJoining(true)
         try{
@@ -45,7 +51,38 @@ export default function Invite() {
                 setError(response.data.detail[0].msg)
             setError("Joining failed...")
         }
+        finally{
+            setJoining(false)
+        }
     }
+
+    if(loadingSc || loading)
+        return(
+            <div className="accept-invite-page">
+                <p>Loading invite...</p>
+            </div>
+        )
+
+    if(!preview.valid_user)
+        return(
+            <div className="accept-invite-page">
+                <div className="accept-invite-area">
+                    <p className="accept-invite-error">This invite was sent to someone else, only they can use it</p>
+                    <button onClick={() => navigate("/chat/realms")}>Back to realms</button>
+                </div>
+            </div>
+        )
+    
+    if(!preview.valid)
+        return(
+            <div className="accept-invite-page">
+                <div-accept-invite-area>
+                    <p>{preview.reason}</p>
+                    <button>Back to realms</button>
+                </div-accept-invite-area>
+            </div>
+        )
+
     if(error)
         return(
             <div className="accept-invite-page">
@@ -54,7 +91,7 @@ export default function Invite() {
                     <button onClick={() => navigate("/chat/realms")}>Back to realms</button>
                 </div>
             </div>
-    )
+        )
     return(
         <div className="accept-invite-page">
             <div className="accept-invite-area">
