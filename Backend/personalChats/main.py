@@ -12,8 +12,16 @@ import asyncio
 import datetime
 from ws_manger import RedisWs
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await manager.start()
+    yield
+    await manager.stop()
+
+app = FastAPI(lifespan=lifespan)
 
 origins = [
     "http://localhost:5173",
@@ -88,14 +96,6 @@ def personalMsgs(db : Session = Depends(get_db), payload = Depends(verify_sessio
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Messages could not be fetched"}])
     return msgs
 
-
-
-# redis = Redis(host="redis", port=6379)
-
-
-# @app.on_event("startup")
-# async def start_listen():
-#     asyncio.create_task(listen_async())
 
 async def user_online(username):
     if manager.redis is None:
