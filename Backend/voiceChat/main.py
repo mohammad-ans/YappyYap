@@ -21,7 +21,9 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+     await manager.start()
      yield
+     await manager.stop()
 
 app = FastAPI(lifespan=lifespan)
 
