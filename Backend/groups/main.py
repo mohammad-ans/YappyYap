@@ -597,7 +597,7 @@ def update_group(id: str, group: str, data: database.GrpUpdate, db: Session = De
 class ConnectionManager:
     def __init__(self):
         self.connections : dict[tuple[str, str], WebSocket] = {}
-    async def add_connection(self, websocket : WebSocket, username : str, grpName : str):
+    def add_connection(self, websocket : WebSocket, username : str, grpName : str):
         self.connections[(username, grpName)] = websocket
     def disconnect(self, username : str, grpName : str):
       if (username, grpName) in self.connections:
@@ -631,7 +631,7 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
     username = payload["username"]
     senderName = username
     await user.accept()
-    await manager.add_connection(user, username, group)
+    manager.add_connection(user, username, group)
     await mark_online(manager_text, f"groups:text:online:{group}", username, True)
     try:
         while True:
@@ -717,7 +717,7 @@ async def total_active(group : str, payload = Depends(verify_session_token)):
 class Connection_ManagerVoice:
     def __init__(self):
         self.connections : dict[tuple[str, str], WebSocket] = {}
-    async def add_connection(self, websocket : WebSocket, username : str, grpName : str):
+    def add_connection(self, websocket : WebSocket, username : str, grpName : str):
         self.connections[(username, grpName)] = websocket
     def disconnect(self, username : str, grpName : str):
       if (username, grpName) in self.connections:
@@ -739,7 +739,7 @@ manager_voice = ws_manger.RedisWs(grp="groups:voice", on_event=on_voice_event)
 async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_session_token), db : Session = Depends(get_db)):
     username = payload["username"]
     await user.accept()
-    await managerV.add_connection(user, username, group)
+    managerV.add_connection(user, username, group)
     await mark_online(manager_voice, f"groups:voice:online:{group}", username, True)
     senderName = username
     try:

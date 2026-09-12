@@ -119,7 +119,7 @@ async def mark_online(username: str, online: bool):
 class ConnectionManager:
     def __init__(self):
         self.connections : dict[str, WebSocket] = {}
-    async def add_connection(self, websocket : WebSocket, username : str):
+    def add_connection(self, websocket : WebSocket, username : str):
         self.connections[username] = websocket
     def disconnect(self, username : str):
       if username in self.connections:
@@ -148,7 +148,7 @@ manager = RedisWs(grp="personalchats:dm", on_event=dm_event)
 async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
     await user.accept()
-    await manager_local.add_connection(user, username)
+    manager_local.add_connection(user, username)
     await mark_online(username, True)
     try:
         while True:
