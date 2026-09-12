@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
     yield
     await manager.stop()
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 load_dotenv()
 
