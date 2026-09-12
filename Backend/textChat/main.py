@@ -7,11 +7,20 @@ from datetime import datetime, timezone, timedelta
 import asyncio
 from coolname import generate_slug
 import httpx
-import os, jwt
+import os, jwt, ws_manger
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await manager.start()
+    yield
+    await manager.stop()
+    client.aclose()
+
+app = FastAPI(lifespan=lifespan)
 
 load_dotenv()
 
@@ -31,6 +40,7 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 ALGORITHM = "HS256"
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+client = httpx.AsyncClient(timeout=5.0)
 
 def get_db(): 
     with session() as db:
@@ -60,8 +70,7 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 class ConnectionManager:
     def __init__(self):
         self.connections : dict[str, WebSocket] = {}
-    async def add_connection(self, websocket : WebSocket, username : str):
-        await websocket.accept()
+    def add_connection(self, websocket : WebSocket, username : str):
         self.connections[username] = websocket
     def disconnect(self, username : str):
       if username in self.connections:
@@ -70,58 +79,79 @@ class ConnectionManager:
         for user in self.connections:
             await self.connections[user].send_text(message)
 
-manager = ConnectionManager()
+manager_local = ConnectionManager()
 
-# async def websoc(user : WebSocket, db : Session = Depends(get_db)):
+async def on_event(data):
+    await manager_local.send_message(data[""])
+
+manager = ws_manger.RedisWs(grp="textchat:global", on_event=on_event)
+
+async def mark_online(manager: ws_manger.RedisWs, username: str, online: bool):
+    if manager.redis is None:
+        return
+    try:
+        if online:
+            await manager.redis.sadd("textchat:online", username)
+        else:
+            await manager.redis.srem("textchat:online", username)
+    except:
+        pass
+
 @app.websocket("/ws/global")
 async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     MAX_TIME = payload["exp"]
     username = payload["username"]
     senderName = username
-    await manager.add_connection(user, username)
+    await user.accept()
+    manager_local.add_connection(user, username)
+    await mark_online(manager, username, True)
     try:
         while True:
             
             try:
-                data = await user.receive_json()
-                if "anonymity" in data and data["anonymity"] == True:
-                    client = httpx.AsyncClient()
-                    while True:
-                        senderName = generate_slug(2)
-                        response_username = await client.get(f"http://auth:8000/userCheck/{username}")
-                        if response_username.json()["msg"] == False:
-                            break
-                        # already_exists = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
-                        # if not already_exists:
-                        #     break
-                    await client.aclose()
-                seconds = int(data["expire"])
-                msg = data["msg"]
-                time = datetime.now(timezone.utc)
-                message = Msgs(
-                    msg = msg,
-                    username = senderName,
-                    time_sent = time,
-                    expiry = time + timedelta(seconds=seconds)
-                )
-                temp = Msg_return.from_orm(message).model_dump_json()
-                db.add(message)
-                db.commit()
-                await manager.send_message(temp)
-            except WebSocketDisconnect:
-                manager.disconnect(username)
-                break
+                data = await asyncio.wait_for(user.receive_json(), timeout=30)
             except asyncio.TimeoutError:
-                manager.disconnect(username)
-                break
-            except Exception as e:
-                await manager.connections[username].send_text("An error occured")
-                manager.disconnect(username)
-                print("An exception occured", e)
-                break
+                try:
+                    await user.send_json({"type": "ping"})
+                    data = await asyncio.wait_for(user.receive_json(), timeout=30)
+                except:
+                    break
+            if data.get("type") == "pong":
+                continue
+            if "anonymity" in data and data["anonymity"] == True:
+                while True:
+                    senderName = generate_slug(2)
+                    response_username = await client.get(f"http://auth:8000/userCheck/{username}")
+                    if response_username.json()["msg"] == False:
+                        break
+                    # already_exists = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
+                    # if not already_exists:
+                    #     break
+                await client.aclose()
+            seconds = int(data["expire"])
+            msg = data["msg"]
+            time = datetime.now(timezone.utc)
+            message = Msgs(
+                msg = msg,
+                username = senderName,
+                time_sent = time,
+                expiry = time + timedelta(seconds=seconds)
+            )
+            temp = Msg_return.from_orm(message).model_dump_json()
+            db.add(message)
+            db.commit()
+            await manager.publish({"payload": temp})
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        try:
+            await user.send_text("An error occured")
+        except:
+            pass
     finally:
         if username in manager.connections:
             manager.disconnect(username)
+        await mark_online(manager, username, False)
 
 # async def send_messages(db : Session = Depends(get_db)):
 @app.get("/getchatmsgs/global")
@@ -137,8 +167,14 @@ async def send_messages(db : Session = Depends(get_db), payload = Depends(verify
     }
 
 @app.get("/global/livecount")
-def total_active(payload = Depends(verify_session_token)):
+async def total_active(payload = Depends(verify_session_token)):
+    if manager.redis is not None:
+        try:
+            total = await manager.redis.scard("textchat:online")
+            return {"msg": "Success", "total": total}
+        except:
+            pass
     return {
         "msg" : "Success",
-        "total":len(manager.connections)
+        "total":len(manager_local.connections)
     }
