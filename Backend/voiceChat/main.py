@@ -14,11 +14,16 @@ from struct import pack
 from coolname import generate_slug
 import httpx
 from typing import Annotated
-import jwt
+import jwt, ws_manger, asyncio, base64
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+     yield
+
+app = FastAPI(lifespan=lifespan)
 
 load_dotenv()
 
@@ -69,8 +74,7 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 class Connection_Manager:
     def __init__(self):
         self.active_connections : dict[str, WebSocket] = {}
-    async def add_connection(self, websocket : WebSocket, username  : str):
-        await websocket.accept()
+    def add_connection(self, websocket : WebSocket, username  : str):
         self.active_connections[username] = websocket
     def disconnect(self, username : str):
          if username in self.active_connections:
@@ -79,18 +83,43 @@ class Connection_Manager:
          for connection in self.active_connections:
               await self.active_connections[connection].send_bytes(message)
 
-manager = Connection_Manager()
+manager_local = Connection_Manager()
+async def on_event(data):
+     await manager_local.send_message(base64.b64decode(data["payload_b64"]))
 
+async def mark_online(manager: ws_manger.RedisWs, username: str, online: bool):
+    if manager.redis is None:
+         return
+    try:
+        if online:
+              await manager.redis.sadd("voicechat:online", username)
+        else:
+            await manager.redis.srem("voicechat:online")
+    except:
+        pass
+
+manager = ws_manger.RedisWs(on_event=on_event)
 
 @app.websocket("/voice/ws/voice")
 async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), db : Session = Depends(get_db)):
     username = payload["username"]
-    await manager.add_connection(user, username)
     senderName = username
+    await user.accept()
+    manager_local.add_connection(user, username)
+    await mark_online(manager, username, True)
     try:
         expiry_seconds = 0
         while True:
-            data = await user.receive()
+            try:
+                 data = await asyncio.wait_for(user.receive_json(), 30)
+            except asyncio.TimeoutError:
+                 try:
+                    await user.send_json({"type": "ping"})
+                    data = await asyncio.wait_for(user.receive_json(), 30)
+                 except:
+                      break
+            if data.get("type") == "pong":
+                 continue
             if "bytes" in data:
                 time = datetime.now(timezone.utc)
                 try:
@@ -129,11 +158,10 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
                         expiry_time = pack(">d", expiry.timestamp())
 
                         complete_payload = time_sent + expiry_time + username_length.to_bytes(4, "big") + username_payload + payload
-                        await manager.send_message(complete_payload)
+                        await manager.publish({"payload_b64": base64.b64encode(complete_payload).decode("ascii")})
                 except WebSocketDisconnect:
-                    print("closed")
+                    raise
                 except Exception as e:
-                    print(e)
                     try:
                         await user.send_text("An error occured")
                     except:
@@ -158,14 +186,14 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
     except WebSocketDisconnect:
          print("closed")
     except Exception as e:
-                    print(e)
-                    try:
-                        await user.send_text("An error occured")
-                    except:
-                         pass
+        print(e)
+        try:
+            await user.send_text("An error occured")
+        except:
+                pass
     finally:
-         print("Disconnet")
-         manager.disconnect(username)
+         manager_local.disconnect(username)
+         await mark_online(manager, username, False)
 
 @app.get("/voice/getmsgs/voice")
 async def get_msgs(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -197,8 +225,14 @@ async def get_msgs(db : Session = Depends(get_db), payload = Depends(verify_sess
 
 
 @app.get("/voice/livecount")
-def total_active(payload = Depends(verify_session_token)):
+async def total_active(payload = Depends(verify_session_token)):
+    if manager.redis is not None:
+        try:
+            total = await manager.redis.scard("voicechat:online")
+            return {"msg": "Success", "total": total}
+        except:
+            pass
     return {
         "msg" : "Success",
-        "total":len(manager.active_connections)
+        "total":len(manager_local.active_connections)
     }

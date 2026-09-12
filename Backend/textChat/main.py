@@ -150,7 +150,7 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
             pass
     finally:
         if username in manager.connections:
-            manager.disconnect(username)
+            manager_local.disconnect(username)
         await mark_online(manager, username, False)
 
 # async def send_messages(db : Session = Depends(get_db)):
