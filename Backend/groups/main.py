@@ -9,13 +9,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
 import asyncio
-import zipfile, io
+import zipfile, io, base64
 from fastapi.responses import StreamingResponse
 from json import loads
 from struct import pack
 from subprocess import run, PIPE
 from tempfile import NamedTemporaryFile
 from dotenv import load_dotenv
+import ws_manger
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await manager.start
+    yield
+    await manager.stop()
 
 app = FastAPI()
 
@@ -590,7 +598,6 @@ class ConnectionManager:
     def __init__(self):
         self.connections : dict[tuple[str, str], WebSocket] = {}
     async def add_connection(self, websocket : WebSocket, username : str, grpName : str):
-        await websocket.accept()
         self.connections[(username, grpName)] = websocket
     def disconnect(self, username : str, grpName : str):
       if (username, grpName) in self.connections:
@@ -601,6 +608,21 @@ class ConnectionManager:
                 await self.connections[user].send_text(message)
 
 manager = ConnectionManager()
+async def on_txt_event(data):
+    await manager.send_message(data["payload"], data["group"])
+
+manager_text = ws_manger.RedisWs(grp="groups:text", on_event=on_txt_event)
+
+async def mark_online(manager: ws_manger.RedisWs, key: str, username: str, online: bool):
+    if manager.redis is None:
+        return
+    try:
+        if online:
+            await manager.redis.sadd(key, username)
+        else:
+            await manager.redis.srem(key, username)
+    except:
+        pass
 
 # async def websoc(user : WebSocket, db : Session = Depends(get_db)):
 @app.websocket("/ws/{group}")
@@ -608,12 +630,23 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
     MAX_TIME = payload["exp"]
     username = payload["username"]
     senderName = username
+    await user.accept()
     await manager.add_connection(user, username, group)
+    await mark_online(manager_text, f"groups:text:online:{group}", username, True)
     try:
         while True:
             
             try:
-                data = await user.receive_json()
+                data = await asyncio.wait_for(user.receive_json(), timeout=30)
+            except asyncio.TimeoutError:
+                try:
+                    await user.send_json({"type": "ping"})
+                    data = await asyncio.wait_for(user.receive_json(), timeout=30)
+                except:
+                    break
+
+                if data.get("type") == "pong":
+                    continue
                 if "anonymity" in data and data["anonymity"] == True:
                     
                     while True:
@@ -637,23 +670,19 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
                 temp = database.Msg_return.from_orm(message).model_dump_json()
                 db.add(message)
                 db.commit()
-                await manager.send_message(temp, group)
+                await manager_text.publish({"payload": temp, "group": group})
             except WebSocketDisconnect:
-                manager.disconnect(username, group)
-                break
-            except asyncio.TimeoutError:
-                manager.disconnect(username, group)
                 break
             except Exception as e:
-                await user.send_text("An error occured")
-                manager.disconnect(username, group)
-                print("An exception occured", e)
-                break
+                try:
+                    await user.send_text("An error occured")
+                except:
+                    pass
     finally:
         if username in manager.connections:
             manager.disconnect(username, group)
+        mark_online(manager_text, f"groups:text:online:{group}", username, False)
 
-# async def send_messages(db : Session = Depends(get_db)):
 @app.get("/getchatmsgs/{group}")
 async def send_messages(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
@@ -667,7 +696,13 @@ async def send_messages(group : str, db : Session = Depends(get_db), payload = D
     }
 
 @app.get("/global/{group}/livecount")
-def total_active(group : str, payload = Depends(verify_session_token)):
+async def total_active(group : str, payload = Depends(verify_session_token)):
+    if manager_text.redis is not None:
+        try:
+            count = await manager_text.redis.scard(f"groups:text:online:{group}")
+            return {"msg": "Sucess","total": count}
+        except:
+            pass
     count = 0
     for user in manager.connections:
         if user[1] == group:
@@ -683,28 +718,41 @@ class Connection_ManagerVoice:
     def __init__(self):
         self.connections : dict[tuple[str, str], WebSocket] = {}
     async def add_connection(self, websocket : WebSocket, username : str, grpName : str):
-        await websocket.accept()
         self.connections[(username, grpName)] = websocket
     def disconnect(self, username : str, grpName : str):
       if (username, grpName) in self.connections:
         del self.connections[(username, grpName)]
-    async def send_message(self, message : database.Msg_return, grpName : str):
+    async def send_message(self, message, grpName : str):
         for user in self.connections:
             if user[1] == grpName:
                 await self.connections[user].send_text(message)
 
 managerV = Connection_ManagerVoice()
 
+async def on_voice_event(data: dict):
+    await managerV.send_message(base64.b64decode(data["payload_b64"]), data["group"])
+
+manager_voice = ws_manger.RedisWs(grp="groups:voice", on_event=on_voice_event)
+
 
 @app.websocket("/voice/ws/{group}")
 async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_session_token), db : Session = Depends(get_db)):
     username = payload["username"]
+    await user.accept()
     await managerV.add_connection(user, username, group)
+    await mark_online(manager_voice, f"groups:voice:online:{group}", username, True)
     senderName = username
     try:
         expiry_seconds = 0
         while True:
-            data = await user.receive()
+            try:
+                data = await asyncio.wait_for(user.receive(), timeout=30)
+            except asyncio.TimeoutError:
+                try:
+                    await user.send_json({"type": "ping"})
+                    data = await asyncio.wait_for(user.receive(), 30)
+                except:
+                    break
             if "bytes" in data:
                 time = datetime.now(timezone.utc)
                 try:
@@ -744,7 +792,7 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                         expiry_time = pack(">d", expiry.timestamp())
 
                         complete_payload = time_sent + expiry_time + username_length.to_bytes(4, "big") + username_payload + payload
-                        await manager.send_message(complete_payload, group)
+                        await manager_voice.publish({"payload_b64": base64.b64encode(complete_payload).decode("ascii"), "group": group})
                 except WebSocketDisconnect:
                     print("closed")
                 except Exception as e:
@@ -771,16 +819,15 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                         #      break
                 expiry_seconds = int(js["expiry"])
     except WebSocketDisconnect:
-         print("closed")
+        pass
     except Exception as e:
-                    print(e)
                     try:
                         await user.send_text("An error occured")
                     except:
                          pass
     finally:
-         print("Disconnet")
          managerV.disconnect(username, group)
+         await mark_online(manager_voice, f"groups:voice:online:{group}", username, False)
 
 @app.get("/voice/getmsgs/{group}")
 async def get_msgs(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -797,22 +844,14 @@ async def get_msgs(group : str, db : Session = Depends(get_db), payload = Depend
     return StreamingResponse(zip_file)
 
 
-# @app.get("/accountmsgs")
-# def account_msgs(db : Session = Depends(get_db), pd = Depends(verify_session_token)):
-#     time = datetime.now(timezone.utc) + timedelta(seconds=2)
-#     msgs = db.execute(select(VoiceMsgs).where(VoiceMsgs.expiry > time)).scalars().all()
-#     payload = []
-#     for msg in msgs:
-#          temp = {"expiry" : msg.expiry, "time_sent" : msg.time_sent, "type" : "Voice"}
-#          payload.append(temp)
-#     msgs = db.execute(select(Msgs).where(Msgs.expiry > time)).scalars().all()
-#     for msg in msgs:
-#          payload.append(Msg_return.from_orm(msg))
-#     return {"msgs" : payload}
-
-
 @app.get("/voice/{group}/livecount")
-def total_active(group : str, payload = Depends(verify_session_token)):
+async def total_active(group : str, payload = Depends(verify_session_token)):
+    if manager_voice is not None:
+        try:
+            count = await manager_voice.redis.scard(f"groups:voice:online:{group}")
+            return {"msg": "Success", "total": count}
+        except:
+            pass
     count = 0
     for user in managerV.connections:
         if user[1] == group:
