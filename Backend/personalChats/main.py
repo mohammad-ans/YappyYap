@@ -5,18 +5,23 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, update, func, text
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Cookie
 from sqlalchemy.orm import Session
-from coolname import generate_slug
 import os, jwt, httpx
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 import asyncio
-import json
-from redis.asyncio import Redis
 import datetime
-import time
+from ws_manger import RedisWs
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await manager.start()
+    yield
+    await manager.stop()
+
+app = FastAPI(lifespan=lifespan)
 
 origins = [
     "http://localhost:5173",
@@ -41,24 +46,24 @@ PRIVATE_KEY = os.getenv("PRIVATE_KEY")
 
 ALGORITHM = "HS256"
 
-# async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
-#     payload = {"username" : "NA", "type" : "admin", "exp" : 0}
-#     return payload
-
 async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
-    if not session_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
-    try:
-        payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
-        if not payload:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Payload not found"}])
-        if not payload["username"]:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Username Not found"}])
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid Token"}])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Expired Token"}])
+    payload = {"username" : "NA", "type" : "admin", "exp" : 0}
     return payload
+
+# async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
+#     if not session_token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
+#     try:
+#         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
+#         if not payload:
+#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Payload not found"}])
+#         if not payload["username"]:
+#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Username Not found"}])
+#     except jwt.InvalidTokenError:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid Token"}])
+#     except jwt.ExpiredSignatureError:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Expired Token"}])
+#     return payload
 
 @app.get("/dms")
 def personalMsgs(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -92,64 +97,72 @@ def personalMsgs(db : Session = Depends(get_db), payload = Depends(verify_sessio
     return msgs
 
 
+async def user_online(username):
+    if manager.redis is None:
+        return username in manager_local.connections
+    try:
+        return bool(await manager.redis.sismember("personalchats:online" ,username))
+    except:
+        return username in manager_local.connections
 
-# redis = Redis(host="redis", port=6379)
-
-
-# @app.on_event("startup")
-# async def start_listen():
-#     asyncio.create_task(listen_async())
-
+async def mark_online(username: str, online: bool):
+    if manager.redis is None:
+        return
+    try:
+        if online:
+            await manager.redis.add("personalchats:online", username)
+        else:
+            await manager.redis.srem("personalchats:online", username)
+    except Exception:
+        pass
 
 class ConnectionManager:
     def __init__(self):
         self.connections : dict[str, WebSocket] = {}
     async def add_connection(self, websocket : WebSocket, username : str):
-        await websocket.accept()
         self.connections[username] = websocket
     def disconnect(self, username : str):
       if username in self.connections:
         del self.connections[username]
     async def send_message(self, message, username):
+        ws = self.connections.get(username)
         try:
             await self.connections[username].send_text(message)
             return True
         except:
             return False
 
-            
-        # if self.connections[username]:
-        #     await self.connections[username].send_json(message)
 
 
 
     
-manager = ConnectionManager()
+manager_local = ConnectionManager()
 
-# async def listen_async():
-#     pubsub = redis.pubsub()
-#     await pubsub.subscribe("notifications")
+async def dm_event(data: dict):
+    for user in (data["sender"], data["receiver"]):
+        await manager_local.send_message(user, data["payload"])
 
-#     async for msg in pubsub.listen():
-#         try:
-#             if msg["type"] == "message":
-#                 data = json.load(msg["data"]) 
-#                 await manager.send_message(data["username"], {"notification" : data["msg"]})
-#         except:
-#             pass
+manager = RedisWs(grp="personalchats:dm", on_event=dm_event)
 
-# async def websoc(user : WebSocket, db : Session = Depends(get_db)):
-# async def websoc(user : WebSocket, db : Session = Depends(get_db)):
 @app.websocket("/ws/main")
 async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
-    MAX_TIME = payload["exp"]
     username = payload["username"]
-    await manager.add_connection(user, username)
+    await user.accept()
+    await manager_local.add_connection(user, username)
+    await mark_online(username, True)
     try:
         while True:
             
             try:
-                data = await user.receive_json()
+                data = await asyncio.wait_for(user.receive_json(), 30)
+            except asyncio.TimeoutError:
+                try:
+                    await user.send_json({"type": "ping"})
+                    data = await asyncio.wait_for(user.receive_json(), 30)
+                except (asyncio.TimeoutError, Exception):
+                    break
+                if data.get("type") == "pong":
+                    continue
                 if "recipient" in data:
                     secondUser = data["recipient"]
                     timeCurr = datetime.datetime.now(datetime.timezone.utc)
@@ -159,7 +172,7 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                         exp = timeCurr + datetime.timedelta(seconds=data["duration"])
                     else:
                         exp = None
-                        if secondUser in manager.connections:
+                        if await user_online(secondUser):
                             exp = timeCurr + datetime.timedelta(seconds=data["duration"])
                     msg = ""
                     if "type" in data:
@@ -184,27 +197,20 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                         )
                         msg = database.Msg_return.from_orm(message).model_dump_json()
                     db.add(message)
-                    if(not await manager.send_message(msg, secondUser) and not defaultExpiration):
-                        message.defaultExpiration = None
-
                     db.commit()
+
+                    await manager.publish({"payload": msg, "sender": username, "receiver": secondUser})
             except WebSocketDisconnect:
-                manager.disconnect(username)
-                break
-            except asyncio.TimeoutError:
-                manager.disconnect(username)
-                break
+                pass
             except Exception as e:
                 print(e)
-                manager.disconnect(username)
-                break
     finally:
         if username in manager.connections:
             manager.disconnect(username)
+        await mark_online(username, False)
+
 
 @app.get("/livecount/{user}")
-def check_user(user : str, payload = Depends(verify_session_token)):
-    for conn in manager.connections:
-        if user == conn:
-            return {"msg" : "Success", "total" : "online"}
-    return {"msg" : "Success", "total" : "offline"}
+async def check_user(user : str, payload = Depends(verify_session_token)):
+    online = await user_online(user)
+    return {"msg" : "Success", "total" : "online" if online else "offline"}

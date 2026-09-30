@@ -58,7 +58,8 @@ export default function Global(props) {
         const axios = useAxios()
         async function getMessages() {
             try {
-                const messages = await axios.get(`https://${props.url}/getchatmsgs/${props.realm["name"]}`)
+                // const messages = await axios.get(`https://${props.url}/getchatmsgs/${props.realm["name"]}`)
+                const messages = await axios.get(`http://${props.url}/getchatmsgs/${props.realm["name"]}`)
                 if (messages.data.msg == "Success") {
                     const response = messages.data.msgs;
                     const parent_element = document.querySelector(".msgs");
@@ -109,7 +110,8 @@ export default function Global(props) {
         let webreconInterval = 2000;
         function connect() {
             // ws.current = new WebSocket(`wss://api.yappyyap.xyz/ws`);
-            ws.current = new WebSocket(`wss://${props.url}/ws/${props.realm["name"]}`)
+            // ws.current = new WebSocket(`wss://${props.url}/ws/${props.realm["name"]}`)
+            ws.current = new WebSocket(`ws://${props.url}/ws/${props.realm["name"]}`)
             ws.current.onopen = () => {
                 getMessages()
             }
@@ -388,8 +390,6 @@ export default function Global(props) {
                 </div>
             </div>
         </div>
-        {/* <Members url={`localhost:8004/${props.realm["name"]}`} owner={props.realm["owner"]} inviteType={props.realm["inviteType"]}/> */}
-        {realmRef.current != "global" && <Members url={`groups.yappyyap.xyz/${props.realm["name"]}`} owner={props.realm["owner"]} inviteType={props.realm["inviteType"]}/>}
         </>
-    )
+        )
 }

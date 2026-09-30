@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import "./Chat.css"
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { Routes, Route, Navigate } from "react-router-dom"
 import ChatSideBar from "./Chat-Modules/ChatSideBar"
 import ChatHeader from "./Chat-Modules/ChatHeader"
@@ -12,6 +12,7 @@ import useAxios from "../hooks/useAxios"
 import Personal from "./Personal"
 import { ChatContext } from "./ChatContext"
 import default_image from "./assets/default_img.png"
+import AllRealmsPage from "./AllRealmsPage"
 
 export default function Chat(props) {
     const { username } = useChatAuth();
@@ -22,8 +23,9 @@ export default function Chat(props) {
     const [theme, setTheme] = useState("blue");
     const [addArea, setAddArea] = useState(false);
     const {setError, setTrigger} = useChatAuth();
-    // const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
-    const [groups, setGroups] = useState({ "Realms": [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all" }], "Direct Messages" : [] })
+    const globalChannels = [{ "name": "global-text", display: "Global Chat", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all", channel: null, role: "member"}, { "name": "global-voice", display: "Global Voice","grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all", channel: null, role: "member" }]
+    const [groups, setGroups] = useState({"Direct Messages": [], "Groups": []})
+    // const [groups, setGroups] = useState()
     const dmUsersRef = useRef([]);
     const [dmMsgs, setDmMsgs] = useState([]);
     // const [notifications, setNotifications] = useState([]);
@@ -35,6 +37,8 @@ export default function Chat(props) {
     const location = useLocation();
     const liveCount = useRef(true);
     const navigate = useNavigate()
+    const [currRealm, setCurrRealm] = useState("global")
+    const [realmDetails, setRealmDetails] = useState(null)
     useEffect(() => {
         let temp = localStorage.getItem("theme");
         if (temp) {
@@ -42,47 +46,40 @@ export default function Chat(props) {
             props.setChatInstructions(false);
         }
     }, [])
-    async function getGroups() {
-        try {
-            // const response = await axios.get("http://localhost:8004/groups");
-            const response = await axios.get(`https://groups.yappyyap.xyz/groups/all/${username}`);
-            // console.log(response.data)
-            const tempGroups = response.data;
-            console.log(tempGroups)
-            tempGroups.map((element) => {
-                if (element.grpType == "text")
-                    // element["url"] = "localhost:8004";
-                    element["url"] = "groups.yappyyap.xyz";
-                else
-                    // element["url"] = "localhost:8004/voice";
-                    element["url"] = "groups.yappyyap.xyz/voice";
-
-                return element
-            })
-            
-            // const realms = [{ "name": "global", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
-            const realms = [{ "name": "global", "grpType": "text", "url": "textchat.yappyyap.xyz", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all"}, { "name": "voice", "grpType": "voice", "url": "voice.yappyyap.xyz/voice", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all" }].concat(tempGroups)
-            console.log(realms)
-            setGroups((pre) => {
-                return { ...pre, "Realms": realms }
-            })
+    const setRealmGrps = useCallback(async (id) => {
+        if(id == "global"){
+            setRealmDetails({id: "global", name: "Global", role: "member", isGlobal: true})
+            setGroups(pre => ({...pre, "Groups": globalChannels}))
+            return globalChannels
         }
-        catch (err) {
-                if (err.response && err.response.data) {
-                    setError(pre => err.response.data.detail[0].msg);
-                    setTrigger(t => !t);
-                    if (ws.current && ws.current.readyState == WebSocket.OPEN)
-                        ws.current.close();
-                    navigate("/signin")
-                }
+        try{
+            const realm = await axios.get(`http://localhost:8004/realms/${id}`)
+            const res = await axios.get(`http://localhost:8004/realms/${id}/groups`)
+            setRealmDetails(realm.data)
+            const groups = res.data.map(grp => ({
+                name: grp.id, display: grp.name, groupId: grp.id, realmId: id, grpType: grp.grpType,
+                url: grp.grpType == "text" ? "localhost:8004" : "localhost:8004/voice",
+                owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType
+            }))
+            setGroups(pre => ({...pre, "Groups": groups}))
+            return groups
         }
-    }
-    useEffect(() => {
-        getGroups()
+        catch(err){
+            if (err.response && err.response.data) {
+                setError(pre => err.response.data.detail[0].msg)
+                setTrigger(t => !t)
+            }
+            return []
+        }  
     }, [])
+    const setCurrentRealm = useCallback(async (id) => {
+        setCurrRealm(id)
+        return await setRealmGrps(id)
+    }, [setRealmGrps])
     async function getDms() {
         try {
-            const response = await axios.get("https://chat.yappyyap.xyz/dms")
+            // const response = await axios.get("https://chat.yappyyap.xyz/dms")
+            const response = await axios.get("http://localhost:8005/dms")
             let arr = {};
             response.data.forEach(element => {
                 // let secondUser = 
@@ -177,8 +174,8 @@ export default function Chat(props) {
         function connect() {
 
             try {
-                // ws.current = new WebSocket("ws://localhost:8005/ws");
-                ws.current = new WebSocket("wss://chat.yappyyap.xyz/ws/main");
+                ws.current = new WebSocket("ws://localhost:8005/ws/main");
+                // ws.current = new WebSocket("wss://chat.yappyyap.xyz/ws/main");
                 ws.current.onopen = () => {
                     setDms(getDms());
                 }
@@ -276,8 +273,11 @@ export default function Chat(props) {
         }
         catch { }
     }
+    function getGroups() {
+        setCurrentRealm(currRealm)
+    }
     return (
-        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups }}>
+        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, currRealm, realmDetails, setCurrentRealm}}>
             <main className="chat-area nav-close-styles" onClick={clearClick}>
                 {props.chatInstructions ? <div className="instructions-overlay">
                     <div className="instructions">
@@ -309,18 +309,67 @@ export default function Chat(props) {
                         {
                             groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)
                         }
-                        {
-                            groups["Realms"].map(element => <Route
-                                key={`${element["name"]}-realm`} path={`/${element["name"]}`} element={element["grpType"] == "text" ? (<Global key={`${element["name"]}-realm`} url={element["url"]} realm={element} />) : (<Voice key={`${element["name"]}-realm`} url={element["url"]} realm={element} />)}
-                            />)
-                        }
+                        <Route path="/realms/:realmId" element={<RealmPage/>} />
+                        <Route path="/realms" element={<AllRealmsPage/>} />
+                        <Route path="/realms/:realmId/:groupKey" element={<ChannelRoute/>} />
                         <Route path="*" element={<DefaultRoot />} />
                     </Routes>
-                    {/* {realm === "global-realm" ? <Global/> : <Voice/>} */}
                 </div>
             </main>
         </ChatContext.Provider>
     )
+}
+
+function RealmPage(){
+    const {realm} = useParams()
+    const navigate = useNavigate()
+    const {setCurrRealm} = useContext(ChatContext)
+
+    useEffect(()=> {
+        async function move() {
+            const grps = await setCurrRealm(realm)
+            if (grps & grps.length > 0) {
+                navigate(`/chat/realms/${realm}/c/${grps[0].name}`, {replace: true})
+            }
+        }
+        move()
+    }, [realm])
+    return (
+        <div className="realm-empty">
+            <p>This realm has no groups yet, you can create one from the sidebar.</p>
+        </div>
+    )
+}
+function ChannelRoute() {
+    const {realm, groupKey} = useParams()
+    const {groups, currRealm, setCurrRealm} = useContext(ChatContext)
+    const [group, setGroup] = useState(null)
+    const [notFound, setFound] = useState(false)
+
+    useEffect(()=> {
+        async function setGrp() {
+            let list = groups["Groups"]
+            if(currRealm !== realm) {
+                list = await setCurrRealm(realm)
+            }
+            const found = (list || []).find(grp => grp.name === groupKey)
+            if (found)
+                setGroup(found)
+            else
+                setFound(true)
+        }
+        setGrp()
+    }, [realm, channel])
+    if (notFound)
+        return (<div className="realm-empty">
+            <p>Group Not Found</p>
+        </div>)
+    if (!group)
+        return (<div>
+            <p>Loading...</p>
+        </div>)
+    return group.grpType == "text" ? <Global key={`${group.name}-realm`} url={group.url} realm={group}/> : <Voice key={`${group.name}-realm`} url={group.url} realm={group} />
+
 }
 function DefaultRoot() {
     return (

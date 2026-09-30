@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { gsap } from "gsap/gsap-core"
 import useAxios from "../hooks/useAxios"
-import default_image from "./assets/default_img.png"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import TypeArea from "./Voice/TypeArea";

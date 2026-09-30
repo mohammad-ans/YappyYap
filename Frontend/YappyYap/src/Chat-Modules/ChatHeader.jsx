@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useContext } from "react"
 import useChatAuth from "../../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import { ChatContext } from "../ChatContext";
+import GroupSettings from "./GroupSettings";
 export default function ChatHeader(props) {
     const [online, setOnline] = useState(0);
     const [members, setMembers] = useState(0);
@@ -11,34 +12,38 @@ export default function ChatHeader(props) {
     const {setError, setTrigger} = useChatAuth();
     const [displayname, setDisplay] = useState("");
     const navigate = useNavigate();
-    const {realmType} = useContext(ChatContext);
+    const {realmType, currRealm, groups} = useContext(ChatContext);
+    const currGrp = props.realmRef.current && props.realmRef.current.endsWith("-realm") ? props.realmRef.current.slice(0, -6) : null
+    const isGrp = currRealm !== "global" && currGrp && props.realmRef.current !== "dms"
+    const display = (groups["Groups"].find(grp => grp["name"] == currGrp) || {})["display"]
+    const [settingsOpen, setSettingsOpen] = useState(false)
     const getOnline = useCallback(async ()=> {
         try{
             let response;
             document.querySelector(".members").style.display = "none";
             if (props.realmRef.current == "dms"){
-                // response = await axios.get(`http://localhost:8005/${props.user.current}`);
-                response = await axios.get(`https://chat.yappyyap.xyz/livecount/${props.user.current}`);
+                response = await axios.get(`http://localhost:8005/${props.user.current}`);
+                // response = await axios.get(`https://chat.yappyyap.xyz/livecount/${props.user.current}`);
             }else{
                 let initialPath;
                 if (props.realmRef.current == "voice-realm") {
-                    // initialPath = "3/voice";
-                    initialPath = "voice.yappyyap.xyz/voice";
+                    initialPath = "3/voice";
+                    // initialPath = "voice.yappyyap.xyz/voice";
                 }
                 else if (props.realmRef.current == "global-realm") {
-                    // initialPath = "2/global"
-                    initialPath = "textchat.yappyyap.xyz/global"
+                    initialPath = "2/global"
+                    // initialPath = "textchat.yappyyap.xyz/global"
                 }
                 else {
-                    // initialPath = `4/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
-                    initialPath = `groups.yappyyap.xyz/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
+                    initialPath = `4/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
+                    // initialPath = `groups.yappyyap.xyz/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
                     document.querySelector(".members").style.display = "block";
-                    // const tempMembers = await axios.get(`http://localhost:800${initialPath}/numMembers`);
-                    const tempMembers = await axios.get(`https://${initialPath}/numMembers`);
+                    const tempMembers = await axios.get(`http://localhost:8004/groups/${currGrp}/numMembers`);
+                    // const tempMembers = await axios.get(`https://groups.yappyyap.xyz/groups/${currGrp}/numMembers`);
                     setMembers(tempMembers.data);
                 }
-                // response = await axios.get(`http://localhost:800${initialPath}/livecount`);
-                response = await axios.get(`https://${initialPath}/livecount`);
+                response = await axios.get(`http://localhost:800${initialPath}/livecount`);
+                // response = await axios.get(`https://${initialPath}/livecount`);
             }
             if (response.data.msg === "Success") {
                 setOnline(response.data.total)
@@ -62,13 +67,14 @@ export default function ChatHeader(props) {
         return ()=> clearInterval(onlineInterval);
     }, [])
     useEffect(()=>{
-        if(props.realm == "dms") {
+        if(props.realm == "dms") 
             setDisplay(`Personal Msg: ${props.user.current}`)
-        }
-        else {
-            setDisplay(props.realm.toUpperCase())
-        }
-    }, [props.realm, props.user.current])
+        else if(display)
+            setDisplay(display.toUpperCase())
+        else 
+            setDisplay((props.realm || "").toUpperCase())
+        
+    }, [props.realm, props.user.current, display])
     function changeTheme(e) {
         let temp = e.target.value;
         localStorage.setItem("theme", temp);
@@ -103,16 +109,20 @@ export default function ChatHeader(props) {
                     <option value="green">Green</option>
                     <option value="beige">Beige</option>
                 </select>
-                {/* <div className="setting">
-                    <input type="color"/>
-                    </div> */}
+                {isGrp && <div className="realm-settings" onClick={() => setSettingsOpen(true)}>
+                    Settings
+                    </div>}
                 </div>
-                        {props.liveCount.current && <div className="online-count">
-                        <div className="members" onClick={showMembers}>{`${members} Members`}</div>
-                                <div className="online-count-dot">
-                                </div>
-                                <span>{online}</span>
-                        </div>}
+                {props.liveCount.current && <div className="online-count">
+                <div className="members" onClick={showMembers}>{`${members} Members`}</div>
+                        <div className="online-count-dot">
+                        </div>
+                        <span>{online}</span>
+                </div>}
+                {settingsOpen && isGrp && <GroupSettings realm={currRealm} group={currGrp} onClose={() => setSettingsOpen(false)} onDeleted={()=> {
+                    setSettingsOpen(false)
+                    navigate(`/chat/realms/${currRealm}`)
+                }}/>}
             </div>
     )
 }

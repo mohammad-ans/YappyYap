@@ -21,6 +21,7 @@ import { HomeCompsProvider } from "../hooks/useHomeComps.jsx";
 import { AboutCompsProvider } from "../hooks/useAboutComps.jsx";
 import Terms from "./Terms.jsx";
 import Policy from "./Policy.jsx";
+import Invite from "./Invite.jsx";
 export default function App() {
     const [email, setEmail] = useState("");
     const [selectOption, setOption] = useState("NewsLetter");
@@ -49,6 +50,7 @@ export default function App() {
                 <Route path = "/contactus" element={<ContactUs footerEmail = {footerEmail} setFooterEmail={setFooterEmail} selectOption={selectOption} setOption = {setOption}/>}/>
                 <Route path="/dashboard/*" element={<DashboardAuthProvider><Dashboard/></DashboardAuthProvider>}/>
                 <Route path="/chat/*" element={<ChatProtection><Chat chatInstructions={chatInstructions} setChatInstructions={setChatInstructions}/></ChatProtection>}/>
+                <Route path="/invite/:token" element={<Invite/>}/>
                 <Route path="*" element={<NotFound/>}/>
             </Routes>
             {!hidePathBoolean && <Footer setOption = {setOption} setFooterEmail = {setFooterEmail}/>}
