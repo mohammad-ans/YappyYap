@@ -36,6 +36,7 @@ services:
     environment:
      TCHAT_DATABASE_URL: ${TCHAT_DATABASE_URL}
      AUTH_URL: http://auth:8000
+     REDIS_URL: redis://redis:6379
      WATCHFILES_FORCE_POLLING: true
     volumes:
      - ./textChat:/app
@@ -53,6 +54,7 @@ services:
     environment:
      DB_URL: ${TCHAT_DATABASE_URL}
      AUTH_URL: http://auth:8000
+     REDIS_URL: redis://redis:6379
      WATCHFILES_FORCE_POLLING: true
     volumes:
      - ./voiceChat:/app
@@ -70,6 +72,7 @@ services:
     environment:
       DATABASE_URL: ${GROUPS_DATABASE_URL}
       AUTH_URL: http://auth:8000
+      REDIS_URL: redis://redis:6379
       WATCHFILES_FORCE_POLLING: true
     volumes:
      - ./groups:/app
@@ -87,6 +90,7 @@ services:
     environment:
       DATABASE_URL: ${PERSONAL_DATABASE_URL}
       AUTH_URL: http://auth:8000
+      REDIS_URL: redis://redis:6379
       WATCHFILES_FORCE_POLLING: true
     volumes:
      - ./personalChats:/app
