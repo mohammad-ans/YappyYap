@@ -15,7 +15,7 @@ class RedisWs:
 
     async def start(self):
         self.stopping = False
-        self.redis = Redis.from_url(self.url, decode_response=True, socket_keepalive=True, health_check_interval=30)
+        self.redis = Redis.from_url(self.url, decode_responses=True, socket_keepalive=True, health_check_interval=30)
         try:
             await self.redis.ping()
         except RedisError as e:
