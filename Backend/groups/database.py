@@ -16,7 +16,7 @@ session = sessionmaker(bind=engine)
 
 class Realm(Base):
     __tablename__ = "realms"
-    id = Column(String, primary_key=True, default=uuid.uuid4())
+    id = Column(String, primary_key=True, default=str(uuid.uuid4()))
     name = Column(String)
     description = Column(String, nullable=True, default="")
     owner = Column(String, index=True)
@@ -33,7 +33,7 @@ class RMembers(Base):
 class Group(Base):
     __tablename__ = "groups"
     realm_id = Column(String , ForeignKey("realms.id")) 
-    id = Column(String, primary_key=True, default=uuid.uuid4())
+    id = Column(String, primary_key=True, default=str(uuid.uuid4()))
     name = Column(String, unique=True)
     owner = Column(String)
     liveCount = Column(Boolean, default=True)
@@ -142,7 +142,7 @@ class RealmDetails(BaseModel):
     id: str
     name: str
     owner: str
-    createdAt: str
+    createdAt: datetime
     inviteType: str
     role: str
     members: int = 0

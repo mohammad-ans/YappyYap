@@ -328,10 +328,12 @@ def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_t
         realm = db.get(database.Realm, member.realm_id)
         if not realm:
             continue
-        detail = database.RealmDetails.model_validate(realm)
-        detail.role = member.role
-        detail.groups = db.execute(select(func.count()).select_from(database.Group).where(database.Group.realm_id == realm.id)).scalar_one()
-        detail.members = db.execute(select(func.count()).select_from(database.RMembers).where(database.RMembers.realm_id == realm.id)).scalar_one()
+        role = member.role
+        groups = db.execute(select(func.count()).select_from(database.Group).where(database.Group.realm_id == realm.id)).scalar_one()
+        members_ = db.execute(select(func.count()).select_from(database.RMembers).where(database.RMembers.realm_id == realm.id)).scalar_one()
+        realm = realm.__dict__
+        realm["createdAt"] = realm["createdAt"].isoformat()
+        detail = database.RealmDetails(**realm, role = role, groups = groups, members = members_)
         details.append(detail)
     return details
 
