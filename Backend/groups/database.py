@@ -33,7 +33,7 @@ class RMembers(Base):
 class Group(Base):
     __tablename__ = "groups"
     realm_id = Column(String , ForeignKey("realms.id")) 
-    id = Column(Integer, primary_key=True, default=uuid.uuid4())
+    id = Column(String, primary_key=True, default=uuid.uuid4())
     name = Column(String, unique=True)
     owner = Column(String)
     liveCount = Column(Boolean, default=True)
