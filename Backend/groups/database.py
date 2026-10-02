@@ -152,7 +152,7 @@ class RealmDetails(BaseModel):
 class RemoveMember(BaseModel):
     username: str
 
-class MemberUpdate:
+class MemberUpdate(BaseModel):
     name: str
     role: str
 

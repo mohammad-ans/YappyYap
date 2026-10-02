@@ -21,9 +21,11 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await manager.start
+    await manager_text.start()
+    await manager_voice.start()
     yield
-    await manager.stop()
+    await manager_voice.stop()
+    await manager_text.stop()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -315,7 +317,7 @@ def get_members(db: Session = Depends(get_db), payload = Depends(verify_session_
 
 @app.get("/realms")
 def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    return db.execute(select(database.Relam).wehre(database.Realm)).scalars().all()
+    return db.execute(select(database.Realm).where(database.Realm.inviteType == "all")).scalars().all()
 
 @app.get("/realms/mine")
 def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
