@@ -1,16 +1,124 @@
-.realms-page{
-    margin: 15vh 2vw 5vh 2vw;
-    background-color: bisque;
-    z-index: 7;
+:root{
+    --text-color: aqua;
+    --header-color : rgb(20, 20, 44);
+    --input-backgrounds : rgb(63, 63, 103);
+    --anonymity-button : grey;
 }
-
-@media (max-width : 1000px) {
-    .nav-close-styles .realms-page{
-        width: calc(100vw - 60px);
-        margin-left: 60px;
-    }
-    .nav-open-styles .realms-page{
-        width: calc(100vw - 200px);
-        margin-left: 200px;
-    }
+html[data-theme="blue"]{
+    --text-color: aqua;
+    --header-color : rgb(20, 20, 44);
+    --input-backgrounds : rgb(63, 63, 103);
+    --anonymity-button : grey;
+}
+html[data-theme="beige"]{
+    --text-color: wheat;
+    --header-color : #0e100f;
+    --input-backgrounds : rgba(245, 222, 179, 0.5);
+    --anonymity-button : rgb(58, 58, 58);
+}
+html[data-theme="green"]{
+    --text-color: rgb(0, 255, 200);
+    --header-color : rgb(20, 44, 20);
+    --input-backgrounds : rgb(63, 103, 63);
+    --anonymity-button : grey;
+}
+.realms-page{
+    margin: 18vh 2vw 5vh 2vw;
+    z-index: 7;
+    box-sizing: border-box;
+}
+.realms-page-header h2{
+    color: var(--input-backgrounds);
+    text-align: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    margin-left: 20px;
+}
+.realms-page-header{
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+.realms-page-header button{
+    background-color: transparent;
+    padding: 8px 16px;
+    border: 1px solid var(--input-backgrounds);
+    border-radius: 4px;
+    color: var(--input-backgrounds);
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.realms-page .realms-list{
+    margin-top: 32px;
+    align-items: flex-start;
+    margin-left: 32px;
+}
+.realms-page .realms-list li{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.realms-page .realms-list div:first-child{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.realms-page .realms-list h3{
+    color: var(--text-color);
+    flex-shrink: 0;
+}
+.realms-page .realms-list div:first-child p{
+    font-size: 0.9rem;
+    color: var(--anonymity-button);
+}
+.realm-details{
+    display: flex;
+    gap: 10px;
+    font-size: 0.9rem;
+}
+.realms-empty{
+    font-weight: bold;
+}
+.realms-page-overlay{
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.realms-create-form{
+    background-color: #111;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 32px 20px 24px 20px;
+    border-radius: 8px;
+}
+.realms-create-form input, textarea, select{
+    background-color: var(--input-backgrounds);
+    border: 1px solid var(--input-backgrounds);
+    padding: 4px 8px;
+    color: var(--header-color);
+    border-radius: 4px;
+}
+.realms-create-form input:focus, textarea:focus{
+    outline: none;
+    border: 1px solid var(--anonymity-button);
+}
+.realms-create-form h2{
+    margin-bottom: 12px;
+}
+.realms-create-form button{
+    margin-top: 8px;
+    padding: 4px 8px;
+    border: 2px solid var(--input-backgrounds);
+    background-color: transparent;
+    border-radius: 4px;
+    color: var(--input-backgrounds);
+    cursor: pointer;
 }

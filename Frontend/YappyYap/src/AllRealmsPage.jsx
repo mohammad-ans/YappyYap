@@ -64,7 +64,7 @@ export default function AllRealmsPage() {
             return
         setSubmitting(true)
         try{
-            const res = await axios.post("http://localhost:8004/realms", {
+            const res = await axios.post("http://localhost:8004/realm", {
                 name: name.trim(),
                 description: description.trim(),
                 inviteType: inviteType
@@ -82,6 +82,9 @@ export default function AllRealmsPage() {
                 setError("An error occured while creating the realm")
             setTrigger(pre => !pre)
         }
+        finally{
+            setSubmitting(false)
+        }
     }
 
     return (
@@ -91,18 +94,19 @@ export default function AllRealmsPage() {
                 <button onClick={() => setCreating(true)}>New Realm</button>
             </div>
             <ul className="realms-list">
-                <li className="realm-card">
-                    <h3>Global</h3>
+                <li className="realm-card" onClick={()=> navigate("chat/realms/global")}>
+                    <div><h3>Global :</h3>
                     <p>The public global realm with global voice and text chat channels.</p>
+                    </div>
                 </li>
                 {loading && <li className="realm-card realms-loading">Loading...</li>}
                 {!loading && realms.map(realm => (
                     <li className="realm-card" key={realm.id} onClick={()=> navigate(`/chat/realms/${realm.id}`)}>
-                        <h3>{realm.name}</h3>
+                        <h3>{realm.name} :</h3>
                         <div className="realm-details">
                             <span>{realm.members} members</span>
                             <span>{realm.groups} channels</span>
-                            <span className="realm-role">{realm.role}</span>
+                            <span className="realm-role">Role: {realm.role}</span>
                         </div>
                     </li>
                 ))}
@@ -127,7 +131,7 @@ export default function AllRealmsPage() {
             )}
             {(creating && <div className="realms-page-overlay">
                     <form className="realms-create-form" onSubmit={createRealm}>
-                        <p className="cancel-cross">X</p>
+                        <p className="cancel-cross" onClick={() => setCreating(false)}>X</p>
                         <h2>Create a Realm</h2>
                         <input type="text" placeholder="Realm name" value={name} minLength={2} maxLength={40} required onChange={e => setName(e.target.value)}/>
                         <textarea placeholder="Realm Description" value={description} maxLength={250} rows={2} onChange={e => setDescription(e.target.value)}/>

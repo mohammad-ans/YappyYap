@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, useContext } from "react"
 import "./Chat.css"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { Routes, Route, Navigate } from "react-router-dom"
@@ -304,7 +304,7 @@ export default function Chat(props) {
                 {addArea && <AddGroup setAddArea={setAddArea} />}
                 <ChatSideBar realmRef={realmRef} groups={groups} username={username} realm={realm} setRealm={setRealm} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea} />
                 <div className="chat-mainarea">
-                    <ChatHeader liveCount={liveCount} realmRef={realmRef} realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user} />
+                    <ChatHeader liveCount={liveCount} realmRef={realmRef} realm={currRealm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user} />
                     <Routes>
                         {
                             groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)
