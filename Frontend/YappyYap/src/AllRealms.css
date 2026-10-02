@@ -1,0 +1,16 @@
+.realms-page{
+    margin: 15vh 2vw 5vh 2vw;
+    background-color: bisque;
+    z-index: 7;
+}
+
+@media (max-width : 1000px) {
+    .nav-close-styles .realms-page{
+        width: calc(100vw - 60px);
+        margin-left: 60px;
+    }
+    .nav-open-styles .realms-page{
+        width: calc(100vw - 200px);
+        margin-left: 200px;
+    }
+}

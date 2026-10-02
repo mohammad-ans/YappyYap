@@ -16,7 +16,7 @@ import AllRealmsPage from "./AllRealmsPage"
 
 export default function Chat(props) {
     const { username } = useChatAuth();
-    const [realm, setRealm] = useState("global-realm");
+    const [realm, setRealm] = useState("");
     const realmRef = useRef("global-realm");
     const realmType = useRef("global");
     const [navOpen, setNavopen] = useState(false);
