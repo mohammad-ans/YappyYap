@@ -89,7 +89,7 @@ export default function AllRealmsPage(props) {
     }
     function navigateRealm(realmId, realm) {
         props.setCurrRealm(realm);
-        navigate(`chats/realms/${realmId}`);
+        navigate(`/chat/realms/${realmId}`);
     }
 
     return (

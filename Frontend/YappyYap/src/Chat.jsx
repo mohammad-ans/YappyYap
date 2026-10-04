@@ -302,16 +302,16 @@ export default function Chat(props) {
                     </div>
                 </div> : (<></>)}
                 {addArea && <AddGroup setAddArea={setAddArea} />}
-                <ChatSideBar realmRef={realmRef} groups={groups} username={username} realm={realm} setCurrGroup={setCurrGroup} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea} />
+                <ChatSideBar realmRef={realmRef} groups={groups} username={username} realm={realm} setCurrGroup={setCurrentGroup} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea} />
                 <div className="chat-mainarea">
                     <ChatHeader liveCount={liveCount} realmRef={realmRef} realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user} />
                     <Routes>
                         {
                             groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)
                         }
-                        <Route path="/realms/:realmId" element={<RealmPage/>} />
+                        <Route path="/realms/:realm" element={<RealmPage/>} />
                         <Route path="/realms" element={<AllRealmsPage setCurrRealm={setRealm}/>} />
-                        <Route path="/realms/:realmId/:groupKey" element={<ChannelRoute/>} />
+                        <Route path="/realms/:realm/c/:groupKey" element={<ChannelRoute/>} />
                         <Route path="*" element={<DefaultRoot />} />
                     </Routes>
                 </div>
@@ -323,11 +323,13 @@ export default function Chat(props) {
 function RealmPage(){
     const {realm} = useParams()
     const navigate = useNavigate()
-    const {setCurrGroup} = useContext(ChatContext)
+    const {setCurrentGroup, setRealm, realmRef} = useContext(ChatContext)
 
     useEffect(()=> {
         async function move() {
-            const grps = await setCurrGroup(realm)
+            const grps = await setCurrentGroup(realm)
+            setRealm(realm)
+            realmRef.current = `${realm}-realm`
             if (grps & grps.length > 0) {
                 navigate(`/chat/realms/${realm}/c/${grps[0].name}`, {replace: true})
             }
@@ -342,7 +344,7 @@ function RealmPage(){
 }
 function ChannelRoute() {
     const {realm, groupKey} = useParams()
-    const {groups, currGroup, setCurrGroup} = useContext(ChatContext)
+    const {groups, currGroup, setCurrentGroup, setRealm, realmRef} = useContext(ChatContext)
     const [group, setGroup] = useState(null)
     const [notFound, setFound] = useState(false)
 
@@ -350,7 +352,7 @@ function ChannelRoute() {
         async function setGrp() {
             let list = groups["Groups"]
             if(currGroup !== realm) {
-                list = await setCurrGroup(realm)
+                list = await setCurrentGroup(realm)
             }
             const found = (list || []).find(grp => grp.name === groupKey)
             if (found)
@@ -358,8 +360,10 @@ function ChannelRoute() {
             else
                 setFound(true)
         }
+        setRealm(realm)
+        realmRef.current = `${realm}-realm`
         setGrp()
-    }, [realm, channel])
+    }, [realm, groupKey])
     if (notFound)
         return (<div className="realm-empty">
             <p>Group Not Found</p>
@@ -372,7 +376,9 @@ function ChannelRoute() {
 
 }
 function DefaultRoot() {
+    const {setRealm} = useContext(ChatContext);
+    setRealm("global");
     return (
-        <Navigate to="/chat/global" replace />
+        <Navigate to="/chat/realms/global" replace />
     )
 }

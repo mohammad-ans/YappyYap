@@ -16,7 +16,7 @@ export default function RealmSettings(props) {
     const [inviteLink, setInviteLink] = useState(null)
     const [addUser, setAddUser] = useState("")
     const axios = useAxios()
-    const priviliged = details.role && (details.role == "owner" || details.role == "admin")
+    const priviliged = details && details.role && (details.role == "owner" || details.role == "admin")
     async function load() {
         setLoading(true)
         try{

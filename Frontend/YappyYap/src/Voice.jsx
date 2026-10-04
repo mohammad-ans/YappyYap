@@ -68,7 +68,7 @@ export default function Voice(props) {
         let isMounted = true;
         realmRef.current = `${props.realm["name"]}-realm`;
         const element = document.querySelector(`.${realmRef.current}`);
-        setRealm(realmRef.current);
+        // setRealm(realmRef.current);
         element.classList.add("current-realm")
         const axios = useAxios();
         async function getmsgs() {

@@ -53,7 +53,7 @@ export default function Global(props) {
         realmRef.current = `${props.realm["name"]}-realm`;
         realmType.current = "global";
         const element = document.querySelector(`.${realmRef.current}`);
-        setRealm(realmRef.current);
+        // setRealm(realmRef.current);
         element.classList.add("current-realm");
         const axios = useAxios()
         async function getMessages() {
