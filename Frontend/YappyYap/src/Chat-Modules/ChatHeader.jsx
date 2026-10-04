@@ -12,9 +12,9 @@ export default function ChatHeader(props) {
     const {setError, setTrigger} = useChatAuth();
     const [displayname, setDisplay] = useState("");
     const navigate = useNavigate();
-    const {realmType, currRealm, groups} = useContext(ChatContext);
+    const {realmType, realm, groups} = useContext(ChatContext);
     const currGrp = props.realmRef.current && props.realmRef.current.endsWith("-realm") ? props.realmRef.current.slice(0, -6) : null
-    const isGrp = currRealm !== "global" && currGrp && props.realmRef.current !== "dms"
+    const isGrp = realm !== "global" && currGrp && props.realmRef.current !== "dms"
     const display = (groups["Groups"].find(grp => grp["name"] == currGrp) || {})["display"]
     const [settingsOpen, setSettingsOpen] = useState(false)
     const getOnline = useCallback(async ()=> {
@@ -71,7 +71,7 @@ export default function ChatHeader(props) {
             setDisplay(`Personal Msg: ${props.user.current}`)
         else if(display)
             setDisplay(display.toUpperCase())
-        else 
+        else
             setDisplay((props.realm || "").toUpperCase())
         
     }, [props.realm, props.user.current, display])
@@ -99,9 +99,7 @@ export default function ChatHeader(props) {
             <div className="chat-header">
                 <div className="chat-menu-bar" onClick={navBarSimulator}>≡</div>
                 <div className="active-realm">
-
-                    <h2>{displayname}
-                        </h2>
+                    {displayname == "" ? <h2 style={{color: "#D00000"}}>{"No Realm Selected"}</h2> : <h2>{displayname}</h2>}
                 </div>
                 <div className="chat-theme">
                 <select className="select-theme-design" value = {props.theme} onChange={changeTheme}>
@@ -113,15 +111,15 @@ export default function ChatHeader(props) {
                     Settings
                     </div>}
                 </div>
-                {props.liveCount.current && <div className="online-count">
+                {realm && props.liveCount.current && <div className="online-count">
                 <div className="members" onClick={showMembers}>{`${members} Members`}</div>
                         <div className="online-count-dot">
                         </div>
                         <span>{online}</span>
                 </div>}
-                {settingsOpen && isGrp && <GroupSettings realm={currRealm} group={currGrp} onClose={() => setSettingsOpen(false)} onDeleted={()=> {
+                {settingsOpen && isGrp && <GroupSettings realm={realm} group={currGrp} onClose={() => setSettingsOpen(false)} onDeleted={()=> {
                     setSettingsOpen(false)
-                    navigate(`/chat/realms/${currRealm}`)
+                    navigate(`/chat/realms/${realm}`)
                 }}/>}
             </div>
     )
