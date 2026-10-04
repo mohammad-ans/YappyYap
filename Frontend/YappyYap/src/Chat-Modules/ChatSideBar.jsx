@@ -11,7 +11,7 @@ export default function ChatSideBar(props) {
     const [searchBy, setSearchBy] = useState(true);
     const {setError, setTrigger} = useChatAuth();
     const [searchResult, setSearchResults] = useState([])
-    const {setDms, getDms, tempDM, currRealm, realmDetails, setCurrentRealm} = useContext(ChatContext);
+    const {setDms, getDms, tempDM, realm, realmDetails, setRealm} = useContext(ChatContext);
     const navigate = useNavigate();
     const axios = useAxios();
     const [settingsOpen, setSettingsOpen] = useState(false)
@@ -42,6 +42,7 @@ export default function ChatSideBar(props) {
     }
     function goToRealms(e) {
         e.stopPropagation()
+        // setRealm()
         navigate("/chat/realms")
     }
     useEffect(()=>{
@@ -90,7 +91,7 @@ export default function ChatSideBar(props) {
         e.stopPropagation()
         e.preventDefault()
         try{
-            await axios.post(`http://localhost:8004/realms/${currRealm}/groups/${el.groupId}/join`)
+            await axios.post(`http://localhost:8004/realms/${realm}/groups/${el.groupId}/join`)
         }
         catch(err) {
             if(err.response && err.response.status !== 409) {
@@ -102,7 +103,7 @@ export default function ChatSideBar(props) {
                 return;
             }
         }
-        navigate(`/chat/realms/${currRealm}/c/${element.name}`)
+        navigate(`/chat/realms/${realm}/c/${element.name}`)
     }
     return(
         <div className="chat-sidearea" onClick={navbarSimulator}>
@@ -110,6 +111,7 @@ export default function ChatSideBar(props) {
                 <span className="realms-r-replacement">R</span>
             <span className="ealms">ealms</span>
             </h2>
+            {realm && <>
             {realmDetails && (
                 <p className="current-realm-name" onClick={endPropagation}><span>{priviliged && <span className="back-to-realms" onClick={()=> setSettingsOpen(true)}>Settings</span>}
                     <span className="back-to-realms" onClick={goToRealms}>Switch</span>
@@ -117,7 +119,7 @@ export default function ChatSideBar(props) {
             )}
             {settingsOpen && (
                 <RealmSettings
-                    realm={currRealm}
+                    realm={realm}
                     onClose={() => setSettingsOpen(false)}
                     onDelete={() => {
                         setSettingsOpen(false)
@@ -148,12 +150,14 @@ export default function ChatSideBar(props) {
                     ))}
                 </ul>
             </div>
+            </>}
             <div className="scroll-area">
-            {currRealm != "global" && <button className="add-group" onClick={addGroup}>+ Add your own Group</button>}
+            {realm && <>{realm != "global" && <button className="add-group" onClick={addGroup}>+ Add your own Group</button>}
             <ul className="realms-list">
-                {props.groups["Groups"].map(element => <Link to={`/chat/realms/${currRealm}/c/${element["name"]}`} key={`${element["name"]}-realm`} className={`${element["name"]}-realm`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">{element["display"] || element["name"]}</span></li></Link>)}
+                {props.groups["Groups"].map(element => <Link to={`/chat/realms/${realm}/c/${element["name"]}`} key={`${element["name"]}-realm`} className={`${element["name"]}-realm`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">{element["display"] || element["name"]}</span></li></Link>)}
 
             </ul>
+            </>}
             {("Direct Messages" in props.groups) && (<><h3 className="personal-msg-heading">Personal Messages</h3><ul className="dms">
                 {props.groups["Direct Messages"].map(element => <Link to={`/chat/u/${element}`} key={element} className={element} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="realm-button">{element}</span></li></Link>)}
             </ul></>)}

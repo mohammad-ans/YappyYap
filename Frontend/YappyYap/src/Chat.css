@@ -290,6 +290,7 @@ flex-direction: row-reverse;
     border-radius: 50%;
 }
 .chat-sidearea-heading{
+    cursor: pointer;
     width: 100%;
     font-size: 3rem;
     font-weight: 900;

@@ -5,7 +5,7 @@ import useChatAuth from "../hooks/useChatAuth"
 import { useNavigate } from "react-router-dom"
 import "./AllRealms.css"
 
-export default function AllRealmsPage() {
+export default function AllRealmsPage(props) {
     const [loading, setLoading] = useState(true)
     const {setError, setTrigger} = useChatAuth()
     const [realms, setRealms] = useState([])
@@ -39,6 +39,7 @@ export default function AllRealmsPage() {
         }
     }
     useEffect(()=> {
+        props.setCurrRealm("");
         loadrealms()
     }, [])
     async function joinOpenRealms(id) {
@@ -86,6 +87,10 @@ export default function AllRealmsPage() {
             setSubmitting(false)
         }
     }
+    function navigateRealm(realmId, realm) {
+        props.setCurrRealm(realm);
+        navigate(`chats/realms/${realmId}`);
+    }
 
     return (
         <div className="realms-page">
@@ -94,14 +99,14 @@ export default function AllRealmsPage() {
                 <button onClick={() => setCreating(true)}>New Realm</button>
             </div>
             <ul className="realms-list">
-                <li className="realm-card" onClick={()=> navigate("chat/realms/global")}>
+                <li className="realm-card" onClick={()=> navigateRealm("global", "global")}>
                     <div><h3>Global :</h3>
                     <p>The public global realm with global voice and text chat channels.</p>
                     </div>
                 </li>
                 {loading && <li className="realm-card realms-loading">Loading...</li>}
                 {!loading && realms.map(realm => (
-                    <li className="realm-card" key={realm.id} onClick={()=> navigate(`/chat/realms/${realm.id}`)}>
+                    <li className="realm-card" key={realm.id} onClick={()=> navigateRealm(realm.id, realm.name)}>
                         <h3>{realm.name} :</h3>
                         <div className="realm-details">
                             <span>{realm.members} members</span>
@@ -111,7 +116,7 @@ export default function AllRealmsPage() {
                     </li>
                 ))}
                 {!loading && realms.length == 0 && (
-                    <li className="realm-card realms-empty">
+                    <li className="realm-card realms-empty" style={{cursor: "text"}}>
                         You are not in any realms yet. Create, join or ask someone to invite you.
                     </li>
                 )}
