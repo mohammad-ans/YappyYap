@@ -13,10 +13,13 @@ export default function ChatHeader(props) {
     const [displayname, setDisplay] = useState("");
     const navigate = useNavigate();
     const {realmType, realm, groups, currGroup} = useContext(ChatContext);
-    const isGrp = realm !== "global" && currGroup && currGroup !== "dms"
+    const isGrp = realm && currGroup !== realm && currGroup !== "dms"
+    const realmGlobal = !realm || realm == "global";
     const [settingsOpen, setSettingsOpen] = useState(false)
     const getOnline = useCallback(async ()=> {
         try{
+            if(!isGrp)
+                return;
             let response;
             document.querySelector(".members").style.display = "none";
             if (currGroup == "dms"){
@@ -51,7 +54,9 @@ export default function ChatHeader(props) {
             if(err.response && err.response.data) {
                     setError(pre => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
-                    navigate("/signin")
+                    console.log(err.response.data)
+                    if(err.status == 403)
+                        navigate("/signin")
                 }
         }
     }, [])
@@ -59,9 +64,15 @@ export default function ChatHeader(props) {
         let theme = localStorage.getItem("theme");
         if(theme)
             document.documentElement.setAttribute("data-theme", theme);
-        const onlineInterval = setInterval(getOnline, 4000);
-        return ()=> clearInterval(onlineInterval);
-    }, [])
+        let onlineInterval;
+        if(isGrp)
+            onlineInterval = setInterval(getOnline, 4000);
+        else
+            clearInterval(onlineInterval)
+        return ()=>{ 
+            clearInterval(onlineInterval);
+        }
+    }, [realm, currGroup])
     useEffect(()=>{
         const display = (groups["Groups"].find(grp => grp["name"] == currGroup) || {})["display"]
         if(props.realm == "dms") 
@@ -104,12 +115,12 @@ export default function ChatHeader(props) {
                     <option value="green">Green</option>
                     <option value="beige">Beige</option>
                 </select>
-                {isGrp && <div className="realm-settings" onClick={() => setSettingsOpen(true)}>
+                {!realmGlobal && <div className="realm-settings" onClick={() => setSettingsOpen(true)}>
                     Settings
                     </div>}
                 </div>
-                {realm && props.liveCount.current && <div className="online-count">
-                <div className="members" onClick={showMembers}>{`${members} Members`}</div>
+                {isGrp && props.liveCount.current && <div className="online-count">
+                {realm != "global" && <div className="members" onClick={showMembers}>{`${members} Members`}</div>}
                         <div className="online-count-dot">
                         </div>
                         <span>{online}</span>
