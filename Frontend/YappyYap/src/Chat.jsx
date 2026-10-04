@@ -73,7 +73,7 @@ export default function Chat(props) {
         }  
     }, [])
     const setCurrentGroup = useCallback(async (id) => {
-        setCurrGroup(id)
+        setRealm(id)
         return await setRealmGrps(id)
     }, [setRealmGrps])
     async function getDms() {
@@ -274,10 +274,10 @@ export default function Chat(props) {
         catch { }
     }
     function getGroups() {
-        setCurrentGroup(currGroup)
+        setCurrentGroup(realm)
     }
     return (
-        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, currGroup, realmDetails, setCurrentGroup}}>
+        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, setRealm, realmDetails, setCurrentGroup, setCurrGroup, currGroup}}>
             <main className="chat-area nav-close-styles" onClick={clearClick}>
                 {props.chatInstructions ? <div className="instructions-overlay">
                     <div className="instructions">
@@ -310,8 +310,8 @@ export default function Chat(props) {
                             groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)
                         }
                         <Route path="/realms/:realm" element={<RealmPage/>} />
-                        <Route path="/realms" element={<AllRealmsPage setCurrRealm={setRealm}/>} />
-                        <Route path="/realms/:realm/c/:groupKey" element={<ChannelRoute/>} />
+                        <Route path="/realms" element={<AllRealmsPage setCurrRealm={setRealm} setCurrGroup={setCurrGroup}/>} />
+                        <Route path="/realms/:realmP/c/:groupKey" element={<ChannelRoute/>} />
                         <Route path="*" element={<DefaultRoot />} />
                     </Routes>
                 </div>
@@ -323,13 +323,13 @@ export default function Chat(props) {
 function RealmPage(){
     const {realm} = useParams()
     const navigate = useNavigate()
-    const {setCurrentGroup, setRealm, realmRef} = useContext(ChatContext)
+    const {setCurrentGroup, setRealm, realmRef, setCurrGroup} = useContext(ChatContext)
 
     useEffect(()=> {
         async function move() {
             const grps = await setCurrentGroup(realm)
             setRealm(realm)
-            realmRef.current = `${realm}-realm`
+            setCurrGroup(realm)
             if (grps & grps.length > 0) {
                 navigate(`/chat/realms/${realm}/c/${grps[0].name}`, {replace: true})
             }
@@ -343,16 +343,16 @@ function RealmPage(){
     )
 }
 function ChannelRoute() {
-    const {realm, groupKey} = useParams()
-    const {groups, currGroup, setCurrentGroup, setRealm, realmRef} = useContext(ChatContext)
+    const {realmP, groupKey} = useParams()
+    const {groups, realm, setCurrentGroup, setRealm} = useContext(ChatContext)
     const [group, setGroup] = useState(null)
     const [notFound, setFound] = useState(false)
 
     useEffect(()=> {
         async function setGrp() {
             let list = groups["Groups"]
-            if(currGroup !== realm) {
-                list = await setCurrentGroup(realm)
+            if(realm !== realmP) {
+                list = await setCurrentGroup(realmP)
             }
             const found = (list || []).find(grp => grp.name === groupKey)
             if (found)
@@ -360,10 +360,10 @@ function ChannelRoute() {
             else
                 setFound(true)
         }
-        setRealm(realm)
-        realmRef.current = `${realm}-realm`
+        setRealm(realmP);
+        setCurrentGroup(realmP);
         setGrp()
-    }, [realm, groupKey])
+    }, [realmP, groupKey])
     if (notFound)
         return (<div className="realm-empty">
             <p>Group Not Found</p>

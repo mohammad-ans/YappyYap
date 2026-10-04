@@ -40,6 +40,7 @@ export default function AllRealmsPage(props) {
     }
     useEffect(()=> {
         props.setCurrRealm("");
+        props.setCurrGroup("");
         loadrealms()
     }, [])
     async function joinOpenRealms(id) {

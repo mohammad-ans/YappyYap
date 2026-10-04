@@ -21,7 +21,7 @@ export default function Voice(props) {
     const websocket = useRef()
     const msgRemoverInterval = useRef();
     const {setError, setTrigger, username} = useChatAuth();
-    const {realmType, liveCount, dmSendOption, setRealm, tempDM, realmRef, getDms, setDms} = useContext(ChatContext);
+    const {realmType, liveCount, dmSendOption, setRealm, tempDM, realmRef, getDms, setDms, setCurrGroup} = useContext(ChatContext);
     const navigate = useNavigate();
     useGSAP(() => {
         gsap.ticker.lagSmoothing(0)
@@ -66,8 +66,9 @@ export default function Voice(props) {
         liveCount.current = props.realm["liveCount"];
         realmType.current = "voice";
         let isMounted = true;
-        realmRef.current = `${props.realm["name"]}-realm`;
-        const element = document.querySelector(`.${realmRef.current}`);
+        const display = props.realm["name"];
+        setCurrGroup(display);
+        const element = document.querySelector(`.${display}-realm`);
         // setRealm(realmRef.current);
         element.classList.add("current-realm")
         const axios = useAxios();

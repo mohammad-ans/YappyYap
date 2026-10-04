@@ -154,7 +154,7 @@ export default function ChatSideBar(props) {
             <div className="scroll-area">
             {realm && <>{realm != "global" && <button className="add-group" onClick={addGroup}>+ Add your own Group</button>}
             <ul className="realms-list">
-                {props.groups["Groups"].map(element => <Link to={`/chat/realms/${realm}/c/${element["name"]}`} key={`${element["name"]}-realm`} className={`${element["name"]}-realm`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">{element["display"] || element["name"]}</span></li></Link>)}
+                {props.groups["Groups"].map(element => <Link to={`/chat/realms/${realm}/c/${element["name"]}`} replace key={`${element["name"]}-realm`} className={`${element["name"]}-realm`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">{element["display"] || element["name"]}</span></li></Link>)}
 
             </ul>
             </>}
