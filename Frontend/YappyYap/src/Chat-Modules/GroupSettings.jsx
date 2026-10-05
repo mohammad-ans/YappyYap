@@ -2,7 +2,7 @@ import {useContext, useEffect, useState} from "react"
 import useAxios from "../../hooks/useAxios"
 import useChatAuth from "../../hooks/useChatAuth"
 import { ChatContext } from "../ChatContext"
-
+import "./GroupSettings.css"
 export default function GroupSettings(props) {
     const [members, setMembers] = useState([])
     const [details, setDetails] = useState(null)
@@ -12,12 +12,11 @@ export default function GroupSettings(props) {
     const [loading, setLoading] = useState(true)
     const {username} = useChatAuth()
     const axios = useAxios()
-    const priviliged = details.role && (details.role == "admin" || details.role == "owner")
-    const {setCurrentRealm, ws} = useContext(ChatContext)
+    const priviliged = details && (details.role == "admin" || details.role == "owner")
+    const {setRealm, ws} = useContext(ChatContext)
     const [transferTarget, setTarget] = useState(null)
     const [inviteUsername, setInviteUsername] = useState("")
     const [inviteLink, setInviteLink] = useState(null)
-
     async function load() {
         setLoading(true)
         try{
@@ -31,6 +30,8 @@ export default function GroupSettings(props) {
             if(err.response && err.response.data)
                 setStatus(err.response.data.detail[0].msg)
             setStatus("Could not load channel settings")
+            setDetails({"realm_id": "global", "description" : "Nthing special", "role": "owner", "memberCount": 40, "name": "global voicee", "owner": "NA", "liveCount": true, "anonymity": true, "maxGrpSize": 50, "maxDuration": 100, "minDuration": 20})
+            setMembers([])
         }
         finally{
             setLoading(false)
@@ -93,7 +94,7 @@ export default function GroupSettings(props) {
     async function leave() {
         try{
             await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/leave`)
-            await setCurrentRealm(props.realm)
+            await setRealm(props.realm)
             props.onDeleted()
         }   
         catch(err) {
@@ -117,7 +118,7 @@ export default function GroupSettings(props) {
     async function deleteChannel() {
         try{
              await axios.delete(`http://localhost/realms/${props.realm}/groups/${props.group}`)
-             await setCurrentRealm()
+             await setRealm(props.realm)
              props.onDeleted()
         }
         catch(err) {

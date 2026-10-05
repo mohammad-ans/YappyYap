@@ -33,9 +33,8 @@ export default function RealmSettings(props) {
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            // showStatus("Could not load realm settings")
-            setMembers([{"username": "NA", "role": "admin"}, {"username": "abc", "role": "member"}, {"username": "abcd", "role": "member"}])
-            setDetails({"role": "admin", "groups": 2, "members": 1, name: "NA", "owner": "menu", "inviteType": "all"})
+            else
+                showStatus("Could not load realm settings")
         }
         finally{
             setLoading(false)

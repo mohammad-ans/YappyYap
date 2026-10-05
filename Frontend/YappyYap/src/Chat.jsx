@@ -13,6 +13,7 @@ import Personal from "./Personal"
 import { ChatContext } from "./ChatContext"
 import default_image from "./assets/default_img.png"
 import AllRealmsPage from "./AllRealmsPage"
+import GroupSettings from "./Chat-Modules/GroupSettings"
 
 export default function Chat(props) {
     const { username } = useChatAuth();
@@ -39,6 +40,7 @@ export default function Chat(props) {
     const navigate = useNavigate()
     const [currGroup, setCurrGroup] = useState("")
     const [realmDetails, setRealmDetails] = useState(null)
+    const [grpSettings, setSettings] = useState(false);
     useEffect(() => {
         let temp = localStorage.getItem("theme");
         if (temp) {
@@ -302,9 +304,13 @@ export default function Chat(props) {
                     </div>
                 </div> : (<></>)}
                 {addArea && <AddGroup setAddArea={setAddArea} />}
+                {grpSettings && 1 && <GroupSettings realm={realm} group={currGroup} onClose={() => setSettings(false)} onDeleted={()=> {
+                    setSettings(false)
+                    navigate(`/chat/realms/${realm}`)
+                }}/>}
                 <ChatSideBar realmRef={realmRef} groups={groups} username={username} realm={realm} setCurrGroup={setCurrentGroup} navOpen={navOpen} setNavopen={setNavopen} setAddArea={setAddArea} />
                 <div className="chat-mainarea">
-                    <ChatHeader liveCount={liveCount} realmRef={realmRef} realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user} />
+                    <ChatHeader liveCount={liveCount} realmRef={realmRef} realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user} setSettings={setSettings} />
                     <Routes>
                         {
                             groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)

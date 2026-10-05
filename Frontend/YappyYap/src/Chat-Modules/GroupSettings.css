@@ -1,0 +1,30 @@
+.grpsettings-overlay{
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10;
+    background-color: #0e100f;
+    padding: 5vh 5vw;
+    overflow-y: scroll;
+}
+.grp-settings{
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin: auto;
+    max-width: 320px;
+}
+.grp-settings *{
+    flex-shrink: 0;
+}
+.grp-settings h2{
+    font-size: 2rem;
+    text-align: center;
+    margin-top: 24px;
+    margin-bottom: 20px;
+}
+.grp-settings .single-setting{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
