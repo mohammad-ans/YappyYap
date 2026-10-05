@@ -133,6 +133,11 @@ class GrpUpdate(BaseModel):
     grpType: Optional[str] = None
     inviteType: Optional[str] = None
 
+class RealmUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    inviteType: Optional[str] = None
+
 class RealmCreate(BaseModel):
     name: str
     description: Optional[str]

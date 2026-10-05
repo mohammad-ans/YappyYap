@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import useAxios from "../hooks/useAxios";
 import useChatAuth from "../hooks/useChatAuth"
 import "./RealmSettings.css"
+import axios from "axios";
 export default function RealmSettings(props) {
     const {username} = useChatAuth()
     const [status, setStatus] = useState("")
@@ -16,9 +16,9 @@ export default function RealmSettings(props) {
     const [transferUser, setTransferUser] = useState(null)
     const [inviteUser, setInviteUser] = useState("")
     const [inviteLink, setInviteLink] = useState(null)
+    const [inviteType, setInviteType] = useState("");
     const [addUser, setAddUser] = useState("")
     const timeOutRef = useRef();
-    const axios = useAxios()
     const priviliged = details && details.role && (details.role == "owner" || details.role == "admin")
     async function load() {
         setLoading(true)
@@ -207,6 +207,23 @@ export default function RealmSettings(props) {
         showStatus("Invite link copied")
     }
 
+    async function updateRealm(data) {
+        try{
+            await axios.patch(`http://localhost:8004/realms/${props.realm}`, data)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            else
+                showStatus("Updating realm failed")
+        }
+
+    }
+    function setInvite(e) {
+        setInviteType(e.target.value)
+        updateRealm({"inviteType": e.target.value})
+    }
+
     if(loading)
         return (
             <div className="realm-settings-overlay">
@@ -235,11 +252,11 @@ export default function RealmSettings(props) {
                     <h3>Name and description</h3>
                     <input type="text" value={name} disabled={!priviliged} maxLength={40} minLength={1} onChange={e => setName(e.target.value)}/>
                     <textarea rows={2} value={description} disabled={!priviliged} maxLength={250} onChange={e => setDescription(e.target.value)} />
-                        {priviliged && <button>Save</button>}
+                        {priviliged && <button onClick={() => updateRealm({"name": name, "description": description})}>Save</button>}
                 </div>
                 <div className="realm-setting">
                     <h3>Who can join</h3>
-                    {priviliged ? <select value={details.inviteType}>
+                    {priviliged ? <select value={inviteType} onChange={e => setInvite(e)}>
                             <option value="invite">Invited individuals only</option>
                             <option value="all">Anyone can join without any invitation</option>
                         </select>: <p>{details.inviteType == "all"? "Open realm": "Invite only"}</p>}

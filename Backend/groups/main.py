@@ -75,6 +75,24 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+@app.patch("/realms/{id}")
+def update_realm(id: str, data: database.RealmUpdate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    realm = db.execute(select(database.Realm).where(database.Realm.id == id)).scalar_one_or_none()
+    if not realm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg" : "Realm not found"}])
+    priviliged = db.execute(select(database.RMembers).where((database.RMembers.username == username) & ((database.RMembers.role == "admin") | (database.RMembers.role == "owner")))).scalar_one_or_none()
+    if not priviliged:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owners and admins can update realm settings"}])
+    if data.name:
+        realm.name = data.name
+    if data.description:
+        realm.description = data.description
+    if data.inviteType:
+        realm.inviteType = data.inviteType
+    db.commit()
+    return {"msg" : "Success"}
+
 @app.get("/invites/{token}/preview")
 def invite(token: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
