@@ -103,7 +103,28 @@ html[data-theme="green"] {
     background-color: transparent;
     width: 100%;
     padding: calc(1vh) calc(1%);
-    font-family: 'Delius', cursive;   
+    font-family: 'Delius', cursive;
+    border: none;
+    color: rgba(245, 245, 220, 0.751);
+    border-radius: 0;
+}
+.back-to-realms{
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.open-realm-settings{
+    cursor: pointer;
+}
+.sidebar-section{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 6px;
+    margin-bottom: 0;
+    position: absolute;
+    width: 100%;
 }
 .send-message:focus{
     border: none;
@@ -294,7 +315,7 @@ flex-direction: row-reverse;
     width: 100%;
     font-size: 3rem;
     font-weight: 900;
-    margin-top: 30px;
+    margin-top: 36px;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -396,6 +417,12 @@ flex-direction: row-reverse;
 @media (max-width : 1000px) {
     .nav-close-styles .chat-sidearea{
         width: 60px;
+    }
+    .nav-close-styles .sidebar-section span{
+        display: none;
+    }
+    .nav-open-styles .sidebar-section{
+        display: flex;
     }
     .nav-close-styles .chat-header{
         width: calc(100vw - 60px);

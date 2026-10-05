@@ -5,7 +5,6 @@ import default_image from "./assets/default_img.png"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import {ChatContext} from "./ChatContext";
-import Members from "./Chat-Modules/Members";
 export default function Global(props) {
     const [msg, setMsg] = useState("");
     const textArea = useRef();
@@ -100,7 +99,8 @@ export default function Global(props) {
                     setTrigger(t => !t);
                     if (ws.current && ws.current.readyState == WebSocket.OPEN)
                         ws.current.close();
-                    navigate("/signin")
+                    if(err.status == 403)
+                        navigate("/signin")
                 }
                 console.warn("Connection to server failed")
             }
@@ -329,7 +329,10 @@ export default function Global(props) {
         try{
             const element = e.currentTarget.children[1];
             dmSendOption.current = element;
-            dmSendOption.current.style.display = "inline";
+            if(element.style.display == "inline")
+                dmSendOption.current.style.display = "none";
+            else
+                dmSendOption.current.style.display = "inline";
             e.stopPropagation()
         }
         catch{}

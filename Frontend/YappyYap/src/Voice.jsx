@@ -11,7 +11,6 @@ import TypeArea from "./Voice/TypeArea"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import {ChatContext} from "./ChatContext";
-import Members from "./Chat-Modules/Members";
 export default function Voice(props) {
     const duration = useRef(0);
     const moveBarAnimation = useRef(new Map())
@@ -126,7 +125,8 @@ export default function Voice(props) {
                     setTrigger(t => !t);
                     if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
                         websocket.current.close();
-                    navigate("/signin");
+                    if(err.status == 403)
+                        navigate("/signin");
                 }
 
             }
