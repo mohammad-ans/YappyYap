@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import useAxios from "../hooks/useAxios";
 import useChatAuth from "../hooks/useChatAuth"
+import "./RealmSettings.css"
 export default function RealmSettings(props) {
     const {username} = useChatAuth()
     const [status, setStatus] = useState()
@@ -28,8 +29,10 @@ export default function RealmSettings(props) {
         }
         catch(err) {
             if(err.response && err.response.data)
-                showStatus(err.response.data)
-            showStatus("Could not load realm settings")
+                showStatus(err.response.data.detail[0].msg)
+            // showStatus("Could not load realm settings")
+            setMembers([])
+            setDetails({"role": "admin", "groups": 2, "members": 1, name: "ans", "owner": "menu", "inviteType": "all"})
         }
         finally{
             setLoading(false)
@@ -81,7 +84,7 @@ export default function RealmSettings(props) {
         }
         catch(err) {
             if(err.response && err.response.data)
-                showStatus(err.response.data.detail[0],msg)
+                showStatus(err.response.data.detail[0].msg)
             showStatus("Failed to create invite for the user, try again")
         }
     }
@@ -212,7 +215,8 @@ export default function RealmSettings(props) {
                 <p className="cancel-cross" onClick={props.onClose}>X</p>
                 <h2>Realm Settings</h2>
                 <p>You: {details.role}</p>
-                {status && <p>{status}</p>}
+                {/* {status && <p>{status}</p>} */}
+                <p className="realm-settings-status">Yoooooooo</p>
                 <div className="realm-setting">
                     <h3>Name and description</h3>
                     <input type="text" value={name} disabled={!priviliged} maxLength={40} minLength={1} onChange={e => setName(e.target.value)}/>
@@ -251,7 +255,7 @@ export default function RealmSettings(props) {
                     </div>
                 )}
                 <div className="realm-setting">
-                    <h3>Members (members.length)</h3>
+                    <h3>Members ({members.length})</h3>
                     <ul>
                         {members.map(mem => (
                             <li key={mem.username} className="realm-member">

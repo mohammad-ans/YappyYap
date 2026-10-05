@@ -54,7 +54,6 @@ export default function ChatHeader(props) {
             if(err.response && err.response.data) {
                     setError(pre => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
-                    console.log(err.response.data)
                     if(err.status == 403)
                         navigate("/signin")
                 }

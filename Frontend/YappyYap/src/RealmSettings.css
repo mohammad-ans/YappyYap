@@ -1,0 +1,76 @@
+:root{
+    --text-color: aqua;
+    --header-color: rgb(20, 20, 24);
+    --input-backgrounds: rgb(63, 63, 103);
+    --border: grey;
+}
+html[data-theme="blue"] {
+    --text-color: aqua;
+    --header-color: rgb(20, 20, 24);
+    --input-backgrounds: rgb(63, 63, 103);
+    --border: grey;
+}
+html[data-theme="beige"] {
+    --text-color: wheat;
+    --header-color: #0e100f;
+    --input-backgrounds: rgba(245, 222, 179, 0.5);
+}
+html[data-theme="green"] {
+    --text-color: rgb(0, 255, 240);
+    --header-color: rgb(20, 44, 20);
+    --input-backgrounds: rgb(63, 103, 63);
+}
+.realm-settings-overlay{
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10;
+    background-color: #0e100f;
+    padding: 5vh 5vw;
+    overflow-y: scroll;
+}
+.realm-settings-overlay .cancel-cross{
+    font-size: 1.6rem;
+}
+.realm-settings{
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 300px;
+    margin: auto;
+}
+.realm-settings *{
+    flex-shrink: 0;
+}
+.realm-settings h2{
+    font-size: 2rem;
+    text-align: center;
+    margin-top: 24px;
+    margin-bottom: 20px;
+}
+.realm-settings .realm-setting, .realm-setting form{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.realm-settings input, textarea{
+    background-color: var(--input-backgrounds);
+    border: 2px solid var(--input-backgrounds);
+    border-radius: 4px;
+    padding: 4px;
+    outline: none;
+}
+.realm-settings input:focus{
+    border-color: var(--border);
+}
+.realm-settings button{
+    border: 1px solid var(--input-backgrounds);
+    background-color: transparent;
+    color: var(--input-backgrounds);
+    border-radius: 6px;
+    padding: 6px;
+    cursor: pointer;
+}
+.realm-setting select{
+    cursor: pointer;
+}

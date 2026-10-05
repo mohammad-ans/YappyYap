@@ -116,12 +116,23 @@ export default function ChatSideBar(props) {
         setSettingsOpen(true)
     }
     return(
+        <>
+        {realm && settingsOpen && (
+            <RealmSettings
+                realm={realm}
+                onClose={() => setSettingsOpen(false)}
+                onDelete={() => {
+                    setSettingsOpen(false)
+                    navigate("/chat/realms")
+                }}
+                />
+        )}
         <div className="chat-sidearea" onClick={navbarSimulator}>
             {realm && realmDetails && (<>
             <span className="sidebar-section">
                     <span className="back-to-realms" onClick={goToRealms}><svg width={20} height={20} viewBox="0 0 24 24" fill="none">
                         <path xmlns="http://www.w3.org/2000/svg" d="M4 8h15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                        <path xmlns="http://www.w3.org/2000/svg" d="m16 5 3 3-3 3" stroke="currentColor" stroke-width="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path xmlns="http://www.w3.org/2000/svg" d="m16 5 3 3-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                         <path xmlns="http://www.w3.org/2000/svg" d="M20 16H5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                         <path xmlns="http://www.w3.org/2000/svg" d="m8 13-3 3 3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg> Realm</span>
@@ -136,18 +147,8 @@ export default function ChatSideBar(props) {
                 {realm && realm != currGroup ? <><span className="realms-r-replacement">{realm.charAt(0)}</span><span>{realm.slice(1)}</span></>
                  : <><span className="realms-r-replacement">R</span><span className="ealms">ealms</span></>}
             </h2>
-            {realm && <>
-            {settingsOpen && (
-                <RealmSettings
-                    realm={realm}
-                    onClose={() => setSettingsOpen(false)}
-                    onDelete={() => {
-                        setSettingsOpen(false)
-                        navigate("/chat/realms")
-                    }}
-                 />
-            )}
             <hr />
+            {realm && <>
             <div className="search-users-groups">
                 <div>
                     <input type="text" onClick={endPropagation} placeholder="Search" value={query} onChange={e => setQuery(e.target.value)}/>
@@ -189,5 +190,6 @@ export default function ChatSideBar(props) {
                 </Link>
             </div>
         </div>
+        </>
     )
 }
