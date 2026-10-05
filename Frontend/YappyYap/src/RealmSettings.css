@@ -74,3 +74,6 @@ html[data-theme="green"] {
 .realm-setting select{
     cursor: pointer;
 }
+.realm-settings-status{
+    color: red;
+}

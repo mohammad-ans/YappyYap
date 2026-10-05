@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import useAxios from "../hooks/useAxios";
 import useChatAuth from "../hooks/useChatAuth"
 import "./RealmSettings.css"
 export default function RealmSettings(props) {
     const {username} = useChatAuth()
-    const [status, setStatus] = useState()
+    const [status, setStatus] = useState("")
+    const colorRef = useRef("red")
     const [details, setDetails] = useState(null)
     const [description, setDescription] = useState("")
-    const [name, setName] = useState()
+    const [name, setName] = useState("")
     const [members, setMembers] = useState([])
     const [confirmDel, setDelete] = useState(false)
     const [loading, setLoading] = useState(true)
@@ -16,6 +17,7 @@ export default function RealmSettings(props) {
     const [inviteUser, setInviteUser] = useState("")
     const [inviteLink, setInviteLink] = useState(null)
     const [addUser, setAddUser] = useState("")
+    const timeOutRef = useRef();
     const axios = useAxios()
     const priviliged = details && details.role && (details.role == "owner" || details.role == "admin")
     async function load() {
@@ -42,9 +44,14 @@ export default function RealmSettings(props) {
         load()
     }, [props.realm])
 
-    function showStatus(msg) {
+    function showStatus(msg, red = true) {
         setStatus(msg)
-        setTimeout(() => setStatus(""), 3000)
+        if(red)
+            colorRef.current = "red"
+        else
+            colorRef.current = "green"
+        clearTimeout(timeOutRef.current)
+        timeOutRef.current = setTimeout(() => setStatus(""), 5000)
     }
 
     async function addMemDirect(e) {
@@ -56,14 +63,15 @@ export default function RealmSettings(props) {
             await axios.post(`http://localhost:8004/realms/${props.realm}/members/add`, {
                 username: user
             })
-            setStatus(`Added ${user} to the realm`)
+            showStatus(`Added ${user} to the realm`, false)
             setAddUser("")
             load()
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Adding user to realm failed, try again")
+            else
+                showStatus("Adding user to realm failed, try again")
         }
     }
 
@@ -80,12 +88,13 @@ export default function RealmSettings(props) {
             setInviteLink(link)
             setInviteUser("")
             const flag = sendInviteDm(user, details.name, link)
-            showStatus(flag ? `Invite sent to ${user} as DM` :`Invite created for ${target}, could not dm so copy it and manually send them`)
+            showStatus(flag ? `Invite sent to ${user} as DM` :`Invite created for ${target}, could not dm so copy it and manually send them`, false)
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Failed to create invite for the user, try again")
+            else
+                showStatus("Failed to create invite for the user, try again")
         }
     }
 
@@ -97,7 +106,8 @@ export default function RealmSettings(props) {
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not delete the realm, try again in a while")
+            else
+                showStatus("Could not delete the realm, try again in a while")
         }
     }
 
@@ -109,7 +119,8 @@ export default function RealmSettings(props) {
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not leave the realm, try again later")
+            else
+                showStatus("Could not leave the realm, try again later")
         }
     }
 
@@ -117,12 +128,13 @@ export default function RealmSettings(props) {
         try{
             await axios.patch(`http://localhost:8004/realms/${props.realm}/members`, {name: name, role: "admin"})
             setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "admin"}: mem))
-            showStatus(`Promoted ${name} to admin`)
+            showStatus(`Promoted ${name} to admin`, false)
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Promoting selected user failed, try again")
+            else
+                showStatus("Promoting selected user failed, try again")
         }
     }
 
@@ -130,12 +142,13 @@ export default function RealmSettings(props) {
         try{
             await axios.patch(`http://localhost:8004/realms/${props.realm}/members`, {name: name, role: "member"})
             setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "member"}: mem))
-            showStatus(`Demoted ${name} to member`)
+            showStatus(`Demoted ${name} to member`, false)
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Demoting selected user failed, try again")
+            else
+                showStatus("Demoting selected user failed, try again")
         }
     }
 
@@ -146,14 +159,15 @@ export default function RealmSettings(props) {
             await axios.post(`http://localhost:8004/realms/${props.realm}/make-owner`, {
                 username: transferUser
             })
-            showStatus(`${transferUser} is now the new owner`)
+            showStatus(`${transferUser} is now the new owner`, false)
             setTransferUser(null)
             load()
         }
         catch(err){
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not make the other user owner")
+            else
+                showStatus("Could not make the other user owner")
         }
     }
 
@@ -163,12 +177,13 @@ export default function RealmSettings(props) {
         try{
             await axios.post(`http:localhost:8004/realms/${props.realm}/members/${removeUser}/remove`)
             setMembers(pre => pre.filter(mem => mem != removeUser))
-            showStatus(`Removed user ${removeUser} from realm`)
+            showStatus(`Removed user ${removeUser} from realm`, false)
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Removing user from realm failed, try again")
+            else
+                showStatus("Removing user from realm failed, try again")
         }
     }
 
@@ -205,7 +220,7 @@ export default function RealmSettings(props) {
             <div className="realm-settings-overlay">
                 <div className="realm-settings">
                     <p className="cancel-cross" onClick={props.onClose}>X</p>
-                    <p>{status || "Could not load the realm's settings"}</p>
+                    <p className="realm-settings-status">{status || "Could not load the realm's settings"}</p>
                 </div>
             </div>
         )
@@ -215,8 +230,7 @@ export default function RealmSettings(props) {
                 <p className="cancel-cross" onClick={props.onClose}>X</p>
                 <h2>Realm Settings</h2>
                 <p>You: {details.role}</p>
-                {/* {status && <p>{status}</p>} */}
-                <p className="realm-settings-status">Yoooooooo</p>
+                {status && <p className="realm-settings-status" style={{color: colorRef.current}}>{status}</p>}
                 <div className="realm-setting">
                     <h3>Name and description</h3>
                     <input type="text" value={name} disabled={!priviliged} maxLength={40} minLength={1} onChange={e => setName(e.target.value)}/>
