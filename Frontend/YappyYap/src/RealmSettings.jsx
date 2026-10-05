@@ -33,8 +33,8 @@ export default function RealmSettings(props) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
             // showStatus("Could not load realm settings")
-            setMembers([])
-            setDetails({"role": "admin", "groups": 2, "members": 1, name: "ans", "owner": "menu", "inviteType": "all"})
+            setMembers([{"username": "NA", "role": "owner"}, {"username": "abc", "role": "member"}, {"username": "abcd", "role": "member"}])
+            setDetails({"role": "owner", "groups": 2, "members": 1, name: "NA", "owner": "menu", "inviteType": "all"})
         }
         finally{
             setLoading(false)
@@ -153,14 +153,13 @@ export default function RealmSettings(props) {
     }
 
     async function transferOwner() {
-        if(!transfer)
+        if(!transferUser)
             return
         try{
             await axios.post(`http://localhost:8004/realms/${props.realm}/make-owner`, {
                 username: transferUser
             })
             showStatus(`${transferUser} is now the new owner`, false)
-            setTransferUser(null)
             load()
         }
         catch(err){
@@ -168,6 +167,9 @@ export default function RealmSettings(props) {
                 showStatus(err.response.data.detail[0].msg)
             else
                 showStatus("Could not make the other user owner")
+        }
+        finally{
+            setTransferUser(null)
         }
     }
 
@@ -184,6 +186,9 @@ export default function RealmSettings(props) {
                 showStatus(err.response.data.detail[0].msg)
             else
                 showStatus("Removing user from realm failed, try again")
+        }
+        finally{
+            setRemoveUser(null)
         }
     }
 
@@ -210,12 +215,13 @@ export default function RealmSettings(props) {
     async function updateRealm(data) {
         try{
             await axios.patch(`http://localhost:8004/realms/${props.realm}`, data)
+            showStatus(`Updated ${Object.keys(data).join(" and ")} of realm successfully`, false)
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
             else
-                showStatus("Updating realm failed")
+                showStatus(`Updating ${Object.keys(data)} of realm failed`)
         }
 
     }
@@ -286,19 +292,21 @@ export default function RealmSettings(props) {
                     </div>
                 )}
                 <div className="realm-setting">
-                    <h3>Members ({members.length})</h3>
-                    <ul>
+                    <h3>Members - {members.length}</h3>
+                    <ul className="realm-settings-members">
                         {members.map(mem => (
                             <li key={mem.username} className="realm-member">
+                                <p className="member-details">
                                 <span className="realm-member-name">{mem.username} {mem.username == username && "(you)"}</span>
                                 <span className={`realm-member-role realm-member-role-${mem.role}`}>{mem.role}</span>
+                                </p>
                                 {details.role == "owner" && mem.role != "owner" && (
                                     <span className="realm-member-actions">
                                         {
                                             mem.role =="member"? 
                                             <button onClick={() => promote(mem.username)}>Promote to admin</button> : <button onClick={() => demote(mem.username)}>Demote to member</button>
                                         }
-                                        <button onClick={()=> setTransferUser(mem.username)}></button>
+                                        <button onClick={()=> setTransferUser(mem.username)}>Make Owner</button>
                                         <button onClick={() => setRemoveUser(true)}>Remove User</button>
                                     </span>
                                 )}
@@ -307,17 +315,21 @@ export default function RealmSettings(props) {
                     </ul>
                 </div>
                 {removeUser &&
-                    <div className="realm-setting">
-                        <p>Remove <b>{removeUser}</b> from everything in realm, delete their owned channel and remove them from every channel</p>
+                    <div className="realm-setting remove-user-confirm">
+                        <p>Remove <b>{removeUser}</b> from everything in realm, delete their owned channel and remove them from every channel?</p>
+                        <div className="buttons">
                         <button onClick={remove}>Remove</button>
                         <button onClick={() => setRemoveUser(null)}>Cancel</button>
+                        </div>
                     </div>
                 }
                 {transferUser &&
-                    <div className="realm-setting">
+                    <div className="realm-setting transfer-user-confirm">
                         <p>Make <b>{transferUser} the new realm owner and demote yourself to admin?</b></p>
+                        <div className="buttons">
                         <button onClick={transferOwner}>Confirm</button>
                         <button onClick={() => setTransferUser(null)}>Cancel</button>
+                        </div>
                     </div>
                 }
                 <div className="realm-setting">

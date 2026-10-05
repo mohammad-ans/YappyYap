@@ -36,7 +36,7 @@ html[data-theme="green"] {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    max-width: 300px;
+    max-width: 320px;
     margin: auto;
 }
 .realm-settings *{
@@ -76,4 +76,54 @@ html[data-theme="green"] {
 }
 .realm-settings-status{
     color: red;
+}
+.realm-settings-members{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 15px;
+    list-style-type: disc;
+}
+.realm-settings-members li{
+    overflow: visible;
+}
+.realm-member-actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.realm-member-actions *{
+    flex-shrink: 0;
+}
+.realm-settings .transfer-user-confirm, .realm-settings .remove-user-confirm{
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.9);
+}
+.transfer-user-confirm p, .remove-user-confirm p {
+    max-width: min(80vw, 500px);
+    text-align: center;
+}
+.transfer-user-confirm .buttons, .remove-user-confirm .buttons{
+    display: flex;
+    gap: 16px;
+}
+.realm-settings-members .member-details{
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    align-items: center;
+}
+.realm-settings-members .member-details span:nth-child(2){
+    width: 80px;
+    font-family: monospace;
+    color: #D00000;
 }
