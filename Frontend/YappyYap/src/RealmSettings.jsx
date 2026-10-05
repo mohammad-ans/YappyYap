@@ -18,6 +18,7 @@ export default function RealmSettings(props) {
     const [inviteLink, setInviteLink] = useState(null)
     const [inviteType, setInviteType] = useState("");
     const [addUser, setAddUser] = useState("")
+    const [leave, setLeave]  = useState(false);
     const timeOutRef = useRef();
     const priviliged = details && details.role && (details.role == "owner" || details.role == "admin")
     async function load() {
@@ -33,8 +34,8 @@ export default function RealmSettings(props) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
             // showStatus("Could not load realm settings")
-            setMembers([{"username": "NA", "role": "owner"}, {"username": "abc", "role": "member"}, {"username": "abcd", "role": "member"}])
-            setDetails({"role": "owner", "groups": 2, "members": 1, name: "NA", "owner": "menu", "inviteType": "all"})
+            setMembers([{"username": "NA", "role": "admin"}, {"username": "abc", "role": "member"}, {"username": "abcd", "role": "member"}])
+            setDetails({"role": "admin", "groups": 2, "members": 1, name: "NA", "owner": "menu", "inviteType": "all"})
         }
         finally{
             setLoading(false)
@@ -109,6 +110,9 @@ export default function RealmSettings(props) {
             else
                 showStatus("Could not delete the realm, try again in a while")
         }
+        finally{
+            setDelete(false)
+        }
     }
 
     async function leaveRealm() {
@@ -121,6 +125,9 @@ export default function RealmSettings(props) {
                 showStatus(err.response.data.detail[0].msg)
             else
                 showStatus("Could not leave the realm, try again later")
+        }
+        finally{
+            setLeave(false)
         }
     }
 
@@ -332,17 +339,28 @@ export default function RealmSettings(props) {
                         </div>
                     </div>
                 }
-                <div className="realm-setting">
-                    {details.role != "owner" && <button onClick={leaveRealm}>Leave Realm</button>}
+                <div className="realm-setting realm-settings-red">
+                    {details.role != "owner" && <button onClick={() =>  setLeave(true)}>Leave Realm</button>}
                     {details.role == "owner" && !confirmDel && <button onClick={()=> setDelete(true)}>Delete Realm</button>}
-                    {details.role == "owner" && confirmDel && 
-                        <>
-                            <p>Delete {details.name}. Everything in the whole realm will be deleted</p>
-                            <button onClick={delRealm}>Delete it</button>
-                            <button onClick={()=> setDelete(false)}>Cancel</button>
-                        </>
-                    }
                 </div>
+                {details.role == "owner" && confirmDel && 
+                    <div className="delete-realm-confirmation">
+                        <p>Delete {details.name}?Everything in the whole realm will be deleted. This action cannot be undone once confirmed.</p>
+                        <div className="buttons">
+                            <button onClick={delRealm} className="realm-delete-confirm">Delete it</button>
+                            <button onClick={()=> setDelete(false)}>Cancel</button>
+                        </div>
+                    </div>
+                }
+                {leave &&
+                    <div className="leave-realm-confirmation">
+                        <p>Leave Realm. If you leave realm all groups will be left too. Are you sure you want to leave?</p>
+                        <div className="buttons">
+                            <button onClick={leaveRealm} className="leave-realm-confirm-btn">Sure</button>
+                            <button onClick={() => setLeave(false)}>Nope</button>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
     )

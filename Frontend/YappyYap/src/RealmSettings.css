@@ -95,7 +95,7 @@ html[data-theme="green"] {
 .realm-member-actions *{
     flex-shrink: 0;
 }
-.realm-settings .transfer-user-confirm, .realm-settings .remove-user-confirm{
+.realm-settings .transfer-user-confirm, .realm-settings .remove-user-confirm, .realm-settings .delete-realm-confirmation, .realm-settings .leave-realm-confirmation{
     position: fixed;
     top: 0px;
     left: 0px;
@@ -108,11 +108,11 @@ html[data-theme="green"] {
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.9);
 }
-.transfer-user-confirm p, .remove-user-confirm p {
+.transfer-user-confirm p, .remove-user-confirm p, .delete-realm-confirmation p, .leave-realm-confirmation p{
     max-width: min(80vw, 500px);
     text-align: center;
 }
-.transfer-user-confirm .buttons, .remove-user-confirm .buttons{
+.transfer-user-confirm .buttons, .remove-user-confirm .buttons, .delete-realm-confirmation .buttons, .leave-realm-confirmation .buttons{
     display: flex;
     gap: 16px;
 }
@@ -126,4 +126,11 @@ html[data-theme="green"] {
     width: 80px;
     font-family: monospace;
     color: #D00000;
+}
+.realm-settings-red button, .delete-realm-confirmation .realm-delete-confirm, .leave-realm-confirmation .leave-realm-confirm-btn{
+    color: beige;
+    font-weight: bold;
+    background-color: #D00000;
+    border: 1px solid #D00000;
+    padding: 8px;
 }
