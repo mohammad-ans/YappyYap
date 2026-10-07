@@ -13,12 +13,14 @@ html[data-theme="blue"] {
 html[data-theme="beige"] {
     --text-color: wheat;
     --header-color: #0e100f;
-    --input-backgrounds: rgba(245, 222, 179, 0.5);
+    --input-backgrounds: rgba(245, 222, 179, 0.8);
+    --border: rgb(58, 58, 58);
 }
 html[data-theme="green"] {
     --text-color: rgb(0, 255, 240);
     --header-color: rgb(20, 44, 20);
     --input-backgrounds: rgb(63, 103, 63);
+    --border: grey;
 }
 .realm-settings-overlay{
     position: absolute;

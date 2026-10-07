@@ -1,3 +1,26 @@
+:root{
+    --text-color: aqua;
+    --header-color: rgb(20, 20, 24);
+    --input-backgrounds: rgb(63, 63, 103);
+}
+html[data-theme="blue"]{
+    --text-color: aqua;
+    --header-color: #0e100f;
+    --input-backgrounds: rgb(63, 63, 103);
+    
+}
+html[data-theme="green"]{
+    --text-color: rgb(0, 255, 240);
+    --header-color: rgb(20, 44, 20);
+    --input-backgrounds: rgb(63, 103, 63);
+    
+}
+html[data-theme="beige"]{
+    --text-color: wheat;
+    --header-color: rgb(20, 20, 24);
+    --input-backgrounds: rgba(245, 222, 179, 0.8);
+    
+}
 .grpsettings-overlay{
     position: fixed;
     width: 100vw;
@@ -23,8 +46,49 @@
     margin-top: 24px;
     margin-bottom: 20px;
 }
-.grp-settings .single-setting{
+.grp-settings .single-setting, .grp-settings form{
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+.grp-settings input, textarea{
+    background-color: var(--input-backgrounds);
+    border: 2px solid var(--input-backgrounds);
+    border-radius: 4px;
+    padding: 4px;
+    outline: none;
+}
+.grp-settings input:focus, .grp-settings textarea:focus{
+    border-color: grey;
+}
+.grp-settings button{
+    border: 1px solid var(--input-backgrounds);
+    background-color: transparent;
+    color: var(--input-backgrounds);
+    border-radius: 6px;
+    padding: 6px;
+}
+.confirm-overlay .buttons{
+    display: flex;
+    gap: 16px;
+}
+.grp-settings .confirm-overlay{
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    width: 100vw;
+    height: 100vh;
+    gap: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.9);
+}
+.confirm-overlay .confirm-button-red{
+    color: beige;
+    font-weight: bold;
+    background-color: #D00000;
+    border: 1px solid #D00000;
+    padding: 8px;
 }

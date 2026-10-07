@@ -17,6 +17,7 @@ export default function GroupSettings(props) {
     const [transferTarget, setTarget] = useState(null)
     const [inviteUsername, setInviteUsername] = useState("")
     const [inviteLink, setInviteLink] = useState(null)
+    const [leaveConfirm, setLeaveConfirm] = useState(null)
     async function load() {
         setLoading(true)
         try{
@@ -256,20 +257,34 @@ export default function GroupSettings(props) {
                     </ul>
                 </div>
                 {transferTarget && (
-                    <div className="transfer-confirm">
+                    <div className="confirm-overlay">
                         <p>Make <b>{transferTarget}</b> the new channel owner and demote yourself to an admin?</p>
+                        <div className="buttons">
                         <button onClick={makeOwner}>Confirm</button>
                         <button onClick={()=> setTarget(null)}>Cancel</button>
+                        </div>
                     </div>
                 )}
                 <div className="single-setting">
-                    {details.role != "owner" && <button onClick={leave}>Leave Channel</button>}
+                    {details.role != "owner" && <button onClick={()=> setLeaveConfirm(true)}>Leave Channel</button>}
                     {details.role == "owner" && <button onClick={()=> setDelConfirm(true)}>Delete Channel</button>}
-                    {details.role == "owner" && delConfirm && (<>
+                    {details.role == "owner" && delConfirm && (
+                    <div className="confirm-overlay">
                         <p>Delete #{details.name}? This cannot be undone</p>
-                        <button onClick={deleteChannel}>Yes</button>
+                        <div className="buttons">
+                        <button onClick={deleteChannel} className="confirm-button-red">Yes</button>
                         <button onClick={()=> setDelConfirm(false)}>Cancel</button>
-                    </>)}
+                        </div>
+                    </div>)}
+                    {leaveConfirm && (<div className="confirm-overlay">
+                        <p>Are you sure you want to leave group?</p>
+                        <div className="buttons">
+                            <button onClick={leave} className="confirm-button-red">Yes</button>
+                            <button onClick={()=> setLeaveConfirm(false)}>Cancel</button>
+                        </div>
+                    </div>)
+
+                    }
                 </div>
             </div>
         </div>    
