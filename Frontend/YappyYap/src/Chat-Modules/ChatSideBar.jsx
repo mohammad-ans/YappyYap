@@ -101,15 +101,15 @@ export default function ChatSideBar(props) {
         }
         catch(err) {
             if(err.response && err.response.status !== 409) {
-                if(err.response.data)
-                    setError(err.response.data.msg)
+                if(err.response.data && err.response.data.detail)
+                    setError(err.response.data.detail[0].msg)
                 else
                     setError("Could not join channel")
                 setTrigger(pre => !pre)
                 return;
             }
         }
-        navigate(`/chat/realms/${realm}/c/${element.name}`)
+        navigate(`/chat/realms/${realm}/c/${el.name}`)
     }
     function openSettings(e) {
         e.stopPropagation();
@@ -144,7 +144,7 @@ export default function ChatSideBar(props) {
                     </>
             )}
             <h2 className="chat-sidearea-heading" onClick={goToRealms}>
-                {realm && realm != currGroup ? <><span className="realms-r-replacement">{realm.charAt(0)}</span><span>{realm.slice(1)}</span></>
+                {realm && realm != currGroup && realmDetails && realmDetails.name ? <><span className="realms-r-replacement">{realmDetails.name.charAt(0)}</span><span>{realmDetails.name.slice(1)}</span></>
                  : <><span className="realms-r-replacement">R</span><span className="ealms">ealms</span></>}
             </h2>
             <hr />

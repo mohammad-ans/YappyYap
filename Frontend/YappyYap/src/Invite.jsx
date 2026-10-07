@@ -28,28 +28,30 @@ export default function Invite() {
             catch(err) {
                 if(err.response && err.response.data)
                     setError(err.response.data.detail[0].msg)
-                setError("Invite link not valid")
+                else
+                    setError("Invite link not valid")
             }
             finally{
-                setLoading(true)
+                setLoading(false)
             }
         }
-        loadPreview(false)
+        loadPreview()
     }, [token, loading, logged])
 
     async function joinNow() {
         setJoining(true)
         try{
             const res = await axios.post(`http://localhost:8004/invites/${token}/redeem`)
-            if(preview.scope == "channel" && res.data.grpId)
+            if(preview.scope == "group" && res.data.grpId)
                 navigate(`/chat/realms/${res.data.realm_id}/c/${res.data.grpId}`)
             else
                 navigate(`/chat/realms/${res.data.realm_id}`)
         }
         catch(err) {
             if(err.response && err.response.data)
-                setError(response.data.detail[0].msg)
-            setError("Joining failed...")
+                setError(err.response.data.detail[0].msg)
+            else
+                setError("Joining failed...")
         }
         finally{
             setJoining(false)
@@ -60,6 +62,16 @@ export default function Invite() {
         return(
             <div className="accept-invite-page">
                 <p>Loading invite...</p>
+            </div>
+        )
+
+    if(error || !preview)
+        return(
+            <div className="accept-invite-page">
+                <div className="accept-invite-area">
+                    <p className="accept-invite-error">{error || "Invite link not valid"}</p>
+                    <button onClick={() => navigate("/chat/realms")}>Back to realms</button>
+                </div>
             </div>
         )
 
@@ -76,29 +88,20 @@ export default function Invite() {
     if(!preview.valid)
         return(
             <div className="accept-invite-page">
-                <div-accept-invite-area>
-                    <p>{preview.reason}</p>
-                    <button>Back to realms</button>
-                </div-accept-invite-area>
-            </div>
-        )
-
-    if(error)
-        return(
-            <div className="accept-invite-page">
                 <div className="accept-invite-area">
-                    <p className="accept-invite-error">{error}</p>
+                    <p className="accept-invite-error">{preview.reason}</p>
                     <button onClick={() => navigate("/chat/realms")}>Back to realms</button>
                 </div>
             </div>
         )
+
     return(
         <div className="accept-invite-page">
             <div className="accept-invite-area">
-                <h2>{preview.scope == "channel" ? `#${preview.name}`: preview.realm_name}</h2>
-                {preview.scope == "channel" && <p>in {preview.realm_name}</p>}
-                <p>Invited by ${preview.invitedBy}</p>
-                <button onClick={joinNow} disabled={joining}>{joining ? "Joining..." : `Join ${preview.scope == "channel" ? "channel" : "realm"}`}</button>
+                <h2>{preview.scope == "group" ? `#${preview.name}`: preview.realm_name}</h2>
+                {preview.scope == "group" && <p>in {preview.realm_name}</p>}
+                <p>Invited by {preview.invitedBy}</p>
+                <button onClick={joinNow} disabled={joining}>{joining ? "Joining..." : `Join ${preview.scope == "group" ? "channel" : "realm"}`}</button>
             </div>
         </div>
     )

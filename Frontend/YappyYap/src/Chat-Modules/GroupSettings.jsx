@@ -24,9 +24,9 @@ export default function GroupSettings(props) {
         setLoading(true)
         try{
             const members = await axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`)
-            const details = axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/details`)
+            const details = await axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/details`)
             setDetails(details.data)
-            setDescription((await details).data.description || "")
+            setDescription(details.data.description || "")
             setMembers(members.data)
         }
         catch(err) {
@@ -117,9 +117,9 @@ export default function GroupSettings(props) {
     }
     async function removeMember() {
         try{
-            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members/remove`, {username: removeMember})
-            setMembers(pre => pre.filter(pre => pre.username != removeMember))
-            showStatus(`Removed ${removeMember}`)
+            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members/remove`, {username: removeTarget})
+            setMembers(pre => pre.filter(mem => mem.username != removeTarget))
+            showStatus(`Removed ${removeTarget}`, false)
         }
         catch(err) {
             if (err.response && err.response.data)
@@ -133,7 +133,7 @@ export default function GroupSettings(props) {
     }
     async function deleteChannel() {
         try{
-             await axios.delete(`http://localhost/realms/${props.realm}/groups/${props.group}`)
+             await axios.delete(`http://localhost:8004/realms/${props.realm}/groups/${props.group}`)
              await setRealm(props.realm)
              props.onDeleted()
         }
@@ -156,7 +156,7 @@ export default function GroupSettings(props) {
             const res = await axios.post(`http://localhost:8004/invites/group/${props.realm}/${props.group}`, {
                 username: target
             })
-            const link = `http://localhost:8004/invite/${res.data.token}/redeem`
+            const link = `${window.location.origin}/invite/${res.data.token}`
             setInviteLink(link)
             setInviteUsername("")
             const delivered = sendInviteDM(target, `#${details.name}`, link)
@@ -173,9 +173,11 @@ export default function GroupSettings(props) {
         if(!ws.current || ws.current.readyState !== WebSocket.OPEN)
             return false
         try{
-            const message = {recipient: username, expiration: false, duration: 86400, 
+            const message = {recipient: username, defaultExpiration: false, duration: 86400,
                 msg: `You have been invited to ${grpName} <a href="${link}" target="_blank" rel="noopener" class="invite-link">Click to join</a>`
             }
+            ws.current.send(JSON.stringify(message))
+            return true
         }
         catch{
             return false
@@ -185,7 +187,7 @@ export default function GroupSettings(props) {
         if(!inviteLink)
             return
         navigator.clipboard?.writeText(inviteLink)
-        showStatus("Invite link copied")
+        showStatus("Invite link copied", false)
     }
 
     async function makeOwner() {
@@ -267,8 +269,7 @@ export default function GroupSettings(props) {
                             </div>
                             {details.owner == username && mem.role !== "owner" && (
                                 <span className="group-member-settings">
-                                    {mem.role == "member"? <button onClick={()=> promote(mem.username)}>Make Admin</button>: <button>Remove Admin</button>}
-                                    {mem.role == "admin" && <button onClick={()=> demote(mem.username)}>Demote</button>}
+                                    {mem.role == "member"? <button onClick={()=> promote(mem.username)}>Make Admin</button>: <button onClick={()=> demote(mem.username)}>Remove Admin</button>}
                                     <button onClick={() => setTarget(mem.username)}>Make Channel Owner</button>
                                     <button onClick={()=> setRemove(mem.username)}>Remove</button>
                                 </span>
@@ -280,7 +281,7 @@ export default function GroupSettings(props) {
                     </ul>
                 </div>
                 {removeTarget && (<div className="confirm-overlay">
-                    <p>Are you sure you want to remove {removeMember} from group?</p>
+                    <p>Are you sure you want to remove {removeTarget} from group?</p>
                     <div className="buttons">
                         <button onClick={removeMember}>Yes</button>
                         <button onClick={()=> setRemove(false)}>Cancel</button>

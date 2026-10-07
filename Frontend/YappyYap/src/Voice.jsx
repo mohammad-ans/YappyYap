@@ -20,7 +20,7 @@ export default function Voice(props) {
     const websocket = useRef()
     const msgRemoverInterval = useRef();
     const {setError, setTrigger, username} = useChatAuth();
-    const {realmType, liveCount, dmSendOption, setRealm, tempDM, realmRef, getDms, setDms, setCurrGroup} = useContext(ChatContext);
+    const {realmType, liveCount, dmSendOption, setRealm, tempDM, realmRef, getDms, setDms, setCurrGroup, setCurrGroupName} = useContext(ChatContext);
     const navigate = useNavigate();
     useGSAP(() => {
         gsap.ticker.lagSmoothing(0)
@@ -67,9 +67,11 @@ export default function Voice(props) {
         let isMounted = true;
         const display = props.realm["name"];
         setCurrGroup(display);
-        const element = document.querySelector(`.${display}-realm`);
+        setCurrGroupName(props.realm["display"] || display);
+        const element = document.getElementsByClassName(`${display}-realm`)[0];
         // setRealm(realmRef.current);
-        element.classList.add("current-realm")
+        if (element)
+            element.classList.add("current-realm")
         const axios = useAxios();
         async function getmsgs() {
             try{
@@ -185,8 +187,8 @@ export default function Voice(props) {
                     if(err.response && err.response.data) {
                             setError(pre => err.response.data.detail[0].msg);
                             setTrigger(t => !t);
-                            if(ws.current && ws.current.readyState == WebSocket.OPEN)
-                                ws.current.close();
+                            if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
+                                websocket.current.close();
                             navigate("/signin")
                         }
 

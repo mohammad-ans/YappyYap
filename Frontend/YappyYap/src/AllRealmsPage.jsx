@@ -14,7 +14,7 @@ export default function AllRealmsPage(props) {
     const [openRealms, setOpenRealms] = useState([])
     const [name, setName] = useState("")
     const [description, setDescription] = useState("")
-    const [inviteType, setInviteType] = useState("")
+    const [inviteType, setInviteType] = useState("invite")
     const [creating, setCreating] = useState(false)
     const axios = useAxios()
     const navigate = useNavigate()
@@ -127,7 +127,7 @@ export default function AllRealmsPage(props) {
                 <h3 className="new-realms-heading">Discover open realms</h3>
                 <ul className="realms-list">
                     {openRealms.map(realm => (
-                        <li className="realm-card">
+                        <li className="realm-card" key={realm.id}>
                             <h3>{realm.name}</h3>
                             <button onClick={() => joinOpenRealms(realm.id)} disabled={joinId == realm.id}> {joinId == realm.id ? "Joining..." : "Join"} </button>
                         </li>

@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useContext } from "react"
 import useChatAuth from "../../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import { ChatContext } from "../ChatContext";
-import GroupSettings from "./GroupSettings";
 export default function ChatHeader(props) {
     const [online, setOnline] = useState(0);
     const [members, setMembers] = useState(0);
@@ -12,7 +11,7 @@ export default function ChatHeader(props) {
     const {setError, setTrigger} = useChatAuth();
     const [displayname, setDisplay] = useState("");
     const navigate = useNavigate();
-    const {realmType, realm, groups, currGroup} = useContext(ChatContext);
+    const {realmType, realm, currGroup, currGroupName, realmDetails} = useContext(ChatContext);
     const isGrp = realm && currGroup !== realm && currGroup !== "dms"
     const realmGlobal = !realm || realm == "global";
     const getOnline = useCallback(async ()=> {
@@ -20,24 +19,27 @@ export default function ChatHeader(props) {
             if(!isGrp)
                 return;
             let response;
-            document.querySelector(".members").style.display = "none";
+            const membersEl = document.querySelector(".members");
+            if (membersEl)
+                membersEl.style.display = "none";
             if (currGroup == "dms"){
                 response = await axios.get(`http://localhost:8005/${props.user.current}`);
                 // response = await axios.get(`https://chat.yappyyap.xyz/livecount/${props.user.current}`);
             }else{
                 let initialPath;
-                if (currGroup == "voice-realm") {
+                if (currGroup == "global-voice") {
                     initialPath = "3/voice";
                     // initialPath = "voice.yappyyap.xyz/voice";
                 }
-                else if (currGroup == "global-realm") {
+                else if (currGroup == "global-text") {
                     initialPath = "2/global"
                     // initialPath = "textchat.yappyyap.xyz/global"
                 }
                 else {
-                    initialPath = `4/${realmType.current}/${currGroup.slice(0,-6)}`
-                    // initialPath = `groups.yappyyap.xyz/${realmType.current}/${currGroup.slice(0,-6)}`
-                    document.querySelector(".members").style.display = "block";
+                    initialPath = `4/${realmType.current}/${currGroup}`
+                    // initialPath = `groups.yappyyap.xyz/${realmType.current}/${currGroup}`
+                    if (membersEl)
+                        membersEl.style.display = "block";
                     const tempMembers = await axios.get(`http://localhost:8004/groups/${currGroup}/numMembers`);
                     // const tempMembers = await axios.get(`https://groups.yappyyap.xyz/groups/${currGroup}/numMembers`);
                     setMembers(tempMembers.data);
@@ -57,7 +59,7 @@ export default function ChatHeader(props) {
                         navigate("/signin")
                 }
         }
-    }, [])
+    }, [isGrp, currGroup])
     useEffect(()=>{
         let theme = localStorage.getItem("theme");
         if(theme)
@@ -70,17 +72,16 @@ export default function ChatHeader(props) {
         return ()=>{ 
             clearInterval(onlineInterval);
         }
-    }, [realm, currGroup])
+    }, [getOnline])
     useEffect(()=>{
-        const display = (groups["Groups"].find(grp => grp["name"] == currGroup) || {})["display"]
-        if(props.realm == "dms") 
+        if(props.realm == "dms")
             setDisplay(pre => `Personal Msg: ${props.user.current}`)
-        else if(display)
-            setDisplay(pre => display.toUpperCase())
+        else if(isGrp && currGroupName)
+            setDisplay(pre => currGroupName.toUpperCase())
         else
-            setDisplay(pre => (props.realm || "").toUpperCase())
-        
-    }, [props.realm, currGroup])
+            setDisplay(pre => ((realmDetails && realmDetails.name) || props.realm || "").toUpperCase())
+
+    }, [props.realm, isGrp, currGroupName, realmDetails])
     function changeTheme(e) {
         let temp = e.target.value;
         localStorage.setItem("theme", temp);

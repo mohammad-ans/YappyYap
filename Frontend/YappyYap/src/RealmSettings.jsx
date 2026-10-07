@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import useChatAuth from "../hooks/useChatAuth"
 import "./RealmSettings.css"
 import axios from "axios";
+import { ChatContext } from "./ChatContext";
 export default function RealmSettings(props) {
     const {username} = useChatAuth()
+    const {ws} = useContext(ChatContext)
     const [status, setStatus] = useState("")
     const colorRef = useRef("red")
     const [details, setDetails] = useState(null)
@@ -26,9 +28,11 @@ export default function RealmSettings(props) {
         try{
             const details = await axios.get(`http://localhost:8004/realms/${props.realm}`)
             const members = await axios.get(`http://localhost:8004/realms/${props.realm}/members`)
-            setMembers(members)
+            setMembers(members.data)
             setDetails(details.data)
-            setDescription(details.data.description)
+            setName(details.data.name)
+            setDescription(details.data.description || "")
+            setInviteType(details.data.inviteType)
         }
         catch(err) {
             if(err.response && err.response.data)
@@ -84,11 +88,11 @@ export default function RealmSettings(props) {
             const res = await axios.post(`http://localhost:8004/invites/realm/${props.realm}`, {
                 username: user
             })
-            const link = `http://localhost:8004/invite/${res.data.token}`
+            const link = `${window.location.origin}/invite/${res.data.token}`
             setInviteLink(link)
             setInviteUser("")
             const flag = sendInviteDm(user, details.name, link)
-            showStatus(flag ? `Invite sent to ${user} as DM` :`Invite created for ${target}, could not dm so copy it and manually send them`, false)
+            showStatus(flag ? `Invite sent to ${user} as DM` :`Invite created for ${user}, could not dm so copy it and manually send them`, false)
         }
         catch(err) {
             if(err.response && err.response.data)
@@ -183,8 +187,8 @@ export default function RealmSettings(props) {
         if(!removeUser)
             return
         try{
-            await axios.post(`http:localhost:8004/realms/${props.realm}/members/${removeUser}/remove`)
-            setMembers(pre => pre.filter(mem => mem != removeUser))
+            await axios.post(`http://localhost:8004/realms/${props.realm}/members/${removeUser}/remove`)
+            setMembers(pre => pre.filter(mem => mem.username != removeUser))
             showStatus(`Removed user ${removeUser} from realm`, false)
         }
         catch(err) {
@@ -199,11 +203,11 @@ export default function RealmSettings(props) {
     }
 
     function sendInviteDm(recipient, realm, link) {
-        if(!props.ws.current || props.ws.current.readyState != WebSocket.OPEN)
+        if(!ws || !ws.current || ws.current.readyState != WebSocket.OPEN)
             return false
         try{
-            const msg = {recipient: recipient, defaultExpiration: false, duration: 86400, msg: `You have been invite to the realm ${realm}. Invite Link:  <a href="${link}" target="_blank" rel="noopener"></a>`}
-            props.ws.current.send(JSON.stringify(msg))
+            const msg = {recipient: recipient, defaultExpiration: false, duration: 86400, msg: `You have been invited to the realm ${realm}. <a href="${link}" target="_blank" rel="noopener" class="invite-link">Click to join</a>`}
+            ws.current.send(JSON.stringify(msg))
             return true
         }
         catch{
@@ -215,7 +219,7 @@ export default function RealmSettings(props) {
         if(!inviteLink)
             return
         navigator.clipboard?.writeText(inviteLink)
-        showStatus("Invite link copied")
+        showStatus("Invite link copied", false)
     }
 
     async function updateRealm(data) {
@@ -313,7 +317,7 @@ export default function RealmSettings(props) {
                                             <button onClick={() => promote(mem.username)}>Promote to admin</button> : <button onClick={() => demote(mem.username)}>Demote to member</button>
                                         }
                                         <button onClick={()=> setTransferUser(mem.username)}>Make Owner</button>
-                                        <button onClick={() => setRemoveUser(true)}>Remove User</button>
+                                        <button onClick={() => setRemoveUser(mem.username)}>Remove User</button>
                                     </span>
                                 )}
                             </li>
@@ -321,7 +325,7 @@ export default function RealmSettings(props) {
                     </ul>
                 </div>
                 {removeUser &&
-                    <div className="realm-setting remove-user-confirm">
+                    <div className="realm-setting remove-user-confirm realm-settings-confirmation">
                         <p>Remove <b>{removeUser}</b> from everything in realm, delete their owned channel and remove them from every channel?</p>
                         <div className="buttons">
                         <button onClick={remove}>Remove</button>
@@ -330,7 +334,7 @@ export default function RealmSettings(props) {
                     </div>
                 }
                 {transferUser &&
-                    <div className="realm-setting transfer-user-confirm">
+                    <div className="transfer-user-confirm realm-settings-confirmation">
                         <p>Make <b>{transferUser} the new realm owner and demote yourself to admin?</b></p>
                         <div className="buttons">
                         <button onClick={transferOwner}>Confirm</button>
@@ -343,19 +347,19 @@ export default function RealmSettings(props) {
                     {details.role == "owner" && !confirmDel && <button onClick={()=> setDelete(true)}>Delete Realm</button>}
                 </div>
                 {details.role == "owner" && confirmDel && 
-                    <div className="delete-realm-confirmation">
+                    <div className="delete-realm-confirmation realm-settings-confirmation">
                         <p>Delete {details.name}?Everything in the whole realm will be deleted. This action cannot be undone once confirmed.</p>
                         <div className="buttons">
-                            <button onClick={delRealm} className="realm-delete-confirm">Delete it</button>
+                            <button onClick={delRealm} className="realm-delete-confirm realm-settings-dngr">Delete it</button>
                             <button onClick={()=> setDelete(false)}>Cancel</button>
                         </div>
                     </div>
                 }
                 {leave &&
-                    <div className="leave-realm-confirmation">
+                    <div className="leave-realm-confirmation realm-settings-confirmation">
                         <p>Leave Realm. If you leave realm all groups will be left too. Are you sure you want to leave?</p>
                         <div className="buttons">
-                            <button onClick={leaveRealm} className="leave-realm-confirm-btn">Sure</button>
+                            <button onClick={leaveRealm} className="leave-realm-confirm-btn realm-settings-dngr">Sure</button>
                             <button onClick={() => setLeave(false)}>Nope</button>
                         </div>
                     </div>

@@ -39,6 +39,7 @@ export default function Chat(props) {
     const liveCount = useRef(true);
     const navigate = useNavigate()
     const [currGroup, setCurrGroup] = useState("")
+    const [currGroupName, setCurrGroupName] = useState("")
     const [realmDetails, setRealmDetails] = useState(null)
     const [grpSettings, setSettings] = useState(false);
     useEffect(() => {
@@ -279,7 +280,7 @@ export default function Chat(props) {
         setCurrentGroup(realm)
     }
     return (
-        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, setRealm, realmDetails, setCurrentGroup, setCurrGroup, currGroup}}>
+        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, setRealm, realmDetails, setCurrentGroup, setCurrGroup, currGroup, currGroupName, setCurrGroupName}}>
             <main className="chat-area nav-close-styles" onClick={clearClick}>
                 {props.chatInstructions ? <div className="instructions-overlay">
                     <div className="instructions">
@@ -329,14 +330,15 @@ export default function Chat(props) {
 function RealmPage(){
     const {realm} = useParams()
     const navigate = useNavigate()
-    const {setCurrentGroup, setRealm, realmRef, setCurrGroup} = useContext(ChatContext)
+    const {setCurrentGroup, setRealm, realmRef, setCurrGroup, setCurrGroupName} = useContext(ChatContext)
 
     useEffect(()=> {
         async function move() {
             const grps = await setCurrentGroup(realm)
             setRealm(realm)
             setCurrGroup(realm)
-            if (grps & grps.length > 0) {
+            setCurrGroupName("")
+            if (grps && grps.length > 0) {
                 navigate(`/chat/realms/${realm}/c/${grps[0].name}`, {replace: true})
             }
         }

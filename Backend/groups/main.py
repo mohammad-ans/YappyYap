@@ -128,7 +128,7 @@ def invite_realm(id: str, data: database.InviteCreate, db: Session = Depends(get
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "Only realm admins and owner can send invites to members"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == data.username))).scalar_one_or_none()
     if member:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, status=[{"msg": "User is already in the realm"}])
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "User is already in the realm"}])
     invite = database.Invite(realm_id=id, grpId=None, invitedBy=username, username=data.username, 
                              expiresAt= datetime.now(timezone.utc) + timedelta(hours=data.expiresInHours), scope="realm")
     db.add(invite)
@@ -158,7 +158,7 @@ def leave_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not a member of this realm"}])
     if member.role == "owner":
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Owner cannot leave realms, make someone else owner or delete the realm"}])
-    owned = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.owner == username))).scalars.all()
+    owned = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.owner == username))).scalars().all()
     for group in owned:
         db.execute(delete(database.Members).where(database.Members.grpId == group.id))
         db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == group.id))
@@ -195,7 +195,7 @@ def remove_user(id: str, user: str, db: Session = Depends(get_db), payload = Dep
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "User to be deleted not found"}])
     if del_user.role == "owner":
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Owner cannot be removed from the realm"}])
-    owned = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.owner == user))).scalar_one_or_none()
+    owned = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.owner == user))).scalars().all()
     for grp in owned:
         db.execute(delete(database.Members).where(database.Members.grpId == grp.id))
         db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == grp.id))
@@ -271,7 +271,7 @@ def valid_invite(invite: database.Invite, username: str):
         return False, "Invite is expired"
     if invite.username != username:
         return False, f"Invite is for {invite.username}"
-    return True
+    return True, None
 
 @app.post("/invites/{token}/redeem")
 def use_invite(token: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -282,18 +282,22 @@ def use_invite(token: str, db: Session = Depends(get_db), payload = Depends(veri
     valid, reason = valid_invite(invite, username)
     if not valid:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": reason}])
-    grp = db.execute(select(database.Group).where((database.Group.id == invite.grpId) & (database.Group.realm_id == invite.realm_id))).scalar_one_or_none()
-    if not grp:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel could have been deleted as it does not exists"}])
-    count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == invite.grpId)).scalar_one()
-    if count >= grp.maxGrpSize:
-        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Channel has reached max size"}])
-    member = db.execute(select(database.RMembers).where(database.RMembers.realm_id == invite.realm_id)).scalar_one_or_none()
-    if not member:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "You need to be in the realm to join its channels"}])
-    grp_member = db.execute(select(database.Members).where(database.Members.grpId == invite.grpId)).scalar_one_or_none()
-    if not grp_member:
-        db.add(database.Members(grpId = invite.grpId, name = username, role = "member"))
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == invite.realm_id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if invite.scope == "realm":
+        if not member:
+            db.add(database.RMembers(realm_id = invite.realm_id, username = username, role = "member"))
+    else:
+        grp = db.execute(select(database.Group).where((database.Group.id == invite.grpId) & (database.Group.realm_id == invite.realm_id))).scalar_one_or_none()
+        if not grp:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel could have been deleted as it does not exists"}])
+        count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == invite.grpId)).scalar_one()
+        if count >= grp.maxGrpSize:
+            raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Channel has reached max size"}])
+        if not member:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "You need to be in the realm to join its channels"}])
+        grp_member = db.execute(select(database.Members).where((database.Members.grpId == invite.grpId) & (database.Members.name == username))).scalar_one_or_none()
+        if not grp_member:
+            db.add(database.Members(grpId = invite.grpId, name = username, role = "member"))
     invite.used = True
     invite.usedAt = datetime.now(timezone.utc)
     db.commit()
@@ -307,13 +311,18 @@ def update_mem(id: str, group: str, data: database.MemberUpdate, db: Session = D
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
-    if not (member and member.role != "owner") and not (grp_member and grp_member.role != "owner"):
+    if not (member and member.role == "owner") and not (grp_member and grp_member.role == "owner"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to change role of members"}])
     update_user = db.execute(select(database.Members).where((database.Members.name == data.name) & (database.Members.grpId == group))).scalar_one_or_none()
     if not update_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "User not found"}])
+    if update_user.role == "owner":
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "You cannot change role of owner, owner can transfer its ownership"}])
+    update_user.role = data.role
+    db.commit()
+    return {"msg": "Success"}
 
-@app.post("/realms/{id}/group/{group}/leave")
+@app.post("/realms/{id}/groups/{group}/leave")
 def leave_group(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
     grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
@@ -329,7 +338,7 @@ def leave_group(id: str, group: str, db: Session = Depends(get_db), payload = De
     return {"msg": "Success"}
 
 @app.get("/groups/{id}/numMembers")
-def get_members(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+def get_members(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == id)).scalar_one()
     return count
 
@@ -364,13 +373,13 @@ def join_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_
     if realm.inviteType != "all":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You need an invite to join this realm"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
-    if not member:
+    if member:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "You are already a member of this realm"}])
     db.add(database.RMembers(realm_id = id, role = "member", username = username))
     db.commit()
     return {"msg": "Sucess"}
 
-@app.post("/realms/{id}/channel/{group}/join")
+@app.post("/realms/{id}/groups/{group}/join")
 def join_group(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
     grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
@@ -382,7 +391,7 @@ def join_group(id: str, group: str, db: Session = Depends(get_db), payload = Dep
     if grp.inviteType != "all":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "To join this channel you need an invite first"}])
     member = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpId == group))).scalar_one_or_none()
-    if not member:
+    if member:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "You are already in the channel"}])
     total_mems = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == group)).scalar_one()
     if total_mems >= grp.maxGrpSize:
@@ -420,12 +429,13 @@ def del_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_s
     mem = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not mem or mem.role != "owner":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to delete this realm"}])
-    groups = select(database.Group).where(database.Group.realmId == id)
+    groups = select(database.Group.id).where(database.Group.realm_id == id)
     db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId.in_(groups)))
     db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId.in_(groups)))
-    db.execute(delete(database.Members).where(database.RMembers.realm_id == id))
-    db.execute(delete(database.Group).where(database.Group.realm_id == id))
+    db.execute(delete(database.Members).where(database.Members.grpId.in_(groups)))
+    db.execute(delete(database.RMembers).where(database.RMembers.realm_id == id))
     db.execute(delete(database.Invite).where(database.Invite.realm_id == id))
+    db.execute(delete(database.Group).where(database.Group.realm_id == id))
     db.execute(delete(database.Realm).where(database.Realm.id == id))
     db.commit()
     return {"msg": "Success"}
@@ -567,10 +577,10 @@ def add_mem(group : str, db : Session = Depends(get_db), payload = Depends(verif
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "User could not be added"}])
 
     
-@app.post("/realm/{id}/groups/{group}/members/remove")
+@app.post("/realms/{id}/groups/{group}/members/remove")
 def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
-    grp = db.execute(select(database.Group).where((database.Group.relam_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
     if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
@@ -590,7 +600,7 @@ def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = D
 @app.get("/realms/{id}/groups/{group}/members")
 def get_members(id: str, group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     try:
-        members = db.execute(select(database.Members.name, database.Members.role).where((database.Members.grpName == group))).scalars().all()
+        members = db.execute(select(database.Members.name.label("username"), database.Members.role).where((database.Members.grpId == group))).mappings().all()
         return members
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])
@@ -603,14 +613,14 @@ def update_group(id: str, group: str, data: database.GrpUpdate, db: Session = De
     if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel does not exists"}])
     grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
-    member = db.execute(select(database.RMmebers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
-    if not (member and (member.role == "admin" or member.role == "owner") ) or not (grp_member and (grp_member.role == "admin" or grp_member.role == "owner")):
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not (member and (member.role == "admin" or member.role == "owner") ) and not (grp_member and (grp_member.role == "admin" or grp_member.role == "owner")):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to update channel details, only owner and admin can do that"}])
     updates = {key: val for key, val in data.model_dump(exclude_unset=True).items() if val is not None}
     if len(updates) == 0:
         return {"msg": "Success", "details": "No changes"}
     try:
-        db.execute(update(database.Group).where(database.Group.name == group).values(**updates))
+        db.execute(update(database.Group).where(database.Group.id == group).values(**updates))
         db.commit()
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg": "Could not update channel"}])
@@ -687,7 +697,7 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
                     username = senderName,
                     time_sent = time,
                     expiry = time + timedelta(seconds=seconds),
-                    grpName = group 
+                    grpId = group 
                 )
                 temp = database.Msg_return.from_orm(message).model_dump_json()
                 db.add(message)
@@ -708,7 +718,7 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
 @app.get("/getchatmsgs/{group}")
 async def send_messages(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
-    msgs = db.execute(select(database.grpMsgsT).where((database.grpMsgsT.expiry > time) & (database.grpMsgsT.grpName == group) )).scalars().all()
+    msgs = db.execute(select(database.grpMsgsT).where((database.grpMsgsT.expiry > time) & (database.grpMsgsT.grpId == group) )).scalars().all()
     msgs_return = []
     for msg in msgs:
         msgs_return.append(database.Msg_return.from_orm(msg))
@@ -804,7 +814,7 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                              msg = payload,
                              time_sent = time,
                              expiry = expiry,
-                             grpName = group
+                             grpId = group
                         )
                         db.add(voicemsg)
                         db.commit()
@@ -854,7 +864,7 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
 @app.get("/voice/getmsgs/{group}")
 async def get_msgs(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
-    db_data = db.execute(select(database.grpsMsgsV).where((database.grpsMsgsV.expiry > time) & (database.grpsMsgsV.grpName == group) )).scalars().all()
+    db_data = db.execute(select(database.grpsMsgsV).where((database.grpsMsgsV.expiry > time) & (database.grpsMsgsV.grpId == group) )).scalars().all()
     zip_file = io.BytesIO()
     with zipfile.ZipFile(zip_file, mode="w") as zipF:
         for msg in db_data:
