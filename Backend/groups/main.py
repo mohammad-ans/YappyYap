@@ -358,9 +358,7 @@ def get_realms(db: Session = Depends(get_db), payload = Depends(verify_session_t
         role = member.role
         groups = db.execute(select(func.count()).select_from(database.Group).where(database.Group.realm_id == realm.id)).scalar_one()
         members_ = db.execute(select(func.count()).select_from(database.RMembers).where(database.RMembers.realm_id == realm.id)).scalar_one()
-        realm = realm.__dict__
-        realm["createdAt"] = realm["createdAt"].isoformat()
-        detail = database.RealmDetails(**realm, role = role, groups = groups, members = members_)
+        detail = database.RealmDetails(id=realm.id, name = realm.name, description = realm.description or "", owner = realm.owner, createdAt=realm.createdAt, inviteType=realm.inviteType, role = role, groups = groups, members = members_)
         details.append(detail)
     return details
 
@@ -449,11 +447,9 @@ def get_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_s
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not a member of this realm"}])
-    details = database.RealmDetails.model_validate(realm)
-    details.role = member.role
-    details.groups = db.execute(select(func.count()).select_from(database.Group).where(database.Group.realm_id == id)).scalar_one()
-    details.members = db.execute(select(func.count()).select_from(database.RMembers).where(database.RMembers.realm_id == id)).scalar_one()
-    return details
+    groups = db.execute(select(func.count()).select_from(database.Group).where(database.Group.realm_id == id)).scalar_one()
+    members = db.execute(select(func.count()).select_from(database.RMembers).where(database.RMembers.realm_id == id)).scalar_one()
+    return database.RealmDetails(id = realm.id, name=realm.name, owner=realm.owner, createdAt=realm.createdAt, inviteType=realm.inviteType, role=member.role, members=members,groups=groups, description=realm.description or "")
 
 @app.get("/realms/{id}/members")
 def realm_members(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -669,13 +665,14 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
         while True:
             
             try:
-                data = await asyncio.wait_for(user.receive_json(), timeout=30)
-            except asyncio.TimeoutError:
                 try:
-                    await user.send_json({"type": "ping"})
                     data = await asyncio.wait_for(user.receive_json(), timeout=30)
-                except:
-                    break
+                except asyncio.TimeoutError:
+                    try:
+                        await user.send_json({"type": "ping"})
+                        data = await asyncio.wait_for(user.receive_json(), timeout=30)
+                    except:
+                        break
 
                 if data.get("type") == "pong":
                     continue
@@ -686,9 +683,6 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
                         response_username = await client.get(f"http://auth:8000/userCheck/{username}")
                         if response_username.json()["msg"] == False:
                             break
-                        # already_exists = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
-                        # if not already_exists:
-                        #     break
                 seconds = int(data["expire"])
                 msg = data["msg"]
                 time = datetime.now(timezone.utc)
@@ -711,9 +705,8 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
                 except:
                     pass
     finally:
-        if username in manager.connections:
-            manager.disconnect(username, group)
-        mark_online(manager_text, f"groups:text:online:{group}", username, False)
+        manager.disconnect(username, group)
+        await mark_online(manager_text, f"groups:text:online:{group}", username, False)
 
 @app.get("/getchatmsgs/{group}")
 async def send_messages(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
