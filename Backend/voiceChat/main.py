@@ -100,9 +100,9 @@ async def mark_online(manager: ws_manger.RedisWs, username: str, online: bool):
     except:
         pass
 
-manager = ws_manger.RedisWs(on_event=on_event)
+manager = ws_manger.RedisWs(grp="voicechat:global", on_event=on_event)
 
-@app.websocket("/voice/ws/voice")
+@app.websocket("/voice/ws/global-voice")
 async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), db : Session = Depends(get_db)):
     username = payload["username"]
     senderName = username
@@ -113,7 +113,7 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
         expiry_seconds = 0
         while True:
             try:
-                 data = await asyncio.wait_for(user.receive_json(), 30)
+                 data = await asyncio.wait_for(user.receive_bytes(), 30)
             except asyncio.TimeoutError:
                  try:
                     await user.send_json({"type": "ping"})
@@ -197,7 +197,7 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
          manager_local.disconnect(username)
          await mark_online(manager, username, False)
 
-@app.get("/voice/getmsgs/voice")
+@app.get("/voice/getmsgs/global-voice")
 async def get_msgs(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
     db_data = db.execute(select(VoiceMsgs).where(VoiceMsgs.expiry > time)).scalars().all()

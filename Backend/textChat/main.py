@@ -82,7 +82,7 @@ class ConnectionManager:
 manager_local = ConnectionManager()
 
 async def on_event(data):
-    await manager_local.send_message(data[""])
+    await manager_local.send_message(data["payload"])
 
 manager = ws_manger.RedisWs(grp="textchat:global", on_event=on_event)
 
@@ -97,7 +97,7 @@ async def mark_online(manager: ws_manger.RedisWs, username: str, online: bool):
     except:
         pass
 
-@app.websocket("/ws/global")
+@app.websocket("/ws/global-text")
 async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     MAX_TIME = payload["exp"]
     username = payload["username"]
@@ -154,7 +154,7 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
         await mark_online(manager, username, False)
 
 # async def send_messages(db : Session = Depends(get_db)):
-@app.get("/getchatmsgs/global")
+@app.get("/getchatmsgs/global-text")
 async def send_messages(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
     msgs = db.execute(select(Msgs).where(Msgs.expiry > time)).scalars().all()
