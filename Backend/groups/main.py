@@ -243,7 +243,7 @@ def invite_user(id: str, group: str, data: database.InviteCreate, db: Session = 
     username = payload["username"]
     grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
     if not grp:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Channel not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
     if not (member and (member.role != "admin" or member.role != "admin")) and not (grp_member and (grp_member.role != "admin" or grp_member.role != "owner")):
@@ -587,10 +587,10 @@ def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = D
        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "User could not be deleted"}])
     return {"msg" : "Success"}
     
-@app.get("/{group}/members")
-def get_members(group : str, db : Session = Depends(get_db)):
+@app.get("/realms/{id}/groups/{group}/members")
+def get_members(id: str, group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     try:
-        members = db.execute(select(database.Members.name).where(database.Members.grpName == group)).scalars().all()
+        members = db.execute(select(database.Members.name, database.Members.role).where((database.Members.grpName == group))).scalars().all()
         return members
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not fetch members"}])

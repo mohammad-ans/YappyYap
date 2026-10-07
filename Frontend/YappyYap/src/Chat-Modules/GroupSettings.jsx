@@ -34,8 +34,6 @@ export default function GroupSettings(props) {
                 setStatus(err.response.data.detail[0].msg)
             else
                 setStatus("Could not load channel settings")
-            setDetails({"realm_id": "global", "description" : "Nthing special", "role": "owner", "memberCount": 40, "name": "global voicee", "owner": "NA", "liveCount": true, "anonymity": true, "maxGrpSize": 50, "maxDuration": 100, "minDuration": 20})
-            setMembers([{"username": "a", "role": "member"}, {"username": "b", "role": "admin"}, {"username": "NA", "role": "owner"}])
         }
         finally{
             setLoading(false)
@@ -155,7 +153,7 @@ export default function GroupSettings(props) {
         if(!target)
             return
         try{
-            const res = await axios.post(`http:localhost:8004/invites/group/${props.realm}/${props.group}`, {
+            const res = await axios.post(`http://localhost:8004/invites/group/${props.realm}/${props.group}`, {
                 username: target
             })
             const link = `http://localhost:8004/invite/${res.data.token}/redeem`

@@ -304,7 +304,7 @@ export default function Chat(props) {
                     </div>
                 </div> : (<></>)}
                 {addArea && <AddGroup setAddArea={setAddArea} />}
-                {grpSettings && 1 && <GroupSettings realm={realm} group={currGroup} onClose={() => setSettings(false)} onDeleted={()=> {
+                {grpSettings && <GroupSettings realm={realm} group={currGroup} onClose={() => setSettings(false)} onDeleted={()=> {
                     setSettings(false)
                     navigate(`/chat/realms/${realm}`)
                 }}/>}

@@ -122,7 +122,7 @@ html[data-theme="beige"]{
     align-items: center;
 }
 .group-members-list .member-details span:nth-child(2){
-    width: 80px;
+    width: 56px;
     font-family: monospace;
     color: #D00000;
 }
