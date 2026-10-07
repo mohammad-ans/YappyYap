@@ -292,7 +292,7 @@ export default function Chat(props) {
         setCurrentGroup(realm)
     }
     return (
-        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, setRealm, realmDetails, setCurrentGroup, setCurrGroup, currGroup, currGroupName, setCurrGroupName}}>
+        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, setRealm, realmDetails, setRealmDetails,setCurrentGroup, setCurrGroup, currGroup, currGroupName, setCurrGroupName}}>
             <main className="chat-area nav-close-styles" onClick={clearClick}>
                 {props.chatInstructions ? <div className="instructions-overlay">
                     <div className="instructions">

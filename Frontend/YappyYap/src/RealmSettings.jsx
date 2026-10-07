@@ -4,7 +4,7 @@ import "./RealmSettings.css"
 import axios from "axios";
 import { ChatContext } from "./ChatContext";
 export default function RealmSettings(props) {
-    const {username} = useChatAuth()
+    const {username, setRealmDetails} = useChatAuth()
     const {ws} = useContext(ChatContext)
     const [status, setStatus] = useState("")
     const colorRef = useRef("red")
@@ -68,6 +68,7 @@ export default function RealmSettings(props) {
                 username: user
             })
             showStatus(`Added ${user} to the realm`, false)
+            setRealmDetails(pre => {return {...pre, "members": pre["members"] + 1}})
             setAddUser("")
             load()
         }
@@ -170,6 +171,7 @@ export default function RealmSettings(props) {
                 username: transferUser
             })
             showStatus(`${transferUser} is now the new owner`, false)
+            setRealmDetails(pre => {return {...pre, "owner": transferUser}})
             load()
         }
         catch(err){
@@ -189,6 +191,7 @@ export default function RealmSettings(props) {
         try{
             await axios.post(`http://localhost:8004/realms/${props.realm}/members/${removeUser}/remove`)
             setMembers(pre => pre.filter(mem => mem.username != removeUser))
+            setRealmDetails(pre => {return {...pre, "members": pre["members"] - 1}})
             showStatus(`Removed user ${removeUser} from realm`, false)
         }
         catch(err) {
@@ -226,6 +229,7 @@ export default function RealmSettings(props) {
         try{
             await axios.patch(`http://localhost:8004/realms/${props.realm}`, data)
             showStatus(`Updated ${Object.keys(data).join(" and ")} of realm successfully`, false)
+            setRealmDetails(pre => {return {...pre, ...data}})
         }
         catch(err) {
             if(err.response && err.response.data)
