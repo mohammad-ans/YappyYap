@@ -683,6 +683,8 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
                         response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
                         if response_username.json()["msg"] == False:
                             break
+                elif "anonymity" in data:
+                    senderName = username
                 seconds = int(data["expire"])
                 msg = data["msg"]
                 time = datetime.now(timezone.utc)
@@ -833,15 +835,14 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
 
             elif "text" in data:
                 js = loads(data["text"])
-                if "anonymity" in js:
+                if "anonymity" in js and js["anonymity"]:
                     while True:
                         senderName = generate_slug(2)
                         response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
                         if response_username.json()["msg"] == False:
                             break
-                        # already_exists = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
-                        # if not already_exists:
-                        #      break
+                elif "anonymity" in js:
+                    senderName = username
                 expiry_seconds = int(js["expiry"])
     except WebSocketDisconnect:
         pass

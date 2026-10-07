@@ -107,6 +107,11 @@ services:
       - "5433:5432"
     volumes:
      - auth_data:/var/lib/postgres/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready - U $${POSTGRES_USER} -dj $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
 
   tchat-db:
     image: postgres:17
@@ -119,6 +124,11 @@ services:
       - "5434:5432"
     volumes:
      - tchat_data:/var/lib/postgres/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
 
   vchat-db:
       image: postgres:17
@@ -131,6 +141,11 @@ services:
         - "5435:5432"
       volumes:
       - vchat_data:/var/lib/postgres/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+        interval: 5s
+        timeout: 5s
+        retries: 8
 
   groups-db:
       image: postgres:17
@@ -143,6 +158,11 @@ services:
        - "5436:5432"
       volumes:
        - grps_data:/var/lib/postgres/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+        interval: 5s
+        timeout: 5s
+        retries: 8
 
   personal-db:
       image: postgres:17
@@ -155,6 +175,11 @@ services:
        - "5437:5432"
       volumes:
        - personal_data:/var/lib/postgres/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+        interval: 5s
+        timeout: 5s
+        retries: 8
 
 volumes:
   auth_data:
