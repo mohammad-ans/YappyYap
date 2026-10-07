@@ -598,7 +598,7 @@ def get_members(group : str, db : Session = Depends(get_db)):
 
 @app.patch("/realms/{id}/groups/{group}")
 def update_group(id: str, group: str, data: database.GrpUpdate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
-    username = payload[username]
+    username = payload["username"]
     grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
     if not grp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel does not exists"}])

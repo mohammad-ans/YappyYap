@@ -2,24 +2,25 @@
     --text-color: aqua;
     --header-color: rgb(20, 20, 24);
     --input-backgrounds: rgb(63, 63, 103);
+    --gray: grey;
 }
 html[data-theme="blue"]{
     --text-color: aqua;
     --header-color: #0e100f;
     --input-backgrounds: rgb(63, 63, 103);
-    
+    --gray: grey;
 }
 html[data-theme="green"]{
     --text-color: rgb(0, 255, 240);
     --header-color: rgb(20, 44, 20);
     --input-backgrounds: rgb(63, 103, 63);
-    
+    --gray: grey;
 }
 html[data-theme="beige"]{
     --text-color: wheat;
     --header-color: rgb(20, 20, 24);
     --input-backgrounds: rgba(245, 222, 179, 0.8);
-    
+    --gray: rgb(78, 78, 78);
 }
 .grpsettings-overlay{
     position: fixed;
@@ -33,12 +34,15 @@ html[data-theme="beige"]{
 .grp-settings{
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 24px;
     margin: auto;
     max-width: 320px;
 }
-.grp-settings *{
+.grp-settings *, .group-member-settings *{
     flex-shrink: 0;
+}
+.cancel-cross{
+    font-size: 1.6rem;
 }
 .grp-settings h2{
     font-size: 2rem;
@@ -59,7 +63,7 @@ html[data-theme="beige"]{
     outline: none;
 }
 .grp-settings input:focus, .grp-settings textarea:focus{
-    border-color: grey;
+    border-color: var(--gray);
 }
 .grp-settings button{
     border: 1px solid var(--input-backgrounds);
@@ -67,10 +71,15 @@ html[data-theme="beige"]{
     color: var(--input-backgrounds);
     border-radius: 6px;
     padding: 6px;
+    cursor: pointer;
 }
 .confirm-overlay .buttons{
     display: flex;
     gap: 16px;
+}
+.confirm-overlay p{
+    max-width: min(80vw, 500px);
+    text-align: center;
 }
 .grp-settings .confirm-overlay{
     position: fixed;
@@ -91,4 +100,33 @@ html[data-theme="beige"]{
     background-color: #D00000;
     border: 1px solid #D00000;
     padding: 8px;
+}
+.group-members-list{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 15px;
+}
+.group-members-list li{
+    overflow-x: visible;
+}
+.group-member-settings{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.group-members-list .member-details{
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    align-items: center;
+}
+.group-members-list .member-details span:nth-child(2){
+    width: 80px;
+    font-family: monospace;
+    color: #D00000;
+}
+.low-text{
+    font-size: 0.8rem;
+    color: var(--gray);
 }

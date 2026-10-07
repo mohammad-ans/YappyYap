@@ -1,8 +1,8 @@
 import {useContext, useEffect, useState} from "react"
-import useAxios from "../../hooks/useAxios"
 import useChatAuth from "../../hooks/useChatAuth"
 import { ChatContext } from "../ChatContext"
 import "./GroupSettings.css"
+import axios from "axios"
 export default function GroupSettings(props) {
     const [members, setMembers] = useState([])
     const [details, setDetails] = useState(null)
@@ -11,13 +11,13 @@ export default function GroupSettings(props) {
     const [delConfirm, setDelConfirm] = useState(false)
     const [loading, setLoading] = useState(true)
     const {username} = useChatAuth()
-    const axios = useAxios()
     const priviliged = details && (details.role == "admin" || details.role == "owner")
     const {setRealm, ws} = useContext(ChatContext)
     const [transferTarget, setTarget] = useState(null)
     const [inviteUsername, setInviteUsername] = useState("")
     const [inviteLink, setInviteLink] = useState(null)
     const [leaveConfirm, setLeaveConfirm] = useState(null)
+    const [removeTarget, setRemove] = useState(null)
     async function load() {
         setLoading(true)
         try{
@@ -32,7 +32,7 @@ export default function GroupSettings(props) {
                 setStatus(err.response.data.detail[0].msg)
             setStatus("Could not load channel settings")
             setDetails({"realm_id": "global", "description" : "Nthing special", "role": "owner", "memberCount": 40, "name": "global voicee", "owner": "NA", "liveCount": true, "anonymity": true, "maxGrpSize": 50, "maxDuration": 100, "minDuration": 20})
-            setMembers([])
+            setMembers([{"username": "a", "role": "member"}, {"username": "b", "role": "admin"}, {"username": "NA", "role": "owner"}])
         }
         finally{
             setLoading(false)
@@ -103,17 +103,23 @@ export default function GroupSettings(props) {
                 showStatus(err.response.data.detail[0].msg)
             showStatus("Could not leave channel")
         }
+        finally{
+            setLeaveConfirm(false)
+        }
     }
-    async function removeMember(name) {
+    async function removeMember() {
         try{
-            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members/remove`, {username: name})
-            setMembers(pre => pre.filter(pre => pre.username != name))
-            showStatus(`Removed ${name}`)
+            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members/remove`, {username: removeMember})
+            setMembers(pre => pre.filter(pre => pre.username != removeMember))
+            showStatus(`Removed ${removeMember}`)
         }
         catch(err) {
             if (err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
             showStatus("Could not remove member")
+        }
+        finally{
+            setRemove(null)
         }
     }
     async function deleteChannel() {
@@ -126,6 +132,9 @@ export default function GroupSettings(props) {
             if (err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
             showStatus("Could not delete channel")
+        }
+        finally{
+            setDelConfirm(false)
         }
     }
     async function sendInvite(e) {
@@ -240,22 +249,31 @@ export default function GroupSettings(props) {
                     <h3>Members ({members.length}/{details.maxGrpSize})</h3>
                     <ul className="group-members-list">
                         {members.map(mem => <li key={mem.username} className="group-member">
+                            <div className="member-details">
                             <span className="group-member-name">{mem.username} {mem.username == username && "(you)"}</span>
                             <span className={`group-member-role role-${mem.role}`}>{mem.role}</span>
+                            </div>
                             {details.owner == username && mem.role !== "owner" && (
                                 <span className="group-member-settings">
                                     {mem.role == "member"? <button onClick={()=> promote(mem.username)}>Make Admin</button>: <button>Remove Admin</button>}
                                     <button onClick={()=> demote(mem.username)}>Make Owner</button>
                                     <button onClick={() => setTarget(mem.username)}>Make Channel Owner</button>
-                                    <button onClick={()=> removeMember(mem.username)}>Remove</button>
+                                    <button onClick={()=> setRemove(mem.username)}>Remove</button>
                                 </span>
                             )}
                             {priviliged && details.owner != username && mem.role == "member" && <span className="group-member-settings">
-                                    <button onClick={() => removeMember(mem.username)}>Remove</button>
+                                    <button onClick={() => setRemove(mem.username)}>Remove</button>
                                 </span>}
                             </li>)}
                     </ul>
                 </div>
+                {removeTarget && (<div className="confirm-overlay">
+                    <p>Are you sure you want to remove {removeMember} from group?</p>
+                    <div className="buttons">
+                        <button onClick={removeMember}>Yes</button>
+                        <button onClick={()=> setDelConfirm(false)}>Cancel</button>
+                    </div>
+                </div>)}
                 {transferTarget && (
                     <div className="confirm-overlay">
                         <p>Make <b>{transferTarget}</b> the new channel owner and demote yourself to an admin?</p>
@@ -283,7 +301,6 @@ export default function GroupSettings(props) {
                             <button onClick={()=> setLeaveConfirm(false)}>Cancel</button>
                         </div>
                     </div>)
-
                     }
                 </div>
             </div>
