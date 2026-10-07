@@ -670,9 +670,9 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
                 except asyncio.TimeoutError:
                     try:
                         await user.send_json({"type": "ping"})
-                        data = await asyncio.wait_for(user.receive_json(), timeout=30)
                     except:
                         break
+                    continue
 
                 if data.get("type") == "pong":
                     continue
@@ -777,9 +777,9 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
             except asyncio.TimeoutError:
                 try:
                     await user.send_json({"type": "ping"})
-                    data = await asyncio.wait_for(user.receive(), 30)
                 except:
                     break
+                continue
             if "bytes" in data:
                 time = datetime.now(timezone.utc)
                 try:

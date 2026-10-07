@@ -173,6 +173,7 @@ export default function Chat(props) {
         let isMounted = true;
 
         let webreconInterval = 2000;
+        let reconnTimer = null;
         // let dms = getDms();
         function connect() {
 
@@ -180,10 +181,11 @@ export default function Chat(props) {
                 ws.current = new WebSocket("ws://localhost:8005/ws/main");
                 // ws.current = new WebSocket("wss://chat.yappyyap.xyz/ws/main");
                 ws.current.onopen = () => {
+                    webreconInterval = 2000
                     setDms(getDms());
                 }
                 ws.current.onclose = () => {
-                    if (ws.current.readyState == 0 && isMounted) {
+                    if (isMounted) {
                         reconnect();
                     }
 
@@ -191,6 +193,10 @@ export default function Chat(props) {
                 ws.current.onmessage = (e) => {
                     try {
                         const element = JSON.parse(e.data)
+                        if(element.type == "ping") {
+                            ws.current.send(JSON.stringify({type: "pong"}))
+                            return
+                        }
                         if ("sender" in element) {
                             let tempUsername = element["sender"];
                             if (window.location.pathname == `/chat/u/${tempUsername}`) {
@@ -233,8 +239,6 @@ export default function Chat(props) {
                         ws.current.close();
                     navigate("/signin")
                 }
-                
-                console.log(err)
                     }
                 }
                 ws.current.onerror = (e) => {
@@ -250,12 +254,17 @@ export default function Chat(props) {
 
         connect();
         function reconnect() {
+            if(!isMounted)
+                return
             setTimeout(connect, webreconInterval);
-            webreconInterval += 1000;
+            webreconInterval = Math.min(webreconInterval + 1000, 15000);
         }
 
         return () => {
             isMounted = false
+            clearTimeout(reconnTimer)
+            if (ws.current && ws.current.readyState == WebSocket.OPEN)
+                ws.current.close();
         }
     }, [])
     function removeInstructionsHeader() {

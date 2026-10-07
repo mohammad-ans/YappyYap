@@ -136,20 +136,28 @@ export default function Voice(props) {
         const interval1 = setInterval(getmsgs, 20000)
         msgRemoverInterval.current = setInterval(removeMsg, 1000);
         let webreconInterval  = 2000;
+        let reconnTimer = null;
         function connect() {
             // websocket.current = new WebSocket("wss://api.yappyyap.xyz/voice/ws")
             // websocket.current = new WebSocket(`wss://${props.url}/ws/${props.realm["name"]}`) 
             websocket.current = new WebSocket(`ws://${props.url}/ws/${props.realm["name"]}`) 
             websocket.current.binaryType = "arraybuffer"
             websocket.current.onopen = () => {
+                webreconInterval = 2000
                 getmsgs()
             }
             websocket.current.onclose = () => {
-                if (websocket.current.readyState == 0 && isMounted)
+                if (isMounted)
                     reconnect();
             }
             websocket.current.onmessage = (e) => {
                 try{
+                        if(typeof e.data == "string"){
+                            const msg = JSON.parse(e.data)
+                            if(msg.type == "ping")
+                                websocket.current.send(JSON.stringify({type: "pong"}))
+                            return
+                        }
                         const msg = document.createElement("li");
                         // console.log(e)
                         const vw = new DataView(e.data);
@@ -197,23 +205,26 @@ export default function Voice(props) {
             }
             
         websocket.current.onerror = () => {
-            if (websocket.current.OPEN) {
+            if (websocket.current.readyState == WebSocket.OPEN) {
                 websocket.current.close();
             }
-            reconnect()
             console.warn("An error occured, websocket connection failed");
         }
         }
         connect();
     function reconnect() {
-        setTimeout(connect, webreconInterval);
-        webreconInterval += 1000;
+        if(!isMounted)
+            return
+        reconnTimer = setTimeout(connect, webreconInterval);
+        webreconInterval = Math.min(webreconInterval + 1000, 15000);
     }
         return () => {
             clearInterval(msgRemoverInterval.current);
             clearInterval(interval1);
             isMounted = false;
-            element.classList.remove("current-realm")
+            clearInterval(reconnTimer)
+            if(element)
+                element.classList.remove("current-realm")
             if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
                 websocket.current.close()
         }

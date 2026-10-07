@@ -116,10 +116,11 @@ export default function Global(props) {
             // ws.current = new WebSocket(`wss://${props.url}/ws/${props.realm["name"]}`)
             ws.current = new WebSocket(`ws://${props.url}/ws/${props.realm["name"]}`)
             ws.current.onopen = () => {
+                webreconInterval = 2000
                 getMessages()
             }
             ws.current.onclose = () => {
-                if (ws.current.readyState == 0 && isMounted) {
+                if (isMounted) {
                     reconnect();
                 }
             }
@@ -127,6 +128,10 @@ export default function Global(props) {
                 try {
                     const element = document.querySelector(".msgs");
                     let res = JSON.parse(e.data)
+                    if(res.type == "ping") {
+                        ws.current.send(JSON.stringify({type: "pong"}))
+                        return
+                    }
                     let time = new Date(res.time_sent);
                     let expiry = new Date(res.expiry);
 
@@ -165,8 +170,10 @@ export default function Global(props) {
         }
         connect();
         function reconnect() {
+            if(!isMounted)
+                return
             setTimeout(connect, webreconInterval);
-            webreconInterval += 1000;
+            webreconInterval = Math.min(webreconInterval + 1000, 15000);
         }
 
         return () => {
@@ -176,7 +183,8 @@ export default function Global(props) {
             clearInterval(interval1);
             clearInterval(interval2);
             clearInterval(interval3);
-            element.classList.remove("current-realm")
+            if(element)
+                element.classList.remove("current-realm")
         }
     }, [])
     // const [msgs, setMsgs] = useState(Array());

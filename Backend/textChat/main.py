@@ -149,7 +149,7 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
         except:
             pass
     finally:
-        if username in manager.connections:
+        if username in manager_local.connections:
             manager_local.disconnect(username)
         await mark_online(manager, username, False)
 
