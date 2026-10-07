@@ -299,7 +299,11 @@ export default function Voice(props) {
         try{
             const element = e.currentTarget.children[1];
             dmSendOption.current = element;
-            dmSendOption.current.style.display = "inline";
+            if(element.style.display == "inline")
+                dmSendOption.current.style.display = "none";
+            else
+                dmSendOption.current.style.display = "inline";
+
             e.stopPropagation()
         }
         catch{}

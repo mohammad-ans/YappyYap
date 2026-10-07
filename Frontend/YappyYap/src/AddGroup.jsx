@@ -66,7 +66,6 @@ export default function AddGroup(props){
                 <select value={inviteType} onChange={e => setInvite(e.target.value)}>
                     <option value="all">Anyone can search and join</option>
                     <option value="invite">Join only by invitation(admin)</option>
-                    <option value="invite-any">Join only by invitation(members)</option>
                 </select>
                 <select value={anonymity} onChange={e => setAnonymity(e.target.value)}>
                     <option value={true}>Anonymity feature allowed</option>

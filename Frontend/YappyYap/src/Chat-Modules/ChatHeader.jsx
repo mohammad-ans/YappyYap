@@ -98,10 +98,6 @@ export default function ChatHeader(props) {
         element.classList.add("nav-open-styles");
         props.setNavopen(n => true);
     }
-    function showMembers() {
-        document.querySelector(".msg-typearea").style.display = "none";
-        document.querySelector(".members-area").style.display = "block";
-    }
     return(
             <div className="chat-header">
                 <div className="chat-menu-bar" onClick={navBarSimulator}>≡</div>
@@ -122,7 +118,7 @@ export default function ChatHeader(props) {
                 </select>
                 </div>
                 {isGrp && props.liveCount.current && <div className="online-count">
-                {realm != "global" && <div className="members" onClick={showMembers}>{`${members} Members`}</div>}
+                {realm != "global" && <div className="members">{`${members} Members`}</div>}
                         <div className="online-count-dot">
                         </div>
                         <span>{online}</span>

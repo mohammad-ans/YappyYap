@@ -160,7 +160,7 @@ export default function ChatSideBar(props) {
                     {searchBy && groupResults.map(element => (
                         <li key={element["name"]}>
                             <span className="name">{element["display"] || element["name"]}</span>
-                            <button className="join-group" onClick={e => openGroup(e, element)}></button>
+                            <button className="join-group" onClick={e => openGroup(e, element)}>Join</button>
                         </li>
                     ))}
                     {!searchBy && searchResult.map(element => (
@@ -180,7 +180,7 @@ export default function ChatSideBar(props) {
             </ul>
             </>}
             {("Direct Messages" in props.groups) && (<><h3 className="personal-msg-heading">Personal Messages</h3><ul className="dms">
-                {props.groups["Direct Messages"].map(element => <Link to={`/chat/u/${element}`} key={element} className={element} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="realm-button">{element}</span></li></Link>)}
+                {props.groups["Direct Messages"].map(element => <Link to={`/chat/u/${element}`} key={element} className={`m${element}`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="realm-button">{element}</span></li></Link>)}
             </ul></>)}
             </div>
             <div className="user-profile">

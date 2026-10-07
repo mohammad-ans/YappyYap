@@ -63,7 +63,7 @@ export default function Chat(props) {
             const groups = res.data.map(grp => ({
                 name: grp.id, display: grp.name, groupId: grp.id, realmId: id, grpType: grp.grpType,
                 url: grp.grpType == "text" ? "localhost:8004" : "localhost:8004/voice",
-                owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType
+                owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType, anonymity: grp.anyonymity
             }))
             setGroups(pre => ({...pre, "Groups": groups}))
             return groups
@@ -225,7 +225,7 @@ export default function Chat(props) {
                                     dmUsersRef.current = [...dmUsersRef.current, tempUsername];
                                 }
                                     
-                                const domElement = document.querySelector(`.${tempUsername}`)
+                                const domElement = document.querySelector(`.m${tempUsername}`)
                                 if(domElement)
                                     domElement.classList.add("new-msg-notification");
                             }
@@ -375,13 +375,14 @@ function ChannelRoute() {
                 list = await setCurrentGroup(realmP)
             }
             const found = (list || []).find(grp => grp.name === groupKey)
-            if (found)
+            if (found){
                 setGroup(found)
+                setFound(false)
+            }
             else
                 setFound(true)
         }
         setRealm(realmP);
-        setCurrentGroup(realmP);
         setGrp()
     }, [realmP, groupKey])
     if (notFound)
@@ -397,7 +398,9 @@ function ChannelRoute() {
 }
 function DefaultRoot() {
     const {setRealm} = useContext(ChatContext);
-    setRealm("global");
+    useEffect(()=> {
+        setRealm("global");
+    })
     return (
         <Navigate to="/chat/realms/global" replace />
     )

@@ -32,7 +32,7 @@ export default function Personal(props){
     useEffect(() => {
         realmRef.current = "dms";
         user.current = props.secondUser;
-        const element = document.querySelector(`.${user.current}`);
+        const element = document.querySelector(`.m${user.current}`);
         element.classList.remove("new-msg-notification");
         props.setRealm("dms")
         element.classList.add("current-realm");
