@@ -19,6 +19,7 @@ export default function Personal(props){
     const navigate = useNavigate()
     const startDuration = useRef(false);
     const axios = useAxios();
+    const anonymity = useRef(null)
     useEffect(() => {
         textArea.current.style.height = "auto";
         if (textArea.current.scrollHeight < 400) {

@@ -81,7 +81,7 @@ def update_realm(id: str, data: database.RealmUpdate, db: Session = Depends(get_
     realm = db.execute(select(database.Realm).where(database.Realm.id == id)).scalar_one_or_none()
     if not realm:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg" : "Realm not found"}])
-    priviliged = db.execute(select(database.RMembers).where((database.RMembers.username == username) & ((database.RMembers.role == "admin") | (database.RMembers.role == "owner")))).scalar_one_or_none()
+    priviliged = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & ((database.RMembers.role == "admin") | (database.RMembers.role == "owner")))).scalar_one_or_none()
     if not priviliged:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owners and admins can update realm settings"}])
     if data.name:
@@ -163,8 +163,9 @@ def leave_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify
         db.execute(delete(database.Members).where(database.Members.grpId == group.id))
         db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == group.id))
         db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId == group.id))
+        db.execute(delete(database.Invite).where((database.Invite.realm_id == id) & (database.Invite.grpId == group)))
         db.execute(delete(database.Group).where(database.Group.id == group.id))
-    db.execute(delete(database.Members).where(database.Members.name == username))
+    db.execute(delete(database.Members).where((database.Members.name == username) & (database.Members.grpId.in_(select(database.Group.id).where(database.Group.realm_id == id)))))
     db.execute(delete(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username)))
     db.commit()
     return {"msg": "Success"}
@@ -200,8 +201,9 @@ def remove_user(id: str, user: str, db: Session = Depends(get_db), payload = Dep
         db.execute(delete(database.Members).where(database.Members.grpId == grp.id))
         db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == grp.id))
         db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId == grp.id))
+        db.execute(delete(database.Invite).where((database.Invite.realm_id == id) & (database.Invite.grpId == grp)))
         db.execute(delete(database.Group).where(database.Group.id == grp.id))
-    db.execute(delete(database.Members).where(database.Members.name == user))
+    db.execute(delete(database.Members).where((database.Members.name == user) & (database.Members.grpId.in_(select(database.Group.id).where(database.Group.realm_id == id)))))
     db.execute(delete(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == user)))
     db.commit()
     return {"msg": "Success"}
@@ -586,6 +588,10 @@ def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = D
     user_del = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == data.username))).scalar_one_or_none()
     if not user_del:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg" : "User not found"}])
+    if user_del.role == "admin" and (member.role == "admin" or grp_member.role == "admin"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Admin cannot remove an admin"}])
+    if user_del.role == "owner":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You cannot remove owner"}])
     try:
         db.execute(delete(database.Members).where((database.Members.name == data.username) & (database.Members.grpId == group)))
         db.commit()

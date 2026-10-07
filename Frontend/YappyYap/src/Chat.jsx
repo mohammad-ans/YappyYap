@@ -17,6 +17,7 @@ import GroupSettings from "./Chat-Modules/GroupSettings"
 
 export default function Chat(props) {
     const { username } = useChatAuth();
+    const usernameRef = useRef(username)
     const [realm, setRealm] = useState("");
     const realmRef = useRef("");
     const realmType = useRef("global");
@@ -197,6 +198,8 @@ export default function Chat(props) {
                             ws.current.send(JSON.stringify({type: "pong"}))
                             return
                         }
+                        if(element.sender == usernameRef.current)
+                            return
                         if ("sender" in element) {
                             let tempUsername = element["sender"];
                             if (window.location.pathname == `/chat/u/${tempUsername}`) {
