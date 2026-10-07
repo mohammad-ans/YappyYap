@@ -117,9 +117,9 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
             except asyncio.TimeoutError:
                  try:
                     await user.send_json({"type": "ping"})
-                    data = await asyncio.wait_for(user.receive_json(), 30)
                  except:
                       break
+                 continue
             if data.get("type") == "pong":
                  continue
             if "bytes" in data:

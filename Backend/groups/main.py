@@ -780,6 +780,8 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                 except:
                     break
                 continue
+            if data.get("type") == "pong":
+                continue
             if "bytes" in data:
                 time = datetime.now(timezone.utc)
                 try:

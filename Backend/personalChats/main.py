@@ -158,9 +158,9 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
             except asyncio.TimeoutError:
                 try:
                     await user.send_json({"type": "ping"})
-                    data = await asyncio.wait_for(user.receive_json(), 30)
                 except (asyncio.TimeoutError, Exception):
                     break
+                continue
             if data.get("type") == "pong":
                 continue
             if "recipient" in data:
