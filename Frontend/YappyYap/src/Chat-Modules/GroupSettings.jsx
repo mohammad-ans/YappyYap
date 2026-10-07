@@ -1,4 +1,4 @@
-import {useContext, useEffect, useState} from "react"
+import {useContext, useEffect, useRef, useState} from "react"
 import useChatAuth from "../../hooks/useChatAuth"
 import { ChatContext } from "../ChatContext"
 import "./GroupSettings.css"
@@ -18,6 +18,8 @@ export default function GroupSettings(props) {
     const [inviteLink, setInviteLink] = useState(null)
     const [leaveConfirm, setLeaveConfirm] = useState(null)
     const [removeTarget, setRemove] = useState(null)
+    const colorRef = useRef("red")
+    const timeoutRef = useRef()
     async function load() {
         setLoading(true)
         try{
@@ -30,7 +32,8 @@ export default function GroupSettings(props) {
         catch(err) {
             if(err.response && err.response.data)
                 setStatus(err.response.data.detail[0].msg)
-            setStatus("Could not load channel settings")
+            else
+                setStatus("Could not load channel settings")
             setDetails({"realm_id": "global", "description" : "Nthing special", "role": "owner", "memberCount": 40, "name": "global voicee", "owner": "NA", "liveCount": true, "anonymity": true, "maxGrpSize": 50, "maxDuration": 100, "minDuration": 20})
             setMembers([{"username": "a", "role": "member"}, {"username": "b", "role": "admin"}, {"username": "NA", "role": "owner"}])
         }
@@ -45,51 +48,57 @@ export default function GroupSettings(props) {
         try{
             await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}`, {inviteType: value})
             setDetails(pre => ({...pre, inviteType: value}))
-            showStatus("Updated invite type")
+            showStatus("Updated invite type", false)
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not update invite type")
+            else
+                showStatus("Could not update invite type")
         }
     }
-    function showStatus(msg) {
+    function showStatus(msg, red=true) {
         setStatus(msg)
-        setTimeout(() => setStatus(""), 3000)
+        colorRef.current = red ? "red" : "green"
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = setTimeout(() => setStatus(""), 5000)
     }
     async function saveDescription() {
         try{
             await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}`, {description})
-            showStatus("Updated description")
+            showStatus("Updated description", false)
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not update description")
+            else
+                showStatus("Could not update description")
         }
     }
     async function promote(name) {
         try{
-            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`, {username: name, role: "admin"})
+            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`, {name: name, role: "admin"})
             setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "admin"} : mem))
-            showStatus(`${name} promoted to admin`)
+            showStatus(`${name} promoted to admin`, false)
         }
-        catch{
+        catch(err){
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not promote to admin")
+            else
+                showStatus("Could not promote to admin")
         }
     }
     async function demote(name) {
         try{
-            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`, {username: name, role: "member"})
+            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`, {name: name, role: "member"})
             setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "member"}: mem))
-            showStatus(`${name} demoted to member`)
+            showStatus(`${name} demoted to member`, false)
         }
         catch(err) {
             if (err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not demote to member")
+            else
+                showStatus("Could not demote to member")
         }
     }
     async function leave() {
@@ -101,7 +110,8 @@ export default function GroupSettings(props) {
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not leave channel")
+            else
+                showStatus("Could not leave channel")
         }
         finally{
             setLeaveConfirm(false)
@@ -116,7 +126,8 @@ export default function GroupSettings(props) {
         catch(err) {
             if (err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not remove member")
+            else
+                showStatus("Could not remove member")
         }
         finally{
             setRemove(null)
@@ -131,7 +142,8 @@ export default function GroupSettings(props) {
         catch(err) {
             if (err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not delete channel")
+            else
+                showStatus("Could not delete channel")
         }
         finally{
             setDelConfirm(false)
@@ -150,12 +162,13 @@ export default function GroupSettings(props) {
             setInviteLink(link)
             setInviteUsername("")
             const delivered = sendInviteDM(target, `#${details.name}`, link)
-            showStatus(delivered ? `Invite sent to ${target} as a DM, they can also use the link below`: `Invite created for ${target}, could not DM it automatically, so copy the link below and send it manually.`)
+            showStatus(delivered ? `Invite sent to ${target} as a DM, they can also use the link below`: `Invite created for ${target}, could not DM it automatically, so copy the link below and send it manually.`, false)
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not create invite")
+            else
+                showStatus("Could not create invite")
         }
     }
     function sendInviteDM(username, grpName, link) {
@@ -184,14 +197,15 @@ export default function GroupSettings(props) {
             await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/make-owner`, {
                 username: transferTarget
             })
-            showStatus(`${transferTarget} is now the owner of the channel`)
+            showStatus(`${transferTarget} is now the owner of the channel`, false)
             setTarget(null)
             load()
         }
         catch(err) {
             if(err.response && err.response.data)
                 showStatus(err.response.data.detail[0].msg)
-            showStatus("Could not make the other user owner of the channel")
+            else
+                showStatus("Could not make the other user owner of the channel")
         }
     }
 
@@ -216,7 +230,7 @@ export default function GroupSettings(props) {
                 <p className="cancel-cross" onClick={props.onClose}>X</p>
                 <h2>{details.name}</h2>
                 <p className="mem-role">You: {details.role || "viewer"}</p>
-                {status && <p className="group-settings-status">{status}</p>}
+                {status && <p className="group-settings-status" style={{color: colorRef.current}}>{status}</p>}
                 <div className="single-setting">
                     <h3>Description</h3>
                     <textarea rows={2} maxLength={250} value={description} disabled={!priviliged} onChange={e => setDescription(e.target.value)}></textarea>
@@ -256,7 +270,7 @@ export default function GroupSettings(props) {
                             {details.owner == username && mem.role !== "owner" && (
                                 <span className="group-member-settings">
                                     {mem.role == "member"? <button onClick={()=> promote(mem.username)}>Make Admin</button>: <button>Remove Admin</button>}
-                                    <button onClick={()=> demote(mem.username)}>Make Owner</button>
+                                    {mem.role == "admin" && <button onClick={()=> demote(mem.username)}>Demote</button>}
                                     <button onClick={() => setTarget(mem.username)}>Make Channel Owner</button>
                                     <button onClick={()=> setRemove(mem.username)}>Remove</button>
                                 </span>
@@ -271,7 +285,7 @@ export default function GroupSettings(props) {
                     <p>Are you sure you want to remove {removeMember} from group?</p>
                     <div className="buttons">
                         <button onClick={removeMember}>Yes</button>
-                        <button onClick={()=> setDelConfirm(false)}>Cancel</button>
+                        <button onClick={()=> setRemove(false)}>Cancel</button>
                     </div>
                 </div>)}
                 {transferTarget && (
