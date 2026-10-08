@@ -110,7 +110,7 @@ async def mark_online(username: str, online: bool):
         return
     try:
         if online:
-            await manager.redis.add("personalchats:online", username)
+            await manager.redis.sadd("personalchats:online", username)
         else:
             await manager.redis.srem("personalchats:online", username)
     except Exception:
@@ -140,7 +140,7 @@ manager_local = ConnectionManager()
 
 async def dm_event(data: dict):
     for user in (data["sender"], data["receiver"]):
-        await manager_local.send_message(user, data["payload"])
+        await manager_local.send_message(data["payload"], user)
 
 manager = RedisWs(grp="personalchats:dm", on_event=dm_event)
 
@@ -161,49 +161,49 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                     data = await asyncio.wait_for(user.receive_json(), 30)
                 except (asyncio.TimeoutError, Exception):
                     break
-                if data.get("type") == "pong":
-                    continue
-                if "recipient" in data:
-                    secondUser = data["recipient"]
-                    timeCurr = datetime.datetime.now(datetime.timezone.utc)
-                    defaultExpiration = data["defaultExpiration"]
-                    
-                    if defaultExpiration == True:
+            if data.get("type") == "pong":
+                continue
+            if "recipient" in data:
+                secondUser = data["recipient"]
+                timeCurr = datetime.datetime.now(datetime.timezone.utc)
+                defaultExpiration = data["defaultExpiration"]
+                
+                if defaultExpiration == True:
+                    exp = timeCurr + datetime.timedelta(seconds=data["duration"])
+                else:
+                    exp = None
+                    if await user_online(secondUser):
                         exp = timeCurr + datetime.timedelta(seconds=data["duration"])
-                    else:
-                        exp = None
-                        if await user_online(secondUser):
-                            exp = timeCurr + datetime.timedelta(seconds=data["duration"])
-                    msg = ""
-                    if "type" in data:
-                        message = database.GroupInvite(
-                            sender = username, 
-                            receiver = secondUser,
-                            group = data["msg"],
-                            sentTime = timeCurr,
-                            duration = data["duration"],
-                            defaultExpiration = exp
-                        )
-                        msg = database.Msg_invite.from_orm(message).model_dump_json()
+                msg = ""
+                if "type" in data:
+                    message = database.GroupInvite(
+                        sender = username, 
+                        receiver = secondUser,
+                        group = data["msg"],
+                        sentTime = timeCurr,
+                        duration = data["duration"],
+                        defaultExpiration = exp
+                    )
+                    msg = database.Msg_invite.from_orm(message).model_dump_json()
 
-                    else:
-                        message = database.PersonalMsgs(
-                            sender = username, 
-                            receiver = secondUser,
-                            msg = data["msg"],
-                            sentTime = timeCurr,
-                            duration = data["duration"],
-                            defaultExpiration = exp
-                        )
-                        msg = database.Msg_return.from_orm(message).model_dump_json()
-                    db.add(message)
-                    db.commit()
+                else:
+                    message = database.PersonalMsgs(
+                        sender = username, 
+                        receiver = secondUser,
+                        msg = data["msg"],
+                        sentTime = timeCurr,
+                        duration = data["duration"],
+                        defaultExpiration = exp
+                    )
+                    msg = database.Msg_return.from_orm(message).model_dump_json()
+                db.add(message)
+                db.commit()
 
-                    await manager.publish({"payload": msg, "sender": username, "receiver": secondUser})
-            except WebSocketDisconnect:
-                pass
-            except Exception as e:
-                print(e)
+                await manager.publish({"payload": msg, "sender": username, "receiver": secondUser})
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        print(e)
     finally:
         if username in manager.connections:
             manager.disconnect(username)

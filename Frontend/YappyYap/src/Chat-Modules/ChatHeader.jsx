@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useContext } from "react"
 import useChatAuth from "../../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import { ChatContext } from "../ChatContext";
-import GroupSettings from "./GroupSettings";
 export default function ChatHeader(props) {
     const [online, setOnline] = useState(0);
     const [members, setMembers] = useState(0);
@@ -12,34 +11,37 @@ export default function ChatHeader(props) {
     const {setError, setTrigger} = useChatAuth();
     const [displayname, setDisplay] = useState("");
     const navigate = useNavigate();
-    const {realmType, currRealm, groups} = useContext(ChatContext);
-    const currGrp = props.realmRef.current && props.realmRef.current.endsWith("-realm") ? props.realmRef.current.slice(0, -6) : null
-    const isGrp = currRealm !== "global" && currGrp && props.realmRef.current !== "dms"
-    const display = (groups["Groups"].find(grp => grp["name"] == currGrp) || {})["display"]
-    const [settingsOpen, setSettingsOpen] = useState(false)
+    const {realmType, realm, currGroup, currGroupName, realmDetails} = useContext(ChatContext);
+    const isGrp = realm && currGroup !== realm && currGroup !== "dms"
+    const realmGlobal = !realm || realm == "global";
     const getOnline = useCallback(async ()=> {
         try{
+            if(!isGrp)
+                return;
             let response;
-            document.querySelector(".members").style.display = "none";
-            if (props.realmRef.current == "dms"){
+            const membersEl = document.querySelector(".members");
+            if (membersEl)
+                membersEl.style.display = "none";
+            if (currGroup == "dms"){
                 response = await axios.get(`http://localhost:8005/${props.user.current}`);
                 // response = await axios.get(`https://chat.yappyyap.xyz/livecount/${props.user.current}`);
             }else{
                 let initialPath;
-                if (props.realmRef.current == "voice-realm") {
+                if (currGroup == "global-voice") {
                     initialPath = "3/voice";
                     // initialPath = "voice.yappyyap.xyz/voice";
                 }
-                else if (props.realmRef.current == "global-realm") {
+                else if (currGroup == "global-text") {
                     initialPath = "2/global"
                     // initialPath = "textchat.yappyyap.xyz/global"
                 }
                 else {
-                    initialPath = `4/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
-                    // initialPath = `groups.yappyyap.xyz/${realmType.current}/${props.realmRef.current.slice(0,-6)}`
-                    document.querySelector(".members").style.display = "block";
-                    const tempMembers = await axios.get(`http://localhost:8004/groups/${currGrp}/numMembers`);
-                    // const tempMembers = await axios.get(`https://groups.yappyyap.xyz/groups/${currGrp}/numMembers`);
+                    initialPath = `4/${realmType.current}/${currGroup}`
+                    // initialPath = `groups.yappyyap.xyz/${realmType.current}/${currGroup}`
+                    if (membersEl)
+                        membersEl.style.display = "block";
+                    const tempMembers = await axios.get(`http://localhost:8004/groups/${currGroup}/numMembers`);
+                    // const tempMembers = await axios.get(`https://groups.yappyyap.xyz/groups/${currGroup}/numMembers`);
                     setMembers(tempMembers.data);
                 }
                 response = await axios.get(`http://localhost:800${initialPath}/livecount`);
@@ -53,28 +55,33 @@ export default function ChatHeader(props) {
             if(err.response && err.response.data) {
                     setError(pre => err.response.data.detail[0].msg);
                     setTrigger(t => !t);
-                    if(ws.current && ws.current.readyState == WebSocket.OPEN)
-                        ws.current.close();
-                    navigate("/signin")
+                    if(err.status == 403)
+                        navigate("/signin")
                 }
         }
-    }, [])
+    }, [isGrp, currGroup])
     useEffect(()=>{
         let theme = localStorage.getItem("theme");
         if(theme)
             document.documentElement.setAttribute("data-theme", theme);
-        const onlineInterval = setInterval(getOnline, 4000);
-        return ()=> clearInterval(onlineInterval);
-    }, [])
+        let onlineInterval;
+        if(isGrp)
+            onlineInterval = setInterval(getOnline, 4000);
+        else
+            clearInterval(onlineInterval)
+        return ()=>{ 
+            clearInterval(onlineInterval);
+        }
+    }, [getOnline])
     useEffect(()=>{
-        if(props.realm == "dms") 
-            setDisplay(`Personal Msg: ${props.user.current}`)
-        else if(display)
-            setDisplay(display.toUpperCase())
-        else 
-            setDisplay((props.realm || "").toUpperCase())
-        
-    }, [props.realm, props.user.current, display])
+        if(props.realm == "dms")
+            setDisplay(pre => `Personal Msg: ${props.user.current}`)
+        else if(isGrp && currGroupName)
+            setDisplay(pre => currGroupName.toUpperCase())
+        else
+            setDisplay(pre => ((realmDetails && realmDetails.name) || props.realm || "").toUpperCase())
+
+    }, [props.realm, isGrp, currGroupName, realmDetails])
     function changeTheme(e) {
         let temp = e.target.value;
         localStorage.setItem("theme", temp);
@@ -99,30 +106,27 @@ export default function ChatHeader(props) {
             <div className="chat-header">
                 <div className="chat-menu-bar" onClick={navBarSimulator}>≡</div>
                 <div className="active-realm">
-
-                    <h2>{displayname}
-                        </h2>
+                    {displayname == "" ? <h2 style={{color: "#D00000"}}>{"No Realm Selected"}</h2> : <h2>{displayname}</h2>}
                 </div>
                 <div className="chat-theme">
+                {isGrp && !realmGlobal && <div className="group-settings" onClick={() => props.setSettings(true)}>
+                    <svg width={20} height={20} viewBox="0 0 24 24" fill="none"stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx={12} cy={12} r={3}></circle>
+                        <path d={"M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"}>
+                    </path></svg>
+                    </div>}
                 <select className="select-theme-design" value = {props.theme} onChange={changeTheme}>
                     <option value="blue">Blue</option>
                     <option value="green">Green</option>
                     <option value="beige">Beige</option>
                 </select>
-                {isGrp && <div className="realm-settings" onClick={() => setSettingsOpen(true)}>
-                    Settings
-                    </div>}
                 </div>
-                {props.liveCount.current && <div className="online-count">
-                <div className="members" onClick={showMembers}>{`${members} Members`}</div>
+                {isGrp && props.liveCount.current && <div className="online-count">
+                {realm != "global" && <div className="members" onClick={showMembers}>{`${members} Members`}</div>}
                         <div className="online-count-dot">
                         </div>
                         <span>{online}</span>
                 </div>}
-                {settingsOpen && isGrp && <GroupSettings realm={currRealm} group={currGrp} onClose={() => setSettingsOpen(false)} onDeleted={()=> {
-                    setSettingsOpen(false)
-                    navigate(`/chat/realms/${currRealm}`)
-                }}/>}
             </div>
     )
 }

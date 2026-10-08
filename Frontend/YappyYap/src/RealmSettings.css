@@ -1,0 +1,138 @@
+:root{
+    --text-color: aqua;
+    --header-color: rgb(20, 20, 24);
+    --input-backgrounds: rgb(63, 63, 103);
+    --border: grey;
+}
+html[data-theme="blue"] {
+    --text-color: aqua;
+    --header-color: rgb(20, 20, 24);
+    --input-backgrounds: rgb(63, 63, 103);
+    --border: grey;
+}
+html[data-theme="beige"] {
+    --text-color: wheat;
+    --header-color: #0e100f;
+    --input-backgrounds: rgba(245, 222, 179, 0.8);
+    --border: rgb(58, 58, 58);
+}
+html[data-theme="green"] {
+    --text-color: rgb(0, 255, 240);
+    --header-color: rgb(20, 44, 20);
+    --input-backgrounds: rgb(63, 103, 63);
+    --border: grey;
+}
+.realm-settings-overlay{
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10;
+    background-color: #0e100f;
+    padding: 5vh 5vw;
+    overflow-y: scroll;
+}
+.realm-settings-overlay .cancel-cross{
+    font-size: 1.6rem;
+}
+.realm-settings{
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 320px;
+    margin: auto;
+}
+.realm-settings *{
+    flex-shrink: 0;
+}
+.realm-settings h2{
+    font-size: 2rem;
+    text-align: center;
+    margin-top: 24px;
+    margin-bottom: 20px;
+}
+.realm-settings .realm-setting, .realm-setting form{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.realm-settings input, textarea{
+    background-color: var(--input-backgrounds);
+    border: 2px solid var(--input-backgrounds);
+    border-radius: 4px;
+    padding: 4px;
+    outline: none;
+}
+.realm-settings input:focus{
+    border-color: var(--border);
+}
+.realm-settings button{
+    border: 1px solid var(--input-backgrounds);
+    background-color: transparent;
+    color: var(--input-backgrounds);
+    border-radius: 6px;
+    padding: 6px;
+    cursor: pointer;
+}
+.realm-setting select{
+    cursor: pointer;
+}
+.realm-settings-status{
+    color: red;
+}
+.realm-settings-members{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 15px;
+    list-style-type: disc;
+}
+.realm-settings-members li{
+    overflow: visible;
+}
+.realm-member-actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.realm-member-actions *{
+    flex-shrink: 0;
+}
+.realm-settings .realm-settings-confirmation{
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.9);
+}
+.realm-settings-confirmation p{
+    max-width: min(80vw, 500px);
+    text-align: center;
+}
+.realm-settings-confirmation .buttons{
+    display: flex;
+    gap: 16px;
+}
+.realm-settings-members .member-details{
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    align-items: center;
+}
+.realm-settings-members .member-details span:nth-child(2){
+    width: 80px;
+    font-family: monospace;
+    color: #D00000;
+}
+.realm-settings-red button, .realm-settings-confirmation .realm-settings-dngr{
+    color: beige;
+    font-weight: bold;
+    background-color: #D00000;
+    border: 1px solid #D00000;
+    padding: 8px;
+}

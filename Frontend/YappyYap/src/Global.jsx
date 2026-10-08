@@ -5,7 +5,6 @@ import default_image from "./assets/default_img.png"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import {ChatContext} from "./ChatContext";
-import Members from "./Chat-Modules/Members";
 export default function Global(props) {
     const [msg, setMsg] = useState("");
     const textArea = useRef();
@@ -16,7 +15,7 @@ export default function Global(props) {
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [yapDuration, setYapDuration] = useState(10);
     const { setError, setTrigger } = useChatAuth();
-    const {realmType, dmSendOption, liveCount, setRealm, tempDM, getDms, setDms, setGroups, realmRef, groups} = useContext(ChatContext);
+    const {realmType, dmSendOption, liveCount, setRealm, tempDM, getDms, setDms, setCurrGroup, setCurrGroupName} = useContext(ChatContext);
     const {username} = useChatAuth();
     const navigate = useNavigate()
     const anonymity = useRef(false);
@@ -50,11 +49,14 @@ export default function Global(props) {
     useEffect(() => {
         liveCount.current = props.realm["liveCount"];
         let isMounted = true;
-        realmRef.current = `${props.realm["name"]}-realm`;
+        const display = props.realm["name"]
+        setCurrGroup(display)
+        setCurrGroupName(props.realm["display"] || display)
         realmType.current = "global";
-        const element = document.querySelector(`.${realmRef.current}`);
-        setRealm(realmRef.current);
-        element.classList.add("current-realm");
+        const element = document.getElementsByClassName(`${display}-realm`)[0];
+        // setRealm(realmRef.current);
+        if (element)
+            element.classList.add("current-realm");
         const axios = useAxios()
         async function getMessages() {
             try {
@@ -99,7 +101,8 @@ export default function Global(props) {
                     setTrigger(t => !t);
                     if (ws.current && ws.current.readyState == WebSocket.OPEN)
                         ws.current.close();
-                    navigate("/signin")
+                    if(err.status == 403)
+                        navigate("/signin")
                 }
                 console.warn("Connection to server failed")
             }
@@ -328,7 +331,10 @@ export default function Global(props) {
         try{
             const element = e.currentTarget.children[1];
             dmSendOption.current = element;
-            dmSendOption.current.style.display = "inline";
+            if(element.style.display == "inline")
+                dmSendOption.current.style.display = "none";
+            else
+                dmSendOption.current.style.display = "inline";
             e.stopPropagation()
         }
         catch{}

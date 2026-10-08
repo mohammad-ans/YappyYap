@@ -16,24 +16,24 @@ session = sessionmaker(bind=engine)
 
 class Realm(Base):
     __tablename__ = "realms"
-    id = Column(String, primary_key=True, default=uuid.uuid4())
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String)
     description = Column(String, nullable=True, default="")
     owner = Column(String, index=True)
     inviteType = Column(String)
-    createdAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    createdAt = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class RMembers(Base):
     __tablename__ = "realm_members"
     realm_id = Column(String, ForeignKey("realms.id"), primary_key=True)
     username = Column(String, primary_key=True)
     role = Column(String, default="member")
-    joinedAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    joinedAt = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class Group(Base):
     __tablename__ = "groups"
     realm_id = Column(String , ForeignKey("realms.id")) 
-    id = Column(Integer, primary_key=True, default=uuid.uuid4())
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, unique=True)
     owner = Column(String)
     liveCount = Column(Boolean, default=True)
@@ -44,6 +44,7 @@ class Group(Base):
     grpType = Column(String)
     inviteType = Column(String)
     description = Column(String, nullable=True, default="")
+    createdAy = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class GroupDetails(BaseModel):
     id: str
@@ -72,13 +73,13 @@ class Members(Base):
 
 class Invite(Base):
     __tablename__ = "invites"
-    token = Column(String, primary_key=True, default=secrets.token_urlsafe(16))
+    token = Column(String, primary_key=True, default=lambda: secrets.token_urlsafe(16))
     scope = Column(String)
     realm_id = Column(String, ForeignKey("realms.id"))
     grpId = Column(String, ForeignKey("groups.id"), nullable=True)
     invitedBy = Column(String)
     username = Column(String)
-    createdAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    createdAt = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     expiresAt = Column(DateTime(timezone=True), nullable=True)
     used = Column(Boolean, default=False)
     usedAt = Column(DateTime(timezone=True), nullable=True)
@@ -133,6 +134,11 @@ class GrpUpdate(BaseModel):
     grpType: Optional[str] = None
     inviteType: Optional[str] = None
 
+class RealmUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    inviteType: Optional[str] = None
+
 class RealmCreate(BaseModel):
     name: str
     description: Optional[str]
@@ -142,9 +148,10 @@ class RealmDetails(BaseModel):
     id: str
     name: str
     owner: str
-    createdAt: str
+    createdAt: datetime
     inviteType: str
     role: str
+    description: str
     members: int = 0
     groups: int = 0
     model_config = {"from_attributes": True}
@@ -152,7 +159,7 @@ class RealmDetails(BaseModel):
 class RemoveMember(BaseModel):
     username: str
 
-class MemberUpdate:
+class MemberUpdate(BaseModel):
     name: str
     role: str
 

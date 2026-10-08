@@ -11,7 +11,7 @@ export default function ChatSideBar(props) {
     const [searchBy, setSearchBy] = useState(true);
     const {setError, setTrigger} = useChatAuth();
     const [searchResult, setSearchResults] = useState([])
-    const {setDms, getDms, tempDM, currRealm, realmDetails, setCurrentRealm} = useContext(ChatContext);
+    const {setDms, getDms, tempDM, realm, realmDetails, currGroup} = useContext(ChatContext);
     const navigate = useNavigate();
     const axios = useAxios();
     const [settingsOpen, setSettingsOpen] = useState(false)
@@ -42,7 +42,14 @@ export default function ChatSideBar(props) {
     }
     function goToRealms(e) {
         e.stopPropagation()
-        navigate("/chat/realms")
+        let a = "";
+        console.log(currGroup)
+        console.log(a ? realm.charAt(0) : realm.slice(1))
+        console.log(a ? realm.slice(1) : realm.charAt(0) )
+        if(realm && realm != currGroup)
+            navigate(`/chat/realms/${realm}`)
+        else
+            navigate("/chat/realms")
     }
     useEffect(()=>{
         async function search() {
@@ -90,42 +97,58 @@ export default function ChatSideBar(props) {
         e.stopPropagation()
         e.preventDefault()
         try{
-            await axios.post(`http://localhost:8004/realms/${currRealm}/groups/${el.groupId}/join`)
+            await axios.post(`http://localhost:8004/realms/${realm}/groups/${el.groupId}/join`)
         }
         catch(err) {
             if(err.response && err.response.status !== 409) {
-                if(err.response.data)
-                    setError(err.response.data.msg)
+                if(err.response.data && err.response.data.detail)
+                    setError(err.response.data.detail[0].msg)
                 else
                     setError("Could not join channel")
                 setTrigger(pre => !pre)
                 return;
             }
         }
-        navigate(`/chat/realms/${currRealm}/c/${element.name}`)
+        navigate(`/chat/realms/${realm}/c/${el.name}`)
+    }
+    function openSettings(e) {
+        e.stopPropagation();
+        setSettingsOpen(true)
     }
     return(
+        <>
+        {realm && settingsOpen && (
+            <RealmSettings
+                realm={realm}
+                onClose={() => setSettingsOpen(false)}
+                onDelete={() => {
+                    setSettingsOpen(false)
+                    navigate("/chat/realms")
+                }}
+                />
+        )}
         <div className="chat-sidearea" onClick={navbarSimulator}>
+            {realm && realmDetails && (<>
+            <span className="sidebar-section">
+                    <span className="back-to-realms" onClick={goToRealms}><svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                        <path xmlns="http://www.w3.org/2000/svg" d="M4 8h15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                        <path xmlns="http://www.w3.org/2000/svg" d="m16 5 3 3-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path xmlns="http://www.w3.org/2000/svg" d="M20 16H5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                        <path xmlns="http://www.w3.org/2000/svg" d="m8 13-3 3 3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg> Realm</span>
+                    {priviliged && <span className="open-realm-settings" onClick={openSettings}><svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx={12} cy={12} r={3}></circle>
+                        <path d={"M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"}>
+                        </path></svg></span>}
+            </span>
+                    </>
+            )}
             <h2 className="chat-sidearea-heading" onClick={goToRealms}>
-                <span className="realms-r-replacement">R</span>
-            <span className="ealms">ealms</span>
+                {realm && realm != currGroup && realmDetails && realmDetails.name ? <><span className="realms-r-replacement">{realmDetails.name.charAt(0)}</span><span>{realmDetails.name.slice(1)}</span></>
+                 : <><span className="realms-r-replacement">R</span><span className="ealms">ealms</span></>}
             </h2>
-            {realmDetails && (
-                <p className="current-realm-name" onClick={endPropagation}><span>{priviliged && <span className="back-to-realms" onClick={()=> setSettingsOpen(true)}>Settings</span>}
-                    <span className="back-to-realms" onClick={goToRealms}>Switch</span>
-                </span></p>
-            )}
-            {settingsOpen && (
-                <RealmSettings
-                    realm={currRealm}
-                    onClose={() => setSettingsOpen(false)}
-                    onDelete={() => {
-                        setSettingsOpen(false)
-                        navigate("/chat/realms")
-                    }}
-                 />
-            )}
             <hr />
+            {realm && <>
             <div className="search-users-groups">
                 <div>
                     <input type="text" onClick={endPropagation} placeholder="Search" value={query} onChange={e => setQuery(e.target.value)}/>
@@ -148,12 +171,14 @@ export default function ChatSideBar(props) {
                     ))}
                 </ul>
             </div>
+            </>}
             <div className="scroll-area">
-            {currRealm != "global" && <button className="add-group" onClick={addGroup}>+ Add your own Group</button>}
+            {realm && <>{realm != "global" && <button className="add-group" onClick={addGroup}>+ Add your own Group</button>}
             <ul className="realms-list">
-                {props.groups["Groups"].map(element => <Link to={`/chat/realms/${currRealm}/c/${element["name"]}`} key={`${element["name"]}-realm`} className={`${element["name"]}-realm`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">{element["display"] || element["name"]}</span></li></Link>)}
+                {props.groups["Groups"].map(element => <Link to={`/chat/realms/${realm}/c/${element["name"]}`} replace key={`${element["name"]}-realm`} className={`${element["name"]}-realm`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="channel-hashtag">#</span><span className="realm-button">{element["display"] || element["name"]}</span></li></Link>)}
 
             </ul>
+            </>}
             {("Direct Messages" in props.groups) && (<><h3 className="personal-msg-heading">Personal Messages</h3><ul className="dms">
                 {props.groups["Direct Messages"].map(element => <Link to={`/chat/u/${element}`} key={element} className={element} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="realm-button">{element}</span></li></Link>)}
             </ul></>)}
@@ -165,5 +190,6 @@ export default function ChatSideBar(props) {
                 </Link>
             </div>
         </div>
+        </>
     )
 }

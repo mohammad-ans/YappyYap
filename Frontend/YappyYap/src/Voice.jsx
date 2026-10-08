@@ -11,7 +11,6 @@ import TypeArea from "./Voice/TypeArea"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import {ChatContext} from "./ChatContext";
-import Members from "./Chat-Modules/Members";
 export default function Voice(props) {
     const duration = useRef(0);
     const moveBarAnimation = useRef(new Map())
@@ -21,7 +20,7 @@ export default function Voice(props) {
     const websocket = useRef()
     const msgRemoverInterval = useRef();
     const {setError, setTrigger, username} = useChatAuth();
-    const {realmType, liveCount, dmSendOption, setRealm, tempDM, realmRef, getDms, setDms} = useContext(ChatContext);
+    const {realmType, liveCount, dmSendOption, setRealm, tempDM, realmRef, getDms, setDms, setCurrGroup, setCurrGroupName} = useContext(ChatContext);
     const navigate = useNavigate();
     useGSAP(() => {
         gsap.ticker.lagSmoothing(0)
@@ -66,10 +65,13 @@ export default function Voice(props) {
         liveCount.current = props.realm["liveCount"];
         realmType.current = "voice";
         let isMounted = true;
-        realmRef.current = `${props.realm["name"]}-realm`;
-        const element = document.querySelector(`.${realmRef.current}`);
-        setRealm(realmRef.current);
-        element.classList.add("current-realm")
+        const display = props.realm["name"];
+        setCurrGroup(display);
+        setCurrGroupName(props.realm["display"] || display);
+        const element = document.getElementsByClassName(`${display}-realm`)[0];
+        // setRealm(realmRef.current);
+        if (element)
+            element.classList.add("current-realm")
         const axios = useAxios();
         async function getmsgs() {
             try{
@@ -125,7 +127,8 @@ export default function Voice(props) {
                     setTrigger(t => !t);
                     if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
                         websocket.current.close();
-                    navigate("/signin");
+                    if(err.status == 403)
+                        navigate("/signin");
                 }
 
             }
@@ -184,8 +187,8 @@ export default function Voice(props) {
                     if(err.response && err.response.data) {
                             setError(pre => err.response.data.detail[0].msg);
                             setTrigger(t => !t);
-                            if(ws.current && ws.current.readyState == WebSocket.OPEN)
-                                ws.current.close();
+                            if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
+                                websocket.current.close();
                             navigate("/signin")
                         }
 
