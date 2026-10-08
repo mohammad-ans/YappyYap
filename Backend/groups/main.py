@@ -783,7 +783,7 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                         stderr=PIPE
                         )
                         if voice_convert.returncode !=0:
-                            await user.send_text("An error occured")
+                            await user.send_text({"type": "error", "msg": "An error occured"})
                             continue
                     with open(output_tmp.name, "rb") as return_file:
                         payload = return_file.read()
@@ -805,8 +805,8 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                         complete_payload = time_sent + expiry_time + username_length.to_bytes(4, "big") + username_payload + payload
                         await manager_voice.publish({"payload_b64": base64.b64encode(complete_payload).decode("ascii"), "group": group})
                         
-                        os.remove(temp_input.name)
-                        os.remove(output_tmp.name)
+                    os.remove(temp_input.name)
+                    os.remove(output_tmp.name)
 
                 elif "text" in data:
                     js = loads(data["text"])

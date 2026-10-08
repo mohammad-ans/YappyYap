@@ -343,9 +343,11 @@ function RealmPage(){
     const {realm} = useParams()
     const navigate = useNavigate()
     const {setCurrentGroup, setRealm, realmRef, setCurrGroup, setCurrGroupName} = useContext(ChatContext)
-
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState("")
     useEffect(()=> {
         async function move() {
+            setLoading(true)
             const grps = await setCurrentGroup(realm)
             setRealm(realm)
             setCurrGroup(realm)
@@ -355,7 +357,14 @@ function RealmPage(){
             }
         }
         move()
+        setLoading(false)
     }, [realm])
+    if(loading)
+        return(
+            <div className="realm-empty">
+                Loading Groups...
+            </div>
+        )
     return (
         <div className="realm-empty">
             <p>This realm has no groups yet, you can create one from the sidebar.</p>

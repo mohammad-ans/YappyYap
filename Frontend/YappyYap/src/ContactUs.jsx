@@ -10,7 +10,7 @@ export default function ContactUs(props) {
     async function contactusSubmit(e) {
         e.preventDefault();
         try{
-            let content = issueRef.current.value;
+            const content = props.selectOption === "NewsLetter" ? props.footerEmail : issueRef.current?.value
             if (props.selectOption == "NewsLetter"){
                 content = props.footerEmail;
             }

@@ -184,7 +184,7 @@ export default function Global(props) {
             isMounted = false;
             ws.current.onclose = null
             ws.current.close();
-            clearTimeout(timerRef)
+            clearTimeout(timerRef.current)
             clearInterval(interval1);
             clearInterval(interval2);
             clearInterval(interval3);
