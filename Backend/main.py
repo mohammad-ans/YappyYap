@@ -1,17 +1,11 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, status, Depends
+from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-# import auth, websocket, voicewebsoc, components
 import os
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from database import session, Contact_us, Contact_us_data, NewsLetter, BugsReport
-from typing import Annotated
 app = FastAPI()
-# app.include_router(auth.router)
-# app.include_router(voicewebsoc.router)
-# app.include_router(websocket.router)
-# app.include_router(components.router)
 
 origins = [
     "http://localhost:5173",

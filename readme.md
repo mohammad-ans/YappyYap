@@ -66,20 +66,20 @@ Well my next step is to create a desktop version of it so stay tuned.
  - The below ai usage was before this current month development. Currently all the work done by AI is also commited by claude as contributor except one commit to help me normalize my group and realm variables which I specified was done by using claude. No other ai usage as far as I can remember.
  - AI was used to very least extent and even then when I used it I made sure that I try something different than what AI assumes the solution to be in an effort to make this project as least AI slop as possible.
 
+## Running your instance
+If you are interested in deploying this project on your own to create your own server kind of.
+- Clone the repository.
+- Navigate to Backend folder and set up the environment variables.
+DB_USERNAME, DB_PASS, API_KEY, EMAIL, PRIVATE_KEY, DB_URL, AUTH_DATABASE_URL, AUTH_USER, AUTH_PASS, PERSONAL_DATABASE_URL, TCHAT_DATABASE_URL, ABASE_URL, VCHAT_DATABASE_URL, TCHAT_USER, TCHAT_PASS, GOOGLE_CLIENT, CLIENT_SECRET 
+- Note that you can do dummy values for variables such as google log in ones.
+- The api key and email are from resend, so you need to configure that.
+- I set up local environment in such a way that I use the commented out verify session token function so there is no need for authentication setup until I move it to production.
+- After setting vars, run `docker compose up -d` from the folder.
+- Then navigate to \Frontend\YappyYap\src\ and configure the backend service urls in config.js
 
-
-## Features
-
-
-
-
-
-   - Provides Anonymity.
-
-
-   - Easy to Use
-
-
-   - Beautiful interface
-
-
+## Images
+![Main-Page](./main.png)
+![Profile-Page](./profile.png)
+![Global-Text](./global-text.png)
+![Global-Voice](./global-voice.png)
+![Realm-Text](./realm-tex.png)
