@@ -14,7 +14,6 @@ def del_job():
         db_text.execute(delete(Msgs).where(Msgs.expiry < datetime.now(timezone.utc)))
         db_voice.execute(delete(VoiceMsgs).where(VoiceMsgs.expiry < datetime.now(timezone.utc)))
         db_personalchat.execute(delete(PersonalMsgs).where(PersonalMsgs.defaultExpiration < datetime.now(timezone.utc)))
-        db_personalchat.execute(delete(PersonalMsgs).where(PersonalMsgs.defaultExpiration < datetime.now(timezone.utc)))
         db_text.commit()
         db_voice.commit()
         db_personalchat.commit()
