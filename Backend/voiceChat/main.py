@@ -31,7 +31,8 @@ load_dotenv()
 
 origins=[
      "http://localhost:5173",
-    "https://yappyyap.online"
+    "https://yappyyap.online",
+    "https://www.yappyyap.online"
 ]
 
 app.add_middleware(
@@ -45,6 +46,8 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 ALGORITHM = "HS256"
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+# Internal address of the auth service (docker compose service name locally, private network URL on the host)
+AUTH_URL = os.getenv("AUTH_URL", "http://auth:8000")
 
 def get_db():
     with session() as db:
@@ -182,7 +185,7 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
                     if "anonymity" in js and js["anonymity"]:
                         while True:
                             senderName = generate_slug(2)
-                            response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
+                            response_username = await client.get(f"{AUTH_URL}/userCheck/{senderName}")
                             if response_username.json()["msg"] == False:
                                 break
                     else:

@@ -17,15 +17,20 @@ from starlette.responses import RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 import secrets
 import re
-from pydantic import BaseModel
+from urllib.parse import quote
 
 load_dotenv()
 app = FastAPI()
 
 origins=[
     "http://localhost:5173",
-    "https://yappyyap.online"
+    "https://yappyyap.online",
+    "https://www.yappyyap.online"
 ]
+
+# Cookies are shared by every *.yappyyap.online service; Google redirects go back to the frontend
+COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", ".yappyyap.online")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://yappyyap.online")
 
 secretkey = os.getenv("SECRET")
 
@@ -85,7 +90,7 @@ def check_username(db: Session, username: str, email: str | None = None):
 
 def clear_cookie(response: Response, key: str):
     # Must match the attributes used in set_cookie or the browser keeps the cookie
-    response.delete_cookie(key=key, path="/", domain=".yappyyap.xyz", secure=True, httponly=True, samesite="none")
+    response.delete_cookie(key=key, path="/", domain=COOKIE_DOMAIN, secure=True, httponly=True, samesite="none")
 
 # async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
 #     payload = {"username" : "NA", "type" : "admin", "exp" : 0}
@@ -175,7 +180,7 @@ async def acc_create(verification_data : OTP_verification, response: Response, d
         samesite="none",
         max_age=1800,
         path="/",
-        domain=".yappyyap.xyz"
+        domain=COOKIE_DOMAIN
     )
     return {"msg":"Success", "username" : user.username, "user" : "email"}
 
@@ -236,7 +241,7 @@ async def verify(verification_data : OTP_verification, response: Response, db : 
         samesite = "none",
         max_age=1800,
         path="/",
-        domain=".yappyyap.xyz"
+        domain=COOKIE_DOMAIN
         )
     db.delete(otp_entry)
     db.commit()
@@ -297,7 +302,7 @@ async def guest_login(response: Response, db : Session = Depends(get_db)):
         samesite="none",
         max_age=GUEST_SESSION_SECONDS,
         path="/",
-        domain=".yappyyap.xyz"
+        domain=COOKIE_DOMAIN
     )
     return {"msg" : "Success", "username" : username}
     
@@ -350,26 +355,15 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
         email = user["email"]
         username = db.execute(select(Users.username).where(Users.email == email)).mappings().one_or_none()
         if not username:
-            token = await create_session_token({"temp" : "token", "email": email, "exp" : int(time.time()) + 1800})
-            # response = RedirectResponse(url=f"http://localhost:5173/signup?email={email}")
-            response = RedirectResponse(url=f"https://yappyyap.xyz/signup?email={email}")
-            response.set_cookie(
-                key="temp_token",
-                value=token,
-                httponly=True,
-                secure=True,
-                samesite="none",
-                max_age=1800,
-                path="/",
-                domain=".yappyyap.xyz"
-            )
-            return response
+            # No account for this Google email: send them to the normal sign up form with the email filled in
+            return RedirectResponse(url=f"{FRONTEND_URL}/signup?email={quote(email)}")
         
         # response = RedirectResponse(url=f"http://localhost:5173/chat")
-        response = RedirectResponse(url=f"https://yappyyap.xyz/chat")
+        response = RedirectResponse(url=f"{FRONTEND_URL}/chat")
         username = username["username"]
 
-        token = await create_session_token({"username" : username, "type": "a", "exp": int(time.time()) + 1800})
+        user_type = "admin" if db.execute(select(Admins).where(Admins.email == email)).scalar_one_or_none() else "Permanent"
+        token = await create_session_token({"username" : username, "type": user_type, "exp": int(time.time()) + 1800})
         response.set_cookie(
         key="session_token",
         value = token,
@@ -378,45 +372,13 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
         samesite="none",
         max_age=1800,
         path="/",
-        domain=".yappyyap.xyz"
+        domain=COOKIE_DOMAIN
         )
         return response
     except Exception as e:
         print(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=[{"msg" : "Could not verify identity"}])
     
-@app.post("/add/google")
-async def add_user_google(data, response: Response, db: Session = Depends(get_db), temp_token : Annotated[str | None, Cookie()] = None):
-    if not temp_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Google sign up expired, continue with Google again"}])
-    try:
-        temp = jwt.decode(temp_token, PRIVATE_KEY, ALGORITHM)
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Google sign up expired, continue with Google again"}])
-    email = temp.get("email")
-    if temp.get("temp") != "token" or not email:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid sign up token"}])
-    if db.execute(select(Users).where(Users.email == email)).scalar_one_or_none():
-        raise HTTPException(status_code=400, detail=[{"msg": "Account already exists"}])
-    check_username(db, data.username, email)
-    user = Users(username=data.username, email=email)
-    db.add(user)
-    db.commit()
-    token = await create_session_token({"username": user.username, "type": "Permanent", "exp": int(time.time()) + 1800})
-    response.set_cookie(
-        key="session_token",
-        value=token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        max_age=1800,
-        path="/",
-        domain=".yappyyap.xyz"
-    )
-    clear_cookie(response, "temp_token")
-    return {"msg": "Success", "username": user.username}
-
-
 @app.get("/users")
 def get_users(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     try:

@@ -43,7 +43,8 @@ async def require_admin(payload = Depends(verify_session_token)):
 
 origins=[
     "http://localhost:5173",
-    "https://yappyyap.online"
+    "https://yappyyap.online",
+    "https://www.yappyyap.online"
 ]
 
 

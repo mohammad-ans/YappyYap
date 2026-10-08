@@ -33,7 +33,8 @@ load_dotenv()
 
 origins = [
     "http://localhost:5173",
-    "https://yappyyap.online"
+    "https://yappyyap.online",
+    "https://www.yappyyap.online"
 ]
 
 app.add_middleware(
@@ -51,6 +52,8 @@ def get_db():
 
 
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+# Internal address of the auth service (docker compose service name locally, private network URL on the host)
+AUTH_URL = os.getenv("AUTH_URL", "http://auth:8000")
 ALGORITHM = "HS256"
 
 # async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
@@ -79,7 +82,7 @@ def require_existing_user(username: str):
     # Stops typos from creating members or invites for accounts that do not exist.
     # Only a definite "no" from auth blocks the request, so auth being down does not block it.
     try:
-        exists = httpx.get(f"http://auth:8000/userCheck/{username}", timeout=5.0).json()["msg"]
+        exists = httpx.get(f"{AUTH_URL}/userCheck/{username}", timeout=5.0).json()["msg"]
     except Exception:
         return
     if exists == False:
@@ -788,7 +791,7 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
                     
                     while True:
                         senderName = generate_slug(2)
-                        response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
+                        response_username = await client.get(f"{AUTH_URL}/userCheck/{senderName}")
                         if response_username.json()["msg"] == False:
                             break
                 elif "anonymity" in data:
@@ -935,7 +938,7 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                     if "anonymity" in js and js["anonymity"]:
                         while True:
                             senderName = generate_slug(2)
-                            response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
+                            response_username = await client.get(f"{AUTH_URL}/userCheck/{senderName}")
                             if response_username.json()["msg"] == False:
                                 break
                     elif "anonymity" in js:

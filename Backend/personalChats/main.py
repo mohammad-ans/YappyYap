@@ -25,7 +25,8 @@ app = FastAPI(lifespan=lifespan)
 
 origins = [
     "http://localhost:5173",
-    "https://yappyyap.online"
+    "https://yappyyap.online",
+    "https://www.yappyyap.online"
 ]
 
 app.add_middleware(
@@ -43,6 +44,8 @@ def get_db():
 
 load_dotenv()
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+# Internal address of the auth service (docker compose service name locally, private network URL on the host)
+AUTH_URL = os.getenv("AUTH_URL", "http://auth:8000")
 
 ALGORITHM = "HS256"
 
@@ -109,7 +112,7 @@ async def user_online(username):
 
 async def user_exists(username: str):
     try:
-        response = await client.get(f"http://auth:8000/userCheck/{username}")
+        response = await client.get(f"{AUTH_URL}/userCheck/{username}")
         return response.json()["msg"] == True
     except:
         return False
