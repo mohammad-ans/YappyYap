@@ -3,6 +3,7 @@ import useChatAuth from "../../hooks/useChatAuth"
 import { ChatContext } from "../ChatContext"
 import "./GroupSettings.css"
 import axios from "axios"
+import { GROUPS_URL } from "../config";
 export default function GroupSettings(props) {
     const [members, setMembers] = useState([])
     const [details, setDetails] = useState(null)
@@ -24,8 +25,8 @@ export default function GroupSettings(props) {
     async function load() {
         setLoading(true)
         try{
-            const members = await axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`)
-            const details = await axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/details`)
+            const members = await axios.get(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}/members`)
+            const details = await axios.get(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}/details`)
             setDetails(details.data)
             setDescription(details.data.description || "")
             setMembers(members.data)
@@ -44,7 +45,7 @@ export default function GroupSettings(props) {
     }
     async function loadInvites() {
         try{
-            const res = await axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/invites`)
+            const res = await axios.get(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}/invites`)
             setInvites(res.data)
         }
         catch(err) {
@@ -56,7 +57,7 @@ export default function GroupSettings(props) {
     }
     async function cancelInvite(token, invitedUser) {
         try{
-            await axios.post(`http://localhost:8004/invites/${token}/cancel`)
+            await axios.post(`${GROUPS_URL}/invites/${token}/cancel`)
             setInvites(pre => pre.filter(invite => invite.token != token))
             showStatus(`Cancelled invite for ${invitedUser}`, false)
         }
@@ -72,7 +73,7 @@ export default function GroupSettings(props) {
     }, [props.group])
     async function saveInviteType(value) {
         try{
-            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}`, {inviteType: value})
+            await axios.patch(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}`, {inviteType: value})
             setDetails(pre => ({...pre, inviteType: value}))
             showStatus("Updated invite type", false)
         }
@@ -91,7 +92,7 @@ export default function GroupSettings(props) {
     }
     async function saveDescription() {
         try{
-            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}`, {description})
+            await axios.patch(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}`, {description})
             showStatus("Updated description", false)
         }
         catch(err) {
@@ -103,7 +104,7 @@ export default function GroupSettings(props) {
     }
     async function promote(name) {
         try{
-            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`, {name: name, role: "admin"})
+            await axios.patch(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}/members`, {name: name, role: "admin"})
             setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "admin"} : mem))
             showStatus(`${name} promoted to admin`, false)
         }
@@ -116,7 +117,7 @@ export default function GroupSettings(props) {
     }
     async function demote(name) {
         try{
-            await axios.patch(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members`, {name: name, role: "member"})
+            await axios.patch(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}/members`, {name: name, role: "member"})
             setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "member"}: mem))
             showStatus(`${name} demoted to member`, false)
         }
@@ -129,7 +130,7 @@ export default function GroupSettings(props) {
     }
     async function leave() {
         try{
-            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/leave`)
+            await axios.post(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}/leave`)
             await setRealm(props.realm)
             props.onDeleted()
         }   
@@ -145,7 +146,7 @@ export default function GroupSettings(props) {
     }
     async function removeMember() {
         try{
-            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/members/remove`, {username: removeTarget})
+            await axios.post(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}/members/remove`, {username: removeTarget})
             setMembers(pre => pre.filter(mem => mem.username != removeTarget))
             showStatus(`Removed ${removeTarget}`, false)
         }
@@ -161,7 +162,7 @@ export default function GroupSettings(props) {
     }
     async function deleteChannel() {
         try{
-             await axios.delete(`http://localhost:8004/realms/${props.realm}/groups/${props.group}`)
+             await axios.delete(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}`)
              await setRealm(props.realm)
              props.onDeleted()
         }
@@ -181,7 +182,7 @@ export default function GroupSettings(props) {
         if(!target)
             return
         try{
-            const res = await axios.post(`http://localhost:8004/invites/group/${props.realm}/${props.group}`, {
+            const res = await axios.post(`${GROUPS_URL}/invites/group/${props.realm}/${props.group}`, {
                 username: target
             })
             const link = `${window.location.origin}/invite/${res.data.token}`
@@ -223,7 +224,7 @@ export default function GroupSettings(props) {
         if(!transferTarget)
             return
         try{
-            await axios.post(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/make-owner`, {
+            await axios.post(`${GROUPS_URL}/realms/${props.realm}/groups/${props.group}/make-owner`, {
                 username: transferTarget
             })
             showStatus(`${transferTarget} is now the owner of the channel`, false)

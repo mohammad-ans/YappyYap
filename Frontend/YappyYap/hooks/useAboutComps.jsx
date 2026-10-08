@@ -1,5 +1,6 @@
 import { useState, createContext, useContext, useEffect } from "react";
 import useAxios from "./useAxios";
+import { DASHBOARD_URL } from "../src/config";
 
 const AboutContext = createContext();
 export default function useAboutComps() {
@@ -13,7 +14,7 @@ export function AboutCompsProvider({children}) {
     async function getAboutComps() {
         setLoading(false)
         try{
-            const response = await axios.get("https://dashboard.yappyyap.xyz/get/aboutcomps");
+            const response = await axios.get(`${DASHBOARD_URL}/get/aboutcomps`);
             if (response.data.msg == "Success") {
                 setContents(pre=> response.data.content);
             }

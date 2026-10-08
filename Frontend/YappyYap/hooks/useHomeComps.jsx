@@ -1,6 +1,7 @@
 import { useState, useContext, createContext, useEffect } from "react";
 import useAxios from "./useAxios";
 import { unzipSync } from "fflate";
+import { DASHBOARD_URL } from "../src/config";
 const HomeComps = createContext()
 export default function useHomeComps(){
     return useContext(HomeComps)
@@ -18,7 +19,7 @@ export function HomeCompsProvider({children}) {
             setUrls(pre=>[])
             setContent(pre=>[])
             setLoading(l => true);
-            const response = await axios.get("https://dashboard.yappyyap.xyz/get/homecomps", {
+            const response = await axios.get(`${DASHBOARD_URL}/get/homecomps`, {
                 responseType : "arraybuffer"
             })
             const zip = new Uint8Array(response.data)

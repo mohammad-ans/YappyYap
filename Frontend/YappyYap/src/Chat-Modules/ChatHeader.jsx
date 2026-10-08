@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useContext } from "react"
 import useChatAuth from "../../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import { ChatContext } from "../ChatContext";
+import { DM_URL, GROUPS_URL, TEXTCHAT_URL, VOICECHAT_URL } from "../config";
 export default function ChatHeader(props) {
     const [online, setOnline] = useState(0);
     const [members, setMembers] = useState(0);
@@ -24,28 +25,28 @@ export default function ChatHeader(props) {
             if (membersEl)
                 membersEl.style.display = "none";
             if (isDm){
-                response = await axios.get(`http://localhost:8005/livecount/${encodeURIComponent(currGroupName)}`);
+                response = await axios.get(`${DM_URL}/livecount/${encodeURIComponent(currGroupName)}`);
                 // response = await axios.get(`https://chat.yappyyap.xyz/livecount/${props.user.current}`);
             }else{
                 let initialPath;
                 if (currGroup == "global-voice") {
-                    initialPath = "3/voice";
+                    initialPath = `${VOICECHAT_URL}/voice`;
                     // initialPath = "voice.yappyyap.xyz/voice";
                 }
                 else if (currGroup == "global-text") {
-                    initialPath = "2/global"
+                    initialPath = `${TEXTCHAT_URL}/global`
                     // initialPath = "textchat.yappyyap.xyz/global"
                 }
                 else {
-                    initialPath = `4/${realmType.current}/${currGroup}`
+                    initialPath = `${GROUPS_URL}/${realmType.current}/${currGroup}`
                     // initialPath = `groups.yappyyap.xyz/${realmType.current}/${currGroup}`
                     if (membersEl)
                         membersEl.style.display = "block";
-                    const tempMembers = await axios.get(`http://localhost:8004/groups/${currGroup}/numMembers`);
+                    const tempMembers = await axios.get(`${GROUPS_URL}/groups/${currGroup}/numMembers`);
                     // const tempMembers = await axios.get(`https://groups.yappyyap.xyz/groups/${currGroup}/numMembers`);
                     setMembers(tempMembers.data);
                 }
-                response = await axios.get(`http://localhost:800${initialPath}/livecount`);
+                response = await axios.get(`${initialPath}/livecount`);
                 // response = await axios.get(`https://${initialPath}/livecount`);
             }
             if (response.data.msg === "Success") {

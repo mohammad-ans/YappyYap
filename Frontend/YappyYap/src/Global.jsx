@@ -5,6 +5,7 @@ import default_image from "./assets/default_img.png"
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import {ChatContext} from "./ChatContext";
+import { toWs } from "./config";
 export default function Global(props) {
     const [msg, setMsg] = useState("");
     const textArea = useRef();
@@ -62,7 +63,7 @@ export default function Global(props) {
         async function getMessages() {
             try {
                 // const messages = await axios.get(`https://${props.url}/getchatmsgs/${props.realm["name"]}`)
-                const messages = await axios.get(`http://${props.url}/getchatmsgs/${props.realm["name"]}`)
+                const messages = await axios.get(`${props.url}/getchatmsgs/${props.realm["name"]}`)
                 if (messages.data.msg == "Success") {
                     const response = messages.data.msgs;
                     const parent_element = document.querySelector(".msgs");
@@ -115,7 +116,7 @@ export default function Global(props) {
         function connect() {
             // ws.current = new WebSocket(`wss://api.yappyyap.xyz/ws`);
             // ws.current = new WebSocket(`wss://${props.url}/ws/${props.realm["name"]}`)
-            ws.current = new WebSocket(`ws://${props.url}/ws/${props.realm["name"]}`)
+            ws.current = new WebSocket(`${toWs(props.url)}/ws/${props.realm["name"]}`)
             ws.current.onopen = () => {
                 webreconInterval = 2000
                 getMessages()

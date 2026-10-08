@@ -4,8 +4,8 @@ import "./SignIn.css"
 import useAxios from "../hooks/useAxios";
 import Onfire from "./OnFire";
 import useChatAuth from "../hooks/useChatAuth";
-import AddUsername from "./AddUsername";
 import { saveNextFromUrl, saveOtpEmail } from "./authRedirect";
+import { AUTH_URL } from "./config";
 
 export default function SignUp(props) {
     const query = new URLSearchParams(window.location.search);
@@ -14,8 +14,6 @@ export default function SignUp(props) {
     const {setTrigger} = useChatAuth()
     const {setError} = useChatAuth()
     const [loading, setLoading] = useState(false);
-    // Set when Google sends back a verified email that has no account yet
-    const [googleEmail, setGoogleEmail] = useState("");
     const navigate = useNavigate()
 
     useEffect(()=>{
@@ -23,7 +21,9 @@ export default function SignUp(props) {
         let tempEmail = query.get("email");
         if(tempEmail){
             setEmail(tempEmail)
-            setGoogleEmail(tempEmail)
+            // Google sign in found no account for this email, so sign up normally with it prefilled
+            setError("This google account has no associated account yet, sign up below")
+            setTrigger(t => !t)
         }
     }, [])
 
@@ -33,7 +33,7 @@ export default function SignUp(props) {
         const axios = useAxios();
         try{
             // const resp = await axios.post("http://localhost:8001/signup", {
-            const resp = await axios.post("https://auth.yappyyap.xyz/signup", {
+            const resp = await axios.post(`${AUTH_URL}/signup`, {
                 email: email,
                 username: username
             })
@@ -61,8 +61,6 @@ export default function SignUp(props) {
     // async function loginWithGoogle(e) {
     //     window.location.href = "http://localhost:8001/auth/g"
     // }
-    if (googleEmail)
-        return <AddUsername email={googleEmail}/>
     return (
         <div className="background-signin">
         <form onSubmit={sendOtp} className="sign-form">

@@ -6,6 +6,7 @@ import useChatAuth from "../../hooks/useChatAuth";
 import useHomeComps from "../../hooks/useHomeComps";
 import Delete from "./../assets/Delete"
 import useAboutComps from "../../hooks/useAboutComps";
+import { DASHBOARD_URL } from "../config";
 export default function AboutComp() {
     const [content, setContent] = useState("");
     const {setError, setTrigger} = useChatAuth()
@@ -13,7 +14,7 @@ export default function AboutComp() {
     const {contents, loading, setCompsCheck} = useAboutComps()
     async function send() {
         try{
-            const response = await axios.post("https://dashboard.yappyyap.xyz/aboutcomps", {
+            const response = await axios.post(`${DASHBOARD_URL}/aboutcomps`, {
                 content : content
             });
             setCompsCheck(c => !c);
@@ -28,7 +29,7 @@ export default function AboutComp() {
     async function deleteComp(e) {
         const data = e.currentTarget.dataset.key;
         try{
-            const response = await axios.post("https://dashboard.yappyyap.xyz/delete/aboutcomps", {
+            const response = await axios.post(`${DASHBOARD_URL}/delete/aboutcomps`, {
                 content : data
             });
             setError(response.data.msg)

@@ -13,6 +13,7 @@ import Personal from "./Personal"
 import { ChatContext } from "./ChatContext"
 import AllRealmsPage from "./AllRealmsPage"
 import GroupSettings from "./Chat-Modules/GroupSettings"
+import { DM_URL, GROUPS_URL, TEXTCHAT_URL, VOICECHAT_URL, toWs } from "./config";
 
 export default function Chat(props) {
     const { username } = useChatAuth();
@@ -25,7 +26,7 @@ export default function Chat(props) {
     const [theme, setTheme] = useState("blue");
     const [addArea, setAddArea] = useState(false);
     const {setError, setTrigger} = useChatAuth();
-    const globalChannels = [{ "name": "global-text", display: "Global Chat", "grpType": "text", "url": "localhost:8002", owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all", channel: null, role: "member"}, { "name": "global-voice", display: "Global Voice","grpType": "voice", "url": "localhost:8003/voice", owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all", channel: null, role: "member" }]
+    const globalChannels = [{ "name": "global-text", display: "Global Chat", "grpType": "text", "url": TEXTCHAT_URL, owner : "NA", anonymity : true, liveCount : true, minDuration : 10, maxDuration : 300, maxGrpSize : -1, inviteType : "all", channel: null, role: "member"}, { "name": "global-voice", display: "Global Voice","grpType": "voice", "url": `${VOICECHAT_URL}/voice`, owner : "NA", anonymity : false, liveCount : false, minDuration : 14, maxDuration : 267, maxGrpSize : -1, inviteType : "all", channel: null, role: "member" }]
     const [groups, setGroups] = useState({"Direct Messages": [], "Groups": []})
     // const [groups, setGroups] = useState()
     const dmUsersRef = useRef([]);
@@ -57,12 +58,12 @@ export default function Chat(props) {
             return globalChannels
         }
         try{
-            const realm = await axios.get(`http://localhost:8004/realms/${id}`)
-            const res = await axios.get(`http://localhost:8004/realms/${id}/groups`)
+            const realm = await axios.get(`${GROUPS_URL}/realms/${id}`)
+            const res = await axios.get(`${GROUPS_URL}/realms/${id}/groups`)
             setRealmDetails(realm.data)
             const groups = res.data.map(grp => ({
                 name: grp.id, display: grp.name, groupId: grp.id, realmId: id, grpType: grp.grpType,
-                url: grp.grpType == "text" ? "localhost:8004" : "localhost:8004/voice",
+                url: grp.grpType == "text" ? GROUPS_URL : `${GROUPS_URL}/voice`,
                 owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType, anonymity: grp.anonymity
             }))
             setGroups(pre => ({...pre, "Groups": groups}))
@@ -83,7 +84,7 @@ export default function Chat(props) {
     async function getDms() {
         try {
             // const response = await axios.get("https://chat.yappyyap.xyz/dms")
-            const response = await axios.get("http://localhost:8005/dms")
+            const response = await axios.get(`${DM_URL}/dms`)
             let arr = {};
             response.data.forEach(element => {
                 // let secondUser = 
@@ -182,7 +183,7 @@ export default function Chat(props) {
         function connect() {
 
             try {
-                ws.current = new WebSocket("ws://localhost:8005/ws/main");
+                ws.current = new WebSocket(`${toWs(DM_URL)}/ws/main`);
                 // ws.current = new WebSocket("wss://chat.yappyyap.xyz/ws/main");
                 ws.current.onopen = () => {
                     webreconInterval = 2000

@@ -2,6 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import useAxios from "../hooks/useAxios";
 import useChatAuth from "../hooks/useChatAuth";
 import { useEffect, useState } from "react";
+import { GROUPS_URL } from "./config";
 
 export default function Invite() {
     const {token} = useParams()
@@ -22,7 +23,7 @@ export default function Invite() {
         }
         async function loadPreview() {
             try{
-                const res = await axios.get(`http://localhost:8004/invites/${token}/preview`)
+                const res = await axios.get(`${GROUPS_URL}/invites/${token}/preview`)
                 setPreview(res.data)
             }
             catch(err) {
@@ -41,7 +42,7 @@ export default function Invite() {
     async function joinNow() {
         setJoining(true)
         try{
-            const res = await axios.post(`http://localhost:8004/invites/${token}/redeem`)
+            const res = await axios.post(`${GROUPS_URL}/invites/${token}/redeem`)
             if(preview.scope == "group" && res.data.grpId)
                 navigate(`/chat/realms/${res.data.realm_id}/c/${res.data.grpId}`)
             else

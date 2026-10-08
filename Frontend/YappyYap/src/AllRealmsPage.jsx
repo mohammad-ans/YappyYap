@@ -4,6 +4,7 @@ import useAxios from "../hooks/useAxios"
 import useChatAuth from "../hooks/useChatAuth"
 import { useNavigate } from "react-router-dom"
 import "./AllRealms.css"
+import { GROUPS_URL } from "./config";
 
 export default function AllRealmsPage(props) {
     const [loading, setLoading] = useState(true)
@@ -21,8 +22,8 @@ export default function AllRealmsPage(props) {
     async function loadrealms() {
         setLoading(true)
         try{
-            const joined = await axios.get(`http://localhost:8004/realms/mine`)
-            const all = await axios.get(`http://localhost:8004/realms`)
+            const joined = await axios.get(`${GROUPS_URL}/realms/mine`)
+            const all = await axios.get(`${GROUPS_URL}/realms`)
             setRealms(joined.data)
             const joinedIds = new Set(joined.data.map(realm => realm.id))
             setOpenRealms(all.data.filter(realm => !joinedIds.has(realm.id)))
@@ -46,7 +47,7 @@ export default function AllRealmsPage(props) {
     async function joinOpenRealms(id) {
         setJoinId(id)        
         try{
-            await axios.post(`http://localhost:8004/realms/${id}/join`)
+            await axios.post(`${GROUPS_URL}/realms/${id}/join`)
             navigate(`/chat/realms/${id}`)
         }
         catch(err) {
@@ -66,7 +67,7 @@ export default function AllRealmsPage(props) {
             return
         setSubmitting(true)
         try{
-            const res = await axios.post("http://localhost:8004/realm", {
+            const res = await axios.post(`${GROUPS_URL}/realm`, {
                 name: name.trim(),
                 description: description.trim(),
                 inviteType: inviteType

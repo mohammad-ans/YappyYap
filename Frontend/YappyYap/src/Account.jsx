@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import useChatAuth from "../hooks/useChatAuth";
 import AccActiveMsg from "./AccActiveMsg";
 import { useNavigate } from "react-router-dom";
+import { AUTH_URL, DM_URL, GROUPS_URL } from "./config";
 export default function Account() {
     const axios = useAxios();
     const [key, setKey] = useState();
@@ -17,7 +18,7 @@ export default function Account() {
     useEffect(()=>{
         async function getUserDetails(){
             try{
-                const response = await axios.get("https://auth.yappyyap.xyz/userdetails")
+                const response = await axios.get(`${AUTH_URL}/userdetails`)
                 const elements = document.querySelector(".account-details").children;
                 elements[1].textContent = response.data.username;
                 elements[2].textContent = response.data.user_type;
@@ -44,10 +45,10 @@ export default function Account() {
             // Guests are removed on sign out so their generated name is freed
             if (userType == "Guest")
                 // await axios.post("http://localhost:8001/signoutguest")
-                await axios.post("https://auth.yappyyap.xyz/signoutguest")
+                await axios.post(`${AUTH_URL}/signoutguest`)
             else
                 // await axios.get("http://localhost:8001/signout")
-                await axios.get("https://auth.yappyyap.xyz/signout")
+                await axios.get(`${AUTH_URL}/signout`)
             loggedOut("Signed out");
         }
         catch(e){
@@ -62,10 +63,10 @@ export default function Account() {
         setBusy(true);
         try{
             // Hand over or remove realms/groups and DMs first, then delete the login itself
-            await axios.delete("http://localhost:8004/users/me");
-            await axios.delete("http://localhost:8005/users/me");
+            await axios.delete(`${GROUPS_URL}/users/me`);
+            await axios.delete(`${DM_URL}/users/me`);
             // await axios.post("http://localhost:8001/delete")
-            await axios.post("https://auth.yappyyap.xyz/delete")
+            await axios.post(`${AUTH_URL}/delete`)
             loggedOut("Account deleted");
         }
         catch(e){

@@ -5,6 +5,7 @@ import Onfire from "./OnFire"
 import "./SignIn.css"
 import useChatAuth from "../hooks/useChatAuth"
 import { saveNextFromUrl, saveOtpEmail } from "./authRedirect"
+import { AUTH_URL } from "./config";
 
 export default function SignIn(props) {
     const [email, setEmail] = useState("");
@@ -20,7 +21,7 @@ export default function SignIn(props) {
         e.preventDefault()
         try{
             // const resp = await axios.post("http://localhost:8001/signin", {
-            const resp = await axios.post("https://auth.yappyyap.xyz/signin", {
+            const resp = await axios.post(`${AUTH_URL}/signin`, {
                 email: email
             })
             if (resp.data.msg == "Success"){
@@ -48,7 +49,7 @@ export default function SignIn(props) {
 
     async function loginWithGoogle(e) {
         // window.location.href = "http://localhost:8001/auth/g"
-        window.location.href = "https://auth.yappyyap.xyz/auth/g"
+        window.location.href = `${AUTH_URL}/auth/g`
     }
 
     return (
