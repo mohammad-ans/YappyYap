@@ -76,8 +76,11 @@ class ConnectionManager:
       if username in self.connections:
         del self.connections[username]
     async def send_message(self, message : Msg_return):
-        for user in self.connections:
-            await self.connections[user].send_text(message)
+        try:
+            for user, ws in list(self.connections.items()):
+                await ws.send_text(message)
+        except:
+            self.connections.pop(user)
 
 manager_local = ConnectionManager()
 

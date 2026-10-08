@@ -82,8 +82,11 @@ class Connection_Manager:
          if username in self.active_connections:
               del self.active_connections[username]
     async def send_message(self, message):
-         for connection in self.active_connections:
-              await self.active_connections[connection].send_bytes(message)
+        try:
+            for user, ws in list(self.active_connections.items()):
+                await ws.send_bytes(message)
+        except:
+            self.active_connections.pop(user)
 
 manager_local = Connection_Manager()
 async def on_event(data):
@@ -128,7 +131,7 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
                         temp_input.flush()
                         output_tmp = NamedTemporaryFile(suffix=".webm", delete=False)
                         output_tmp.close()
-                        voice_convert = run([
+                        voice_convert = await asyncio.to_thread(run, [
                             'ffmpeg',
                             '-y',
                             '-i', temp_input.name,

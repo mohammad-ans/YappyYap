@@ -52,12 +52,8 @@ export default function ChatHeader(props) {
             }
         }
         catch(err) {
-            if(err.response && err.response.data) {
-                    setError(pre => err.response.data.detail[0].msg);
-                    setTrigger(t => !t);
-                    if(err.status == 403)
-                        navigate("/signin")
-                }
+                if(err.status == 403)
+                    navigate("/signin")
         }
     }, [isGrp, currGroup])
     useEffect(()=>{
@@ -65,8 +61,10 @@ export default function ChatHeader(props) {
         if(theme)
             document.documentElement.setAttribute("data-theme", theme);
         let onlineInterval;
-        if(isGrp)
+        if(isGrp){
+            getOnline()
             onlineInterval = setInterval(getOnline, 4000);
+        }
         else
             clearInterval(onlineInterval)
         return ()=>{ 

@@ -180,7 +180,7 @@ export default function ChatSideBar(props) {
             </ul>
             </>}
             {("Direct Messages" in props.groups) && (<><h3 className="personal-msg-heading">Personal Messages</h3><ul className="dms">
-                {props.groups["Direct Messages"].map(element => <Link to={`/chat/u/${element}`} key={element} className={`m${element}`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="realm-button">{element}</span></li></Link>)}
+                {props.groups["Direct Messages"].map(element => <Link to={`/chat/u/${element}`} key={element} className={`m${CSS,escape(element)}`} onClick={testfunc}><li><span className="dot-realm-style"></span><span className="realm-button">{element}</span></li></Link>)}
             </ul></>)}
             </div>
             <div className="user-profile">

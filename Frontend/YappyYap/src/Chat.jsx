@@ -63,7 +63,7 @@ export default function Chat(props) {
             const groups = res.data.map(grp => ({
                 name: grp.id, display: grp.name, groupId: grp.id, realmId: id, grpType: grp.grpType,
                 url: grp.grpType == "text" ? "localhost:8004" : "localhost:8004/voice",
-                owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType, anonymity: grp.anyonymity
+                owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType, anonymity: grp.anonymity
             }))
             setGroups(pre => ({...pre, "Groups": groups}))
             return groups

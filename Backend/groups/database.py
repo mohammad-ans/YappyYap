@@ -37,7 +37,7 @@ class Group(Base):
     name = Column(String)
     owner = Column(String)
     liveCount = Column(Boolean, default=True)
-    anyonymity = Column(Boolean, default=False)
+    anonymity = Column(Boolean, default=False)
     maxGrpSize = Column(Integer)
     maxDuration = Column(Integer)
     minDuration = Column(Integer)
@@ -54,7 +54,7 @@ class GroupDetails(BaseModel):
     owner: str
     createdAt: datetime
     liveCount: bool
-    anyonymity: bool
+    anonymity: bool
     maxGrpSize: int
     maxDuration: int
     minDuration: int
