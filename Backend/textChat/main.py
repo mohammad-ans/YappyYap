@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     await manager.start()
     yield
     await manager.stop()
-    client.aclose()
+    await client.aclose()
 
 app = FastAPI(lifespan=lifespan)
 
