@@ -245,9 +245,7 @@ export default function Global(props) {
                 "msg": msg.trim(),
                 "expire": yapDuration
             }
-            if (anonymity.current) {
-                message["anonymity"] = true
-            }
+            message.anonymity = anonymity.current
             ws.current.send(JSON.stringify(message));
         }
 

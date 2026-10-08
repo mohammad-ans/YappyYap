@@ -181,9 +181,8 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
                         response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
                         if response_username.json()["msg"] == False:
                             break
-                        # already_exists = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
-                        # if not already_exists:
-                        #      break
+                else:
+                    senderName = username
                 expiry_seconds = int(js["expiry"])
     except WebSocketDisconnect:
          print("closed")

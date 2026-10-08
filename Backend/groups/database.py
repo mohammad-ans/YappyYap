@@ -69,7 +69,7 @@ class Members(Base):
     name = Column(String, primary_key=True)
     grpId = Column(String, ForeignKey("groups.id"), primary_key=True)
     role = Column(String, default="member")
-    joinedAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    joinedAt = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class Invite(Base):
     __tablename__ = "invites"

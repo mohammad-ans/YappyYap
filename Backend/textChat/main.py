@@ -124,10 +124,8 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                     response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
                     if response_username.json()["msg"] == False:
                         break
-                    # already_exists = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
-                    # if not already_exists:
-                    #     break
-                await client.aclose()
+            else:
+                senderName = username
             seconds = int(data["expire"])
             msg = data["msg"]
             time = datetime.now(timezone.utc)

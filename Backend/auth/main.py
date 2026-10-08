@@ -97,7 +97,7 @@ async def signup(data : Email_signup, db : Session = Depends(get_db)):
     already_exists = db.execute(select(Users).where(Users.username == data.username)).scalar_one_or_none()
     if already_exists:
         raise HTTPException(status_code=400, detail=[{"msg":"User name already taken"}])
-    already_exists = db.execute(select(Pending_users).where(Pending_users.email == data.email or Pending_users.username == data.username)).scalar_one_or_none()
+    already_exists = db.execute(select(Pending_users).where(Pending_users.email == data.email)).scalar_one_or_none()
     # already_exists = db.query(Pending_users).filter_by(email = data.email).update({"username" : data.username})
     if already_exists:
         already_exists.username = data.username

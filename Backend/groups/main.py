@@ -84,9 +84,9 @@ def update_realm(id: str, data: database.RealmUpdate, db: Session = Depends(get_
     priviliged = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & ((database.RMembers.role == "admin") | (database.RMembers.role == "owner")))).scalar_one_or_none()
     if not priviliged:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owners and admins can update realm settings"}])
-    if data.name:
+    if data.name is not None:
         realm.name = data.name
-    if data.description:
+    if data.description is not None:
         realm.description = data.description
     if data.inviteType:
         realm.inviteType = data.inviteType
@@ -596,6 +596,13 @@ def create_grp(id: str, data: database.GrpAdd, db: Session = Depends(get_db), pa
     db.commit()
     return {"msg": "Success", "id": grp.id}
 
+def check_mem(username: str, id: str, db: Session):
+    mem = db.execute(select(database.Members).where((database.Members.username == username) & (database.Members.grpId == id))).scalar_one_or_none()
+    if not mem:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only group members can send messages"}])
+    return True
+
+
 class ConnectionManager:
     def __init__(self):
         self.connections : dict[tuple[str, str], WebSocket] = {}
@@ -631,6 +638,7 @@ async def mark_online(manager: ws_manger.RedisWs, key: str, username: str, onlin
 async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     MAX_TIME = payload["exp"]
     username = payload["username"]
+    check_mem(username, group)
     senderName = username
     await user.accept()
     manager.add_connection(user, username, group)
@@ -739,6 +747,7 @@ manager_voice = ws_manger.RedisWs(grp="groups:voice", on_event=on_voice_event)
 @app.websocket("/voice/ws/{group}")
 async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_session_token), db : Session = Depends(get_db)):
     username = payload["username"]
+    check_mem(username, group)
     await user.accept()
     managerV.add_connection(user, username, group)
     await mark_online(manager_voice, f"groups:voice:online:{group}", username, True)
