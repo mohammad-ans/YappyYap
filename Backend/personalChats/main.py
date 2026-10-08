@@ -25,7 +25,7 @@ app = FastAPI(lifespan=lifespan)
 
 origins = [
     "http://localhost:5173",
-    "https://yappyyap.xyz"
+    "https://yappyyap.online"
 ]
 
 app.add_middleware(
@@ -46,24 +46,24 @@ PRIVATE_KEY = os.getenv("PRIVATE_KEY")
 
 ALGORITHM = "HS256"
 
-async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
-    payload = {"username" : "NA", "type" : "admin", "exp" : 0}
-    return payload
-
 # async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
-#     if not session_token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
-#     try:
-#         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
-#         if not payload:
-#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Payload not found"}])
-#         if not payload["username"]:
-#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Username Not found"}])
-#     except jwt.InvalidTokenError:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid Token"}])
-#     except jwt.ExpiredSignatureError:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Expired Token"}])
+#     payload = {"username" : "NA", "type" : "admin", "exp" : 0}
 #     return payload
+
+async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
+    if not session_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
+    try:
+        payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
+        if not payload:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Payload not found"}])
+        if not payload["username"]:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Username Not found"}])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid Token"}])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Expired Token"}])
+    return payload
 
 @app.get("/dms")
 def personalMsgs(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
