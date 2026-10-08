@@ -42,9 +42,17 @@ export default function ChatSideBar(props) {
         props.setAddArea(true);
     }
     function goToRealms(e) {
-        // A realm's own page just redirects to its first channel, so going "back" means the realms list
+        // The "Realm" button always goes back to the list of all realms
         e.stopPropagation()
         navigate("/chat/realms")
+    }
+    function goToRealmPage(e) {
+        // The heading opens the current realm's page, or the realms list when no realm is open
+        e.stopPropagation()
+        if(realm && realmDetails)
+            navigate(`/chat/realms/${realm}`)
+        else
+            navigate("/chat/realms")
     }
     useEffect(()=>{
         async function search() {
@@ -131,8 +139,8 @@ export default function ChatSideBar(props) {
             </span>
                     </>
             )}
-            <h2 className="chat-sidearea-heading" onClick={goToRealms}>
-                {realm && realm != currGroup && realmDetails && realmDetails.name ? <><span className="realms-r-replacement">{realmDetails.name.charAt(0)}</span><span>{realmDetails.name.slice(1)}</span></>
+            <h2 className="chat-sidearea-heading" onClick={goToRealmPage}>
+                {realm && realmDetails && realmDetails.name ? <><span className="realms-r-replacement">{realmDetails.name.charAt(0)}</span><span>{realmDetails.name.slice(1)}</span></>
                  : <><span className="realms-r-replacement">R</span><span className="ealms">ealms</span></>}
             </h2>
             <hr />

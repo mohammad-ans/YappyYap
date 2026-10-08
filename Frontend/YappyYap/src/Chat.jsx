@@ -340,24 +340,22 @@ export default function Chat(props) {
 }
 
 function RealmPage(){
+    // Landing page of a realm: shows the realm and its channels, the user picks one
     const {realm} = useParams()
-    const navigate = useNavigate()
-    const {setCurrentGroup, setRealm, realmRef, setCurrGroup, setCurrGroupName} = useContext(ChatContext)
+    const {setCurrentGroup, setRealm, setCurrGroup, setCurrGroupName, realmDetails} = useContext(ChatContext)
     const [loading, setLoading] = useState(true)
+    const [channels, setChannels] = useState([])
     useEffect(()=> {
-        async function move() {
+        async function load() {
             setLoading(true)
             const grps = await setCurrentGroup(realm)
             setRealm(realm)
             setCurrGroup(realm)
             setCurrGroupName("")
-            if (grps && grps.length > 0) {
-                navigate(`/chat/realms/${realm}/c/${grps[0].name}`, {replace: true})
-                return
-            }
+            setChannels(grps || [])
             setLoading(false)
         }
-        move()
+        load()
     }, [realm])
     if(loading)
         return(
@@ -366,8 +364,26 @@ function RealmPage(){
             </div>
         )
     return (
-        <div className="realm-empty">
-            <p>This realm has no groups yet, you can create one from the sidebar.</p>
+        <div className="realm-page">
+            {realmDetails && <div className="realm-page-header">
+                <h2>{realmDetails.name}</h2>
+                {realmDetails.description && <p>{realmDetails.description}</p>}
+                {!realmDetails.isGlobal && <p className="realm-page-counts">{realmDetails.members} members · {realmDetails.groups} channels</p>}
+            </div>}
+            {channels.length == 0 ? (
+                <p className="realm-page-empty">This realm has no groups yet, you can create one from the sidebar.</p>
+            ) : (
+                <ul className="realm-page-channels">
+                    {channels.map(channel => (
+                        <li key={channel.name}>
+                            <Link to={`/chat/realms/${realm}/c/${channel.name}`}>
+                                <span className="realm-page-hashtag">#</span>{channel.display || channel.name}
+                                <span className="realm-page-type">{channel.grpType}</span>
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
     )
 }
@@ -422,7 +438,8 @@ function DefaultRoot() {
     useEffect(()=> {
         setRealm("global");
     })
+    // /chat opens Global Chat directly; the realm page only shows when a realm is opened on purpose
     return (
-        <Navigate to="/chat/realms/global" replace />
+        <Navigate to="/chat/realms/global/c/global-text" replace />
     )
 }
