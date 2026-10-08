@@ -4,8 +4,8 @@ import "./RealmSettings.css"
 import axios from "axios";
 import { ChatContext } from "./ChatContext";
 export default function RealmSettings(props) {
-    const {username, setRealmDetails} = useChatAuth()
-    const {ws} = useContext(ChatContext)
+    const {username} = useChatAuth()
+    const {ws, setRealmDetails} = useContext(ChatContext)
     const [status, setStatus] = useState("")
     const colorRef = useRef("red")
     const [details, setDetails] = useState(null)

@@ -286,18 +286,20 @@ async def signout(response: Response):
 
 @app.post("/delete")
 async def delete_acc(request: Email_signin, response: Response, db: Session = Depends(get_db), msg = Depends(verify_session_token)):
+    username = msg["username"]
     response.delete_cookie(key="session_token")
     # del_user = db.query(Users).filter(email=request.email).first()
-    del_user = db.execute(select(Users).where(Users.email == request.email)).scalar_one()
+    del_user = db.execute(select(Users).where(Users.username == username)).scalar_one()
     db.delete(del_user)
     db.commit()
     return {"msg" : "Success"}
 
 @app.post("/signoutguest")
 async def guest_logout(request: Guest_login, response : Response, db : Session= Depends(get_db), msg = Depends(verify_session_token)):
+    username = msg["username"]
     response.delete_cookie(key="session_token")
     # del_user_signout = db.query(Guests).filter(username = request.username).first()
-    del_user_signout = db.execute(select(Guests).where(Guests.username == request.username)).scalar_one()
+    del_user_signout = db.execute(select(Guests).where(Guests.username == username)).scalar_one()
     db.delete(del_user_signout)
     db.commit()
     return {"msg" : "Success"}
@@ -368,12 +370,6 @@ def add_user_google(username : str, temp_token : Annotated[str | None, Cookie()]
 @app.get("/users")
 def get_users(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     try:
-        data = Users(
-            email = "NA",
-            username = "NA"
-        )
-        db.add(data)
-        db.commit()
         users = db.execute(select(Users.username)).scalars().all()
         return users
     except:

@@ -163,7 +163,7 @@ def leave_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify
         db.execute(delete(database.Members).where(database.Members.grpId == group.id))
         db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == group.id))
         db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId == group.id))
-        db.execute(delete(database.Invite).where((database.Invite.realm_id == id) & (database.Invite.grpId == group)))
+        db.execute(delete(database.Invite).where((database.Invite.realm_id == id) & (database.Invite.grpId == group.id)))
         db.execute(delete(database.Group).where(database.Group.id == group.id))
     db.execute(delete(database.Members).where((database.Members.name == username) & (database.Members.grpId.in_(select(database.Group.id).where(database.Group.realm_id == id)))))
     db.execute(delete(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username)))
@@ -201,7 +201,7 @@ def remove_user(id: str, user: str, db: Session = Depends(get_db), payload = Dep
         db.execute(delete(database.Members).where(database.Members.grpId == grp.id))
         db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == grp.id))
         db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId == grp.id))
-        db.execute(delete(database.Invite).where((database.Invite.realm_id == id) & (database.Invite.grpId == grp)))
+        db.execute(delete(database.Invite).where((database.Invite.realm_id == id) & (database.Invite.grpId == grp.id)))
         db.execute(delete(database.Group).where(database.Group.id == grp.id))
     db.execute(delete(database.Members).where((database.Members.name == user) & (database.Members.grpId.in_(select(database.Group.id).where(database.Group.realm_id == id)))))
     db.execute(delete(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == user)))
@@ -758,7 +758,7 @@ class Connection_ManagerVoice:
     async def send_message(self, message, grpName : str):
         for user in self.connections:
             if user[1] == grpName:
-                await self.connections[user].send_text(message)
+                await self.connections[user].send_bytes(message)
 
 managerV = Connection_ManagerVoice()
 
@@ -785,8 +785,6 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                     await user.send_json({"type": "ping"})
                 except:
                     break
-                continue
-            if data.get("type") == "pong":
                 continue
             if "bytes" in data:
                 time = datetime.now(timezone.utc)
@@ -843,6 +841,8 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
 
             elif "text" in data:
                 js = loads(data["text"])
+                if js.get("type") == "pong":
+                    continue
                 if "anonymity" in js and js["anonymity"]:
                     while True:
                         senderName = generate_slug(2)

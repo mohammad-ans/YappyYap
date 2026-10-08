@@ -44,7 +44,7 @@ class Group(Base):
     grpType = Column(String)
     inviteType = Column(String)
     description = Column(String, nullable=True, default="")
-    createdAy = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    createdAt = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class GroupDetails(BaseModel):
     id: str

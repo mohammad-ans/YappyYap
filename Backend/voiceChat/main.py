@@ -96,7 +96,7 @@ async def mark_online(manager: ws_manger.RedisWs, username: str, online: bool):
         if online:
               await manager.redis.sadd("voicechat:online", username)
         else:
-            await manager.redis.srem("voicechat:online")
+            await manager.redis.srem("voicechat:online", username)
     except:
         pass
 
@@ -113,14 +113,12 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
         expiry_seconds = 0
         while True:
             try:
-                 data = await asyncio.wait_for(user.receive_bytes(), 30)
+                 data = await asyncio.wait_for(user.receive(), 30)
             except asyncio.TimeoutError:
                  try:
                     await user.send_json({"type": "ping"})
                  except:
                       break
-                 continue
-            if data.get("type") == "pong":
                  continue
             if "bytes" in data:
                 time = datetime.now(timezone.utc)
@@ -175,6 +173,8 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
 
             elif "text" in data:
                 js = loads(data["text"])
+                if js.get("type") == "pong":
+                    continue
                 if "anonymity" in js:
                     while True:
                         senderName = generate_slug(2)
