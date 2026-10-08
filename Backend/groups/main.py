@@ -75,6 +75,16 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 client = httpx.AsyncClient()
 
+def require_existing_user(username: str):
+    # Stops typos from creating members or invites for accounts that do not exist.
+    # Only a definite "no" from auth blocks the request, so auth being down does not block it.
+    try:
+        exists = httpx.get(f"http://auth:8000/userCheck/{username}", timeout=5.0).json()["msg"]
+    except Exception:
+        return
+    if exists == False:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": f"User {username} does not exist"}])
+
 def delete_group_data(db: Session, group_id: str):
     # Removes a group and everything that references it; caller commits
     db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == group_id))
@@ -130,6 +140,7 @@ def add_mem(id: str, data: database.Username, db: Session = Depends(get_db), pay
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not member or member.role == "member":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owner and admins can add members"}])
+    require_existing_user(data.username)
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == data.username))).scalar_one_or_none()
     if member:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "User is already in realm"}])
@@ -143,6 +154,7 @@ def invite_realm(id: str, data: database.InviteCreate, db: Session = Depends(get
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not member or member.role == "member":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Only realm admins and owner can send invites to members"}])
+    require_existing_user(data.username)
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == data.username))).scalar_one_or_none()
     if member:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "User is already in the realm"}])
@@ -271,7 +283,8 @@ def invite_user(id: str, group: str, data: database.InviteCreate, db: Session = 
     grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
     if not ((member and member.role in ("admin", "owner")) or (grp_member and grp_member.role in ("admin", "owner"))):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to invite users"}])
-    invited = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == data.username))).scalar_one_or_none()
+    require_existing_user(data.username)
+    invited =db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == data.username))).scalar_one_or_none()
     if invited:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "User is already in the channel"}])
     count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == group)).scalar_one()
