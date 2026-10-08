@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 import database
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update, func, text
+from sqlalchemy import select, update, delete, func, text
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Cookie
 from sqlalchemy.orm import Session
 import os, jwt, httpx
@@ -227,6 +227,15 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
         if not manager_local.is_connected(username):
             await mark_online(username, False)
 
+
+@app.delete("/users/me")
+def delete_user_msgs(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    # Called before an account is deleted: removes every DM and invite DM the user sent or received
+    username = payload["username"]
+    db.execute(delete(database.PersonalMsgs).where((database.PersonalMsgs.sender == username) | (database.PersonalMsgs.receiver == username)))
+    db.execute(delete(database.GroupInvite).where((database.GroupInvite.sender == username) | (database.GroupInvite.receiver == username)))
+    db.commit()
+    return {"msg": "Success"}
 
 @app.get("/livecount/{user}")
 async def check_user(user : str, payload = Depends(verify_session_token)):

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Cookie
 from sqlalchemy.orm import Session
-from sqlalchemy import select, delete, update, func
+from sqlalchemy import select, delete, update, func, case
 from database import session, engine, Base
 import database
 from coolname import generate_slug
@@ -74,6 +74,23 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
 
 
 client = httpx.AsyncClient()
+
+def delete_group_data(db: Session, group_id: str):
+    # Removes a group and everything that references it; caller commits
+    db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == group_id))
+    db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId == group_id))
+    db.execute(delete(database.Members).where(database.Members.grpId == group_id))
+    db.execute(delete(database.Invite).where(database.Invite.grpId == group_id))
+    db.execute(delete(database.Group).where(database.Group.id == group_id))
+
+def delete_realm_data(db: Session, realm_id: str):
+    # Removes a realm with all its groups, members and invites; caller commits
+    group_ids = db.execute(select(database.Group.id).where(database.Group.realm_id == realm_id)).scalars().all()
+    for group_id in group_ids:
+        delete_group_data(db, group_id)
+    db.execute(delete(database.RMembers).where(database.RMembers.realm_id == realm_id))
+    db.execute(delete(database.Invite).where(database.Invite.realm_id == realm_id))
+    db.execute(delete(database.Realm).where(database.Realm.id == realm_id))
 
 @app.patch("/realms/{id}")
 def update_realm(id: str, data: database.RealmUpdate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -436,14 +453,7 @@ def del_realm(id: str, db: Session = Depends(get_db), payload = Depends(verify_s
     mem = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not mem or mem.role != "owner":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to delete this realm"}])
-    groups = select(database.Group.id).where(database.Group.realm_id == id)
-    db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId.in_(groups)))
-    db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId.in_(groups)))
-    db.execute(delete(database.Members).where(database.Members.grpId.in_(groups)))
-    db.execute(delete(database.RMembers).where(database.RMembers.realm_id == id))
-    db.execute(delete(database.Invite).where(database.Invite.realm_id == id))
-    db.execute(delete(database.Group).where(database.Group.realm_id == id))
-    db.execute(delete(database.Realm).where(database.Realm.id == id))
+    delete_realm_data(db, id)
     db.commit()
     return {"msg": "Success"}
 
@@ -492,11 +502,7 @@ def del_group(id : str, group: str, db : Session = Depends(get_db), payload = De
     if not owner and not realm_owner:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You are not allowed to delete the group"}])
     try:
-        db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == group))
-        db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId == group))
-        db.execute(delete(database.Members).where(database.Members.grpId == group))
-        db.execute(delete(database.Invite).where(database.Invite.grpId == group))
-        db.execute(delete(database.Group).where(database.Group.id == group))
+        delete_group_data(db, group)
         db.commit()
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Group could not be deleted"}])
@@ -584,6 +590,41 @@ def create_grp(id: str, data: database.GrpAdd, db: Session = Depends(get_db), pa
     db.add(database.Members(name=username, grpId=grp.id, role="owner"))
     db.commit()
     return {"msg": "Success", "id": grp.id}
+
+@app.delete("/users/me")
+def delete_user_data(db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    # Called before an account is deleted: hands owned realms/groups to the next admin
+    # (or the earliest member), deletes them if nobody is left, then removes all memberships
+    username = payload["username"]
+    admins_first = case((database.RMembers.role == "admin", 0), else_=1)
+    owned_realms = db.execute(select(database.RMembers).where((database.RMembers.username == username) & (database.RMembers.role == "owner"))).scalars().all()
+    for owned in owned_realms:
+        successor = db.execute(select(database.RMembers).where((database.RMembers.realm_id == owned.realm_id) & (database.RMembers.username != username)).order_by(admins_first, database.RMembers.joinedAt)).scalars().first()
+        if successor:
+            successor.role = "owner"
+            realm = db.get(database.Realm, owned.realm_id)
+            if realm:
+                realm.owner = successor.username
+        else:
+            delete_realm_data(db, owned.realm_id)
+    db.flush()
+    grp_admins_first = case((database.Members.role == "admin", 0), else_=1)
+    owned_groups = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.role == "owner"))).scalars().all()
+    for owned in owned_groups:
+        successor = db.execute(select(database.Members).where((database.Members.grpId == owned.grpId) & (database.Members.name != username)).order_by(grp_admins_first, database.Members.joinedAt)).scalars().first()
+        if successor:
+            successor.role = "owner"
+            grp = db.get(database.Group, owned.grpId)
+            if grp:
+                grp.owner = successor.name
+        else:
+            delete_group_data(db, owned.grpId)
+    db.flush()
+    db.execute(delete(database.Members).where(database.Members.name == username))
+    db.execute(delete(database.RMembers).where(database.RMembers.username == username))
+    db.execute(delete(database.Invite).where(database.Invite.username == username))
+    db.commit()
+    return {"msg": "Success"}
 
 def check_mem(username: str, id: str, db: Session):
     mem = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpId == id))).scalar_one_or_none()
