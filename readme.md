@@ -77,6 +77,9 @@ DB_USERNAME, DB_PASS, API_KEY, EMAIL, PRIVATE_KEY, DB_URL, AUTH_DATABASE_URL, AU
 - After setting vars, run `docker compose up -d` from the folder.
 - Then navigate to \Frontend\YappyYap\src\ and configure the backend service urls in config.js
 
+### Features that do not work
+The message fetching on the profile page does not works, I kinda also marked it in ui.
+
 ## Images
 ![Main-Page](./main.png)
 ![Profile-Page](./profile.png)
