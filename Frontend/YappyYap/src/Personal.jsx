@@ -14,7 +14,7 @@ export default function Personal(props){
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [yapDuration, setYapDuration] = useState(10);
     const {setError, setTrigger, username} = useChatAuth();
-    const {getDms, setDms, dmMsgs, addDmMsg, ws, realmRef, user, tempDM, setCurrGroup, setCurrGroupName} = useContext(ChatContext)
+    const {getDms, setDms, dmMsgs, ws, realmRef, user, tempDM, setCurrGroup, setCurrGroupName} = useContext(ChatContext)
     const parentMsgs = useRef();
     const navigate = useNavigate()
     const startDuration = useRef(false);
@@ -170,14 +170,8 @@ export default function Personal(props){
                 "msg" : tempMsg,
                 "duration" : duration
             }
+            // Shown when the server echoes it back (see Chat.jsx), so it also appears in other tabs
             ws.current.send(JSON.stringify(message));
-            addDmMsg(props.secondUser, {
-                "msg": tempMsg,
-                "defaultExpiration": null,
-                "duration": duration,
-                "sent": true,
-                "sentTime": new Date().toISOString()
-            })
         }
         
         textArea.current.value = "";

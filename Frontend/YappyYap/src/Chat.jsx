@@ -17,6 +17,7 @@ import GroupSettings from "./Chat-Modules/GroupSettings"
 export default function Chat(props) {
     const { username } = useChatAuth();
     const usernameRef = useRef(username)
+    usernameRef.current = username
     const [realm, setRealm] = useState("");
     const realmRef = useRef("");
     const realmType = useRef("global");
@@ -205,16 +206,17 @@ export default function Chat(props) {
                             setTrigger(t => !t)
                             return
                         }
-                        if(element.sender == usernameRef.current)
-                            return
                         if ("sender" in element) {
-                            let tempUsername = element["sender"];
+                            // The server sends every DM to both people, so a message we sent arrives here too.
+                            // It is the only copy of a sent message, which keeps all of the sender's tabs in sync.
+                            const sentByMe = element.sender == usernameRef.current
+                            let tempUsername = sentByMe ? element["receiver"] : element["sender"];
                             // Store it so the DM page shows it now or whenever it is opened later
                             addDmMsg(tempUsername, {
                                 "msg": element.msg,
                                 "defaultExpiration": element.defaultExpiration,
                                 "duration": element.duration,
-                                "sent": false,
+                                "sent": sentByMe,
                                 "sentTime": element.sentTime
                             })
                             if(!dmUsersRef.current.includes(tempUsername)) {
@@ -223,7 +225,7 @@ export default function Chat(props) {
                                 })
                                 dmUsersRef.current = [...dmUsersRef.current, tempUsername];
                             }
-                            if (user.current != tempUsername) {
+                            if (!sentByMe && user.current != tempUsername) {
                                 const domElement = document.querySelector(`[data-user="${CSS.escape(tempUsername)}"]`)
                                 if(domElement)
                                     domElement.classList.add("new-msg-notification");

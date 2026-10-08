@@ -62,6 +62,9 @@ export default function ChatHeader(props) {
         if(theme)
             document.documentElement.setAttribute("data-theme", theme);
         let onlineInterval;
+        // Clear the previous chat's numbers so they are not shown until the first poll returns
+        setOnline(isDm ? "" : 0);
+        setMembers(0);
         if(isGrp || isDm){
             getOnline()
             onlineInterval = setInterval(getOnline, 4000);
