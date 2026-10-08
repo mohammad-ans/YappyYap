@@ -3,6 +3,7 @@ import useAxios from "../hooks/useAxios";
 import "./AddGroup.css"
 import useChatAuth from "../hooks/useChatAuth";
 import { ChatContext } from "./ChatContext";
+import { useNavigate } from "react-router-dom";
 export default function AddGroup(props){
     const [name, setName] = useState("");
     const [grpType, setGrpType] = useState("text");
@@ -17,10 +18,11 @@ export default function AddGroup(props){
     const {setError, setTrigger} = useChatAuth();
     const {getGroups} = useContext(ChatContext)
     const axios = useAxios()
+    const navigate = useNavigate()
     async function addGroup(e) {
         e.preventDefault();
         try{
-            const response = await axios.post("http://localhost:8004/addgroup", {
+            const response = await axios.post(`http://localhost:8004/realms/${props.realm}/groups`, {
             // const response = await axios.post("https://groups.yappyyap.xyz/addgroup", {
                 name : name,
                 description: description,
@@ -33,8 +35,10 @@ export default function AddGroup(props){
                 grpType : grpType,
                 inviteType : inviteType
             })
-            getGroups();
+            await getGroups();
             setError("Successfully Done");
+            props.setAddArea(false)
+            navigate(`/chat/realms/${props.realm}/c/${response.data.id}`)
         }
         catch(err){
             if(err.response.status == 406)
@@ -53,10 +57,10 @@ export default function AddGroup(props){
         <div className="add-groupoverlay">
                 <form onSubmit={addGroup} className="group-add">
                 <p className="cancel-cross" onClick={removeGroupArea}>X</p>
-                <h2>Add your Realm</h2>
+                <h2>Add your Group</h2>
                 <input type="text" placeholder="Enter a unique Group Name" value={name} onChange={e => setName(e.target.value)} required/>
                 <input type="text" placeholder="Enter group description" value={description} onChange={e=> setDescription(e.target.value)}/>
-                <input type="number" value={grpSize} min={1} max={100} placeholder="Maximum size of Group" onChange={e => setSize(e.target.value)} required/>
+                <input type="number" value={grpSize} min={2} max={100} placeholder="Maximum size of Group" onChange={e => setSize(e.target.value)} required/>
                 <input type="number" value={minDuration} min={10} max={250} placeholder="Minimum Duration of message(10, 250)" onChange={e => setMinDuration(e.target.value)} required/>
                 <input type="number" value={maxDuration} min={minDuration ? Number(minDuration) + 10 : 50} max={300} placeholder="Maximum duration of message(minDuration + 10, 240)" onChange={e => setMaxDuration(e.target.value)} required/>
                 <select value={grpType} onChange={e => setGrpType(e.target.value)}>
@@ -66,7 +70,6 @@ export default function AddGroup(props){
                 <select value={inviteType} onChange={e => setInvite(e.target.value)}>
                     <option value="all">Anyone can search and join</option>
                     <option value="invite">Join only by invitation(admin)</option>
-                    <option value="invite-any">Join only by invitation(members)</option>
                 </select>
                 <select value={anonymity} onChange={e => setAnonymity(e.target.value)}>
                     <option value={true}>Anonymity feature allowed</option>
@@ -76,7 +79,7 @@ export default function AddGroup(props){
                     <option value={true}>Online Count enabled</option>
                     <option value={false}>Online Count disabled</option>
                 </select>
-                <button type="submit">Add Realm</button>
+                <button type="submit">Add Group</button>
                 </form>
         </div>
     )

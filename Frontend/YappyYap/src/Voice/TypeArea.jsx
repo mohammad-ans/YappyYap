@@ -66,9 +66,7 @@ export default function TypeArea(props) {
                                 let payloadDetails = {
                                     "expiry" : yapDuration
                                 }
-                                if (anonymity.current){
-                                    payloadDetails["anonymity"] = true;
-                                }
+                                payloadDetails.anonymity = anonymity.current
                                 props.websocket.current.send(JSON.stringify(payloadDetails))
                                 props.websocket.current.send(blob)
                             }

@@ -52,7 +52,7 @@ services:
       auth:
         condition: service_started
     environment:
-     DB_URL: ${TCHAT_DATABASE_URL}
+     DB_URL: ${VCHAT_DATABASE_URL}
      AUTH_URL: http://auth:8000
      REDIS_URL: redis://redis:6379
      WATCHFILES_FORCE_POLLING: true
@@ -106,7 +106,12 @@ services:
     ports:
       - "5433:5432"
     volumes:
-     - auth_data:/var/lib/postgres/data
+     - auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
 
   tchat-db:
     image: postgres:17
@@ -118,7 +123,12 @@ services:
     ports:
       - "5434:5432"
     volumes:
-     - tchat_data:/var/lib/postgres/data
+     - tchat_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 8
 
   vchat-db:
       image: postgres:17
@@ -130,7 +140,12 @@ services:
       ports:
         - "5435:5432"
       volumes:
-      - vchat_data:/var/lib/postgres/data
+      - vchat_data:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+        interval: 5s
+        timeout: 5s
+        retries: 8
 
   groups-db:
       image: postgres:17
@@ -142,7 +157,12 @@ services:
       ports:
        - "5436:5432"
       volumes:
-       - grps_data:/var/lib/postgres/data
+       - grps_data:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+        interval: 5s
+        timeout: 5s
+        retries: 8
 
   personal-db:
       image: postgres:17
@@ -154,7 +174,12 @@ services:
       ports:
        - "5437:5432"
       volumes:
-       - personal_data:/var/lib/postgres/data
+       - personal_data:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+        interval: 5s
+        timeout: 5s
+        retries: 8
 
 volumes:
   auth_data:

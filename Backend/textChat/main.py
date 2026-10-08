@@ -68,21 +68,28 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
  
 
 class ConnectionManager:
+    # Keyed by socket so the same user can have several tabs open
     def __init__(self):
-        self.connections : dict[str, WebSocket] = {}
+        self.connections : dict[int, tuple[str, WebSocket]] = {}
     def add_connection(self, websocket : WebSocket, username : str):
-        self.connections[username] = websocket
-    def disconnect(self, username : str):
-      if username in self.connections:
-        del self.connections[username]
+        self.connections[id(websocket)] = (username, websocket)
+    def disconnect(self, websocket : WebSocket):
+        self.connections.pop(id(websocket), None)
+    def is_connected(self, username : str):
+        return any(user == username for user, _ in self.connections.values())
+    def count(self):
+        return len({user for user, _ in self.connections.values()})
     async def send_message(self, message : Msg_return):
-        for user in self.connections:
-            await self.connections[user].send_text(message)
+        for key, (user, ws) in list(self.connections.items()):
+            try:
+                await ws.send_text(message)
+            except:
+                self.connections.pop(key, None)
 
 manager_local = ConnectionManager()
 
 async def on_event(data):
-    await manager_local.send_message(data[""])
+    await manager_local.send_message(data["payload"])
 
 manager = ws_manger.RedisWs(grp="textchat:global", on_event=on_event)
 
@@ -97,7 +104,7 @@ async def mark_online(manager: ws_manger.RedisWs, username: str, online: bool):
     except:
         pass
 
-@app.websocket("/ws/global")
+@app.websocket("/ws/global-text")
 async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     MAX_TIME = payload["exp"]
     username = payload["username"]
@@ -107,54 +114,52 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
     await mark_online(manager, username, True)
     try:
         while True:
-            
             try:
-                data = await asyncio.wait_for(user.receive_json(), timeout=30)
-            except asyncio.TimeoutError:
                 try:
-                    await user.send_json({"type": "ping"})
                     data = await asyncio.wait_for(user.receive_json(), timeout=30)
+                except asyncio.TimeoutError:
+                    try:
+                        await user.send_json({"type": "ping"})
+                    except:
+                        break
+                    continue
+                if data.get("type") == "pong":
+                    continue
+                if "anonymity" in data and data["anonymity"] == True:
+                    while True:
+                        senderName = generate_slug(2)
+                        response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
+                        if response_username.json()["msg"] == False:
+                            break
+                else:
+                    senderName = username
+                seconds = int(data["expire"])
+                msg = data["msg"]
+                time = datetime.now(timezone.utc)
+                message = Msgs(
+                    msg = msg,
+                    username = senderName,
+                    time_sent = time,
+                    expiry = time + timedelta(seconds=seconds)
+                )
+                temp = Msg_return.from_orm(message).model_dump_json()
+                db.add(message)
+                db.commit()
+                await manager.publish({"payload": temp})
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                try:
+                    await user.send_text("An error occured")
                 except:
                     break
-            if data.get("type") == "pong":
-                continue
-            if "anonymity" in data and data["anonymity"] == True:
-                while True:
-                    senderName = generate_slug(2)
-                    response_username = await client.get(f"http://auth:8000/userCheck/{username}")
-                    if response_username.json()["msg"] == False:
-                        break
-                    # already_exists = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
-                    # if not already_exists:
-                    #     break
-                await client.aclose()
-            seconds = int(data["expire"])
-            msg = data["msg"]
-            time = datetime.now(timezone.utc)
-            message = Msgs(
-                msg = msg,
-                username = senderName,
-                time_sent = time,
-                expiry = time + timedelta(seconds=seconds)
-            )
-            temp = Msg_return.from_orm(message).model_dump_json()
-            db.add(message)
-            db.commit()
-            await manager.publish({"payload": temp})
-    except WebSocketDisconnect:
-        pass
-    except Exception as e:
-        try:
-            await user.send_text("An error occured")
-        except:
-            pass
     finally:
-        if username in manager.connections:
-            manager_local.disconnect(username)
-        await mark_online(manager, username, False)
+        manager_local.disconnect(user)
+        if not manager_local.is_connected(username):
+            await mark_online(manager, username, False)
 
 # async def send_messages(db : Session = Depends(get_db)):
-@app.get("/getchatmsgs/global")
+@app.get("/getchatmsgs/global-text")
 async def send_messages(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
     msgs = db.execute(select(Msgs).where(Msgs.expiry > time)).scalars().all()
@@ -176,5 +181,5 @@ async def total_active(payload = Depends(verify_session_token)):
             pass
     return {
         "msg" : "Success",
-        "total":len(manager_local.connections)
+        "total": manager_local.count()
     }

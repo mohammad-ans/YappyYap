@@ -4,6 +4,8 @@ import "./SignIn.css"
 import useAxios from "../hooks/useAxios";
 import Onfire from "./OnFire";
 import useChatAuth from "../hooks/useChatAuth";
+import AddUsername from "./AddUsername";
+import { saveNextFromUrl, saveOtpEmail } from "./authRedirect";
 
 export default function SignUp(props) {
     const query = new URLSearchParams(window.location.search);
@@ -12,13 +14,16 @@ export default function SignUp(props) {
     const {setTrigger} = useChatAuth()
     const {setError} = useChatAuth()
     const [loading, setLoading] = useState(false);
+    // Set when Google sends back a verified email that has no account yet
+    const [googleEmail, setGoogleEmail] = useState("");
     const navigate = useNavigate()
 
     useEffect(()=>{
+        saveNextFromUrl()
         let tempEmail = query.get("email");
         if(tempEmail){
             setEmail(tempEmail)
-            setError("This google account has no associated account yet")
+            setGoogleEmail(tempEmail)
         }
     }, [])
 
@@ -34,6 +39,7 @@ export default function SignUp(props) {
             })
             if (resp.data.msg == "Success"){
                 props.setEmail(email);
+                saveOtpEmail(email);
                 navigate("otp");
                 setError("OTP Sent");
             }
@@ -55,6 +61,8 @@ export default function SignUp(props) {
     // async function loginWithGoogle(e) {
     //     window.location.href = "http://localhost:8001/auth/g"
     // }
+    if (googleEmail)
+        return <AddUsername email={googleEmail}/>
     return (
         <div className="background-signin">
         <form onSubmit={sendOtp} className="sign-form">
@@ -69,7 +77,7 @@ export default function SignUp(props) {
                     Username
                 </label>
                 <div className="signform-input">                    
-                <input className="username-input" type="text" placeholder="Username" value={username} onChange={(e) => setusername(e.target.value)} required/>
+                <input className="username-input" type="text" placeholder="Username" value={username} onChange={(e) => setusername(e.target.value)} pattern="[A-Za-z0-9_]{3,20}" title="3-20 characters: letters, digits or _" required/>
                 </div>
         </li>
             <li>

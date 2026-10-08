@@ -59,7 +59,7 @@ class RedisWs:
         if self.listener_task:
             self.listener_task.cancel()
             try:
-                await self.listener_task()
+                await self.listener_task
             except:
                 pass
         if self.redis:

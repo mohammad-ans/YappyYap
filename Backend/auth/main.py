@@ -5,7 +5,7 @@ import random
 import jwt
 import os
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from datetime import datetime, timezone
 import time
 from coolname import generate_slug
@@ -16,6 +16,8 @@ from authlib.integrations.starlette_client import OAuth
 from starlette.responses import RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 import secrets
+import re
+from pydantic import BaseModel
 
 load_dotenv()
 app = FastAPI()
@@ -66,6 +68,25 @@ async def create_session_token(data:dict):
     token = jwt.encode(data, PRIVATE_KEY, algorithm=ALGORITHM)
     return token
 
+USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,20}$")
+GUEST_SESSION_SECONDS = 300
+
+def check_username(db: Session, username: str, email: str | None = None):
+    # Usernames end up in URLs and DM lookups, so only letters, digits and _ are allowed
+    if not USERNAME_PATTERN.match(username):
+        raise HTTPException(status_code=400, detail=[{"msg": "Username must be 3-20 characters using letters, digits or _"}])
+    if db.execute(select(Users).where(Users.username == username)).scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=[{"msg": "User name already taken"}])
+    if db.execute(select(Guests).where(Guests.username == username)).scalars().first():
+        raise HTTPException(status_code=400, detail=[{"msg": "User name already taken"}])
+    pending = db.execute(select(Pending_users).where(Pending_users.username == username)).scalar_one_or_none()
+    if pending and pending.email != email:
+        raise HTTPException(status_code=400, detail=[{"msg": "User name already taken"}])
+
+def clear_cookie(response: Response, key: str):
+    # Must match the attributes used in set_cookie or the browser keeps the cookie
+    response.delete_cookie(key=key, path="/", domain=".yappyyap.xyz", secure=True, httponly=True, samesite="none")
+
 async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
     payload = {"username" : "NA", "type" : "admin", "exp" : 0}
     return payload
@@ -93,11 +114,8 @@ async def signup(data : Email_signup, db : Session = Depends(get_db)):
     already_exists = db.execute(select(Users).where(Users.email == data.email)).scalar_one_or_none()
     if already_exists:
         raise HTTPException(status_code=400, detail=[{"msg":"Account already exists"}])
-    # already_exists = db.query(Users).filter_by(username=data.username).first()
-    already_exists = db.execute(select(Users).where(Users.username == data.username)).scalar_one_or_none()
-    if already_exists:
-        raise HTTPException(status_code=400, detail=[{"msg":"User name already taken"}])
-    already_exists = db.execute(select(Pending_users).where(Pending_users.email == data.email or Pending_users.username == data.username)).scalar_one_or_none()
+    check_username(db, data.username, data.email)
+    already_exists = db.execute(select(Pending_users).where(Pending_users.email == data.email)).scalar_one_or_none()
     # already_exists = db.query(Pending_users).filter_by(email = data.email).update({"username" : data.username})
     if already_exists:
         already_exists.username = data.username
@@ -109,6 +127,8 @@ async def signup(data : Email_signup, db : Session = Depends(get_db)):
         db.add(pending_user_data)
     try:
         email_response = await send_otp(data.email, random_otp)
+        if email_response >= 300 or email_response < 200:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=[{"msg": "Service not available. Try Again."}])
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=[{"msg" : "Service not available. Try Again."}])
     # already_exists = db.query(OTP_entry).filter_by(email = data.email).update({"otp":random_otp})
@@ -172,6 +192,8 @@ async def signin(data : Email_signin, db : Session = Depends(get_db)):
     already_exists = db.execute(select(OTP_entry).where(OTP_entry.email == data.email)).scalar_one_or_none()
     try:
         email_response = await send_otp(data.email, random_otp)
+        if email_response >= 300 or email_response < 200:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=[{"msg": "Service not available. Try Again."}])
     except:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=[{"msg" : "Service not available. Try Later."}])
     if already_exists:
@@ -266,14 +288,14 @@ async def guest_login(response: Response, db : Session = Depends(get_db)):
     )
     db.add(guest_data)
     db.commit()
-    token = await create_session_token({"username" : guest_data.username, "type": "Guest", "exp": int(time.time()) + 600})
+    token = await create_session_token({"username" : guest_data.username, "type": "Guest", "exp": int(time.time()) + GUEST_SESSION_SECONDS})
     response.set_cookie(
         key="session_token",
         value = token,
         httponly = True,
         secure = True,
         samesite="none",
-        max_age=300,
+        max_age=GUEST_SESSION_SECONDS,
         path="/",
         domain=".yappyyap.xyz"
     )
@@ -281,25 +303,28 @@ async def guest_login(response: Response, db : Session = Depends(get_db)):
     
 @app.get("/signout")
 async def signout(response: Response):
-    response.delete_cookie(key="session_token")
+    clear_cookie(response, "session_token")
     return {"msg" : "Success"}
 
 @app.post("/delete")
-async def delete_acc(request: Email_signin, response: Response, db: Session = Depends(get_db), msg = Depends(verify_session_token)):
-    response.delete_cookie(key="session_token")
-    # del_user = db.query(Users).filter(email=request.email).first()
-    del_user = db.execute(select(Users).where(Users.email == request.email)).scalar_one()
+async def delete_acc(response: Response, db: Session = Depends(get_db), msg = Depends(verify_session_token)):
+    # The account is taken from the session, the request body is not needed
+    username = msg["username"]
+    del_user = db.execute(select(Users).where(Users.username == username)).scalar_one_or_none()
+    if not del_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Account not found"}])
+    db.execute(delete(OTP_entry).where(OTP_entry.email == del_user.email))
     db.delete(del_user)
     db.commit()
+    clear_cookie(response, "session_token")
     return {"msg" : "Success"}
 
 @app.post("/signoutguest")
-async def guest_logout(request: Guest_login, response : Response, db : Session= Depends(get_db), msg = Depends(verify_session_token)):
-    response.delete_cookie(key="session_token")
-    # del_user_signout = db.query(Guests).filter(username = request.username).first()
-    del_user_signout = db.execute(select(Guests).where(Guests.username == request.username)).scalar_one()
-    db.delete(del_user_signout)
+async def guest_logout(response : Response, db : Session= Depends(get_db), msg = Depends(verify_session_token)):
+    username = msg["username"]
+    db.execute(delete(Guests).where(Guests.username == username))
     db.commit()
+    clear_cookie(response, "session_token")
     return {"msg" : "Success"}
 
 @app.get("/admincheck")
@@ -325,7 +350,7 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
         email = user["email"]
         username = db.execute(select(Users.username).where(Users.email == email)).mappings().one_or_none()
         if not username:
-            token = await create_session_token({"temp" : "token", "exp" : int(time.time()) + 1800})
+            token = await create_session_token({"temp" : "token", "email": email, "exp" : int(time.time()) + 1800})
             # response = RedirectResponse(url=f"http://localhost:5173/signup?email={email}")
             response = RedirectResponse(url=f"https://yappyyap.xyz/signup?email={email}")
             response.set_cookie(
@@ -361,19 +386,40 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=[{"msg" : "Could not verify identity"}])
     
 @app.post("/add/google")
-def add_user_google(username : str, temp_token : Annotated[str | None, Cookie()] = None):
-    pass
+async def add_user_google(data, response: Response, db: Session = Depends(get_db), temp_token : Annotated[str | None, Cookie()] = None):
+    if not temp_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Google sign up expired, continue with Google again"}])
+    try:
+        temp = jwt.decode(temp_token, PRIVATE_KEY, ALGORITHM)
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Google sign up expired, continue with Google again"}])
+    email = temp.get("email")
+    if temp.get("temp") != "token" or not email:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid sign up token"}])
+    if db.execute(select(Users).where(Users.email == email)).scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=[{"msg": "Account already exists"}])
+    check_username(db, data.username, email)
+    user = Users(username=data.username, email=email)
+    db.add(user)
+    db.commit()
+    token = await create_session_token({"username": user.username, "type": "Permanent", "exp": int(time.time()) + 1800})
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        max_age=1800,
+        path="/",
+        domain=".yappyyap.xyz"
+    )
+    clear_cookie(response, "temp_token")
+    return {"msg": "Success", "username": user.username}
 
 
 @app.get("/users")
 def get_users(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     try:
-        data = Users(
-            email = "NA",
-            username = "NA"
-        )
-        db.add(data)
-        db.commit()
         users = db.execute(select(Users.username)).scalars().all()
         return users
     except:

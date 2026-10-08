@@ -34,17 +34,17 @@ class Group(Base):
     __tablename__ = "groups"
     realm_id = Column(String , ForeignKey("realms.id")) 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String, unique=True)
+    name = Column(String)
     owner = Column(String)
     liveCount = Column(Boolean, default=True)
-    anyonymity = Column(Boolean, default=False)
+    anonymity = Column(Boolean, default=False)
     maxGrpSize = Column(Integer)
     maxDuration = Column(Integer)
     minDuration = Column(Integer)
     grpType = Column(String)
     inviteType = Column(String)
     description = Column(String, nullable=True, default="")
-    createdAy = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    createdAt = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class GroupDetails(BaseModel):
     id: str
@@ -54,7 +54,7 @@ class GroupDetails(BaseModel):
     owner: str
     createdAt: datetime
     liveCount: bool
-    anyonymity: bool
+    anonymity: bool
     maxGrpSize: int
     maxDuration: int
     minDuration: int
@@ -69,7 +69,7 @@ class Members(Base):
     name = Column(String, primary_key=True)
     grpId = Column(String, ForeignKey("groups.id"), primary_key=True)
     role = Column(String, default="member")
-    joinedAt = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    joinedAt = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 class Invite(Base):
     __tablename__ = "invites"

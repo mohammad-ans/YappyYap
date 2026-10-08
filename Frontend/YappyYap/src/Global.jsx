@@ -13,12 +13,13 @@ export default function Global(props) {
     const [italic, setItalic] = useState(false);
     const [strike, setStrike] = useState(false);
     const [optionsOpen, setOptionsOpen] = useState(false);
-    const [yapDuration, setYapDuration] = useState(10);
+    const [yapDuration, setYapDuration] = useState(props.realm.minDuration);
     const { setError, setTrigger } = useChatAuth();
     const {realmType, dmSendOption, liveCount, setRealm, tempDM, getDms, setDms, setCurrGroup, setCurrGroupName} = useContext(ChatContext);
     const {username} = useChatAuth();
     const navigate = useNavigate()
     const anonymity = useRef(false);
+    const timerRef = useRef(null)
     useEffect(() => {
         textArea.current.style.height = "auto";
         if (textArea.current.scrollHeight < 400) {
@@ -40,7 +41,7 @@ export default function Global(props) {
             let dms = getDms();
             tempDM.current = tempUsername
             await setDms(dms)
-            navigate(`/chat/u/${tempUsername}`)
+            navigate(`/chat/u/${encodeURIComponent(tempUsername)}`)
         }
         catch{
 
@@ -116,17 +117,28 @@ export default function Global(props) {
             // ws.current = new WebSocket(`wss://${props.url}/ws/${props.realm["name"]}`)
             ws.current = new WebSocket(`ws://${props.url}/ws/${props.realm["name"]}`)
             ws.current.onopen = () => {
+                webreconInterval = 2000
                 getMessages()
             }
-            ws.current.onclose = () => {
-                if (ws.current.readyState == 0 && isMounted) {
-                    reconnect();
+            ws.current.onclose = (e) => {
+                if(e.code == 4403){
+                    // Not a member: stop reconnecting and polling, they need to join first
+                    clearInterval(interval1)
+                    setError("You are not a member of this group")
+                    setTrigger(pre => !pre)
+                    return
                 }
+                if (isMounted)
+                    reconnect();
             }
             ws.current.onmessage = (e) => {
                 try {
                     const element = document.querySelector(".msgs");
                     let res = JSON.parse(e.data)
+                    if(res.type == "ping") {
+                        ws.current.send(JSON.stringify({type: "pong"}))
+                        return
+                    }
                     let time = new Date(res.time_sent);
                     let expiry = new Date(res.expiry);
 
@@ -165,18 +177,22 @@ export default function Global(props) {
         }
         connect();
         function reconnect() {
-            setTimeout(connect, webreconInterval);
-            webreconInterval += 1000;
+            if(!isMounted)
+                return
+            timerRef.current = setTimeout(connect, webreconInterval);
+            webreconInterval = Math.min(webreconInterval + 1000, 15000);
         }
 
         return () => {
             isMounted = false;
-            if (ws.current && ws.current.readyState == WebSocket.OPEN)
-                ws.current.close();
+            ws.current.onclose = null
+            ws.current.close();
+            clearTimeout(timerRef.current)
             clearInterval(interval1);
             clearInterval(interval2);
             clearInterval(interval3);
-            element.classList.remove("current-realm")
+            if(element)
+                element.classList.remove("current-realm")
         }
     }, [])
     // const [msgs, setMsgs] = useState(Array());
@@ -237,9 +253,7 @@ export default function Global(props) {
                 "msg": msg.trim(),
                 "expire": yapDuration
             }
-            if (anonymity.current) {
-                message["anonymity"] = true
-            }
+            message.anonymity = anonymity.current
             ws.current.send(JSON.stringify(message));
         }
 

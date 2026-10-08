@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
-from database import session_text, session_voice, session_personalchat, Msgs, VoiceMsgs, PersonalMsgs, GroupInvite
+from database import session_text, session_voice, session_personalchat, Msgs, VoiceMsgs, PersonalMsgs
 from sqlalchemy import delete
 import sys
 import signal
@@ -13,7 +13,6 @@ def del_job():
         db_personalchat = session_personalchat()
         db_text.execute(delete(Msgs).where(Msgs.expiry < datetime.now(timezone.utc)))
         db_voice.execute(delete(VoiceMsgs).where(VoiceMsgs.expiry < datetime.now(timezone.utc)))
-        db_personalchat.execute(delete(PersonalMsgs).where(PersonalMsgs.defaultExpiration < datetime.now(timezone.utc)))
         db_personalchat.execute(delete(PersonalMsgs).where(PersonalMsgs.defaultExpiration < datetime.now(timezone.utc)))
         db_text.commit()
         db_voice.commit()

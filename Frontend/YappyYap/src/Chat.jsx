@@ -11,12 +11,13 @@ import AddGroup from "./AddGroup"
 import useAxios from "../hooks/useAxios"
 import Personal from "./Personal"
 import { ChatContext } from "./ChatContext"
-import default_image from "./assets/default_img.png"
 import AllRealmsPage from "./AllRealmsPage"
 import GroupSettings from "./Chat-Modules/GroupSettings"
 
 export default function Chat(props) {
     const { username } = useChatAuth();
+    const usernameRef = useRef(username)
+    usernameRef.current = username
     const [realm, setRealm] = useState("");
     const realmRef = useRef("");
     const realmType = useRef("global");
@@ -28,7 +29,7 @@ export default function Chat(props) {
     const [groups, setGroups] = useState({"Direct Messages": [], "Groups": []})
     // const [groups, setGroups] = useState()
     const dmUsersRef = useRef([]);
-    const [dmMsgs, setDmMsgs] = useState([]);
+    const [dmMsgs, setDmMsgs] = useState({});
     // const [notifications, setNotifications] = useState([]);
     const user = useRef("");
     const dmSendOption = useRef();
@@ -62,7 +63,7 @@ export default function Chat(props) {
             const groups = res.data.map(grp => ({
                 name: grp.id, display: grp.name, groupId: grp.id, realmId: id, grpType: grp.grpType,
                 url: grp.grpType == "text" ? "localhost:8004" : "localhost:8004/voice",
-                owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType
+                owner: grp.owner, liveCount: grp.liveCount, minDuration: grp.minDuration, maxDuration: grp.maxDuration, maxGrpSize: grp.maxGrpSize, inviteType: grp.inviteType, anonymity: grp.anonymity
             }))
             setGroups(pre => ({...pre, "Groups": groups}))
             return groups
@@ -156,9 +157,12 @@ export default function Chat(props) {
                 }
         }
     }
+    function addDmMsg(otherUser, message) {
+        setDmMsgs(pre => ({...pre, [otherUser]: [...(pre[otherUser] || []), message]}))
+    }
     async function setDms(dmns) {
 
-        let dms = await dmns;
+        let dms = (await dmns) || [];
         if (tempDM.current != "" && !(dms.includes(tempDM.current))){
             
             dms.push(tempDM.current)
@@ -173,6 +177,7 @@ export default function Chat(props) {
         let isMounted = true;
 
         let webreconInterval = 2000;
+        let reconnTimer = null;
         // let dms = getDms();
         function connect() {
 
@@ -180,10 +185,11 @@ export default function Chat(props) {
                 ws.current = new WebSocket("ws://localhost:8005/ws/main");
                 // ws.current = new WebSocket("wss://chat.yappyyap.xyz/ws/main");
                 ws.current.onopen = () => {
+                    webreconInterval = 2000
                     setDms(getDms());
                 }
                 ws.current.onclose = () => {
-                    if (ws.current.readyState == 0 && isMounted) {
+                    if (isMounted) {
                         reconnect();
                     }
 
@@ -191,32 +197,36 @@ export default function Chat(props) {
                 ws.current.onmessage = (e) => {
                     try {
                         const element = JSON.parse(e.data)
+                        if(element.type == "ping") {
+                            ws.current.send(JSON.stringify({type: "pong"}))
+                            return
+                        }
+                        if(element.type == "error") {
+                            setError(element.msg)
+                            setTrigger(t => !t)
+                            return
+                        }
                         if ("sender" in element) {
-                            let tempUsername = element["sender"];
-                            if (window.location.pathname == `/chat/u/${tempUsername}`) {
-                                const parent_element = document.querySelector(".msgs");
-                                let time = new Date(element["sentTime"]);
-                                let expiry = new Date(element.defaultExpiration);
-                                
-                                if (expiry - new Date() > 500) {
-                                    let text = element.msg;
-                                    time = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                                    let new_element = document.createElement("li");
-                                    expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
-                                    new_element.classList.add(expiry, "chat-message-block")
-                                    new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${tempUsername}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
-                                    parent_element.append(new_element);
-                                }
+                            // The server sends every DM to both people, so a message we sent arrives here too.
+                            // It is the only copy of a sent message, which keeps all of the sender's tabs in sync.
+                            const sentByMe = element.sender == usernameRef.current
+                            let tempUsername = sentByMe ? element["receiver"] : element["sender"];
+                            // Store it so the DM page shows it now or whenever it is opened later
+                            addDmMsg(tempUsername, {
+                                "msg": element.msg,
+                                "defaultExpiration": element.defaultExpiration,
+                                "duration": element.duration,
+                                "sent": sentByMe,
+                                "sentTime": element.sentTime
+                            })
+                            if(!dmUsersRef.current.includes(tempUsername)) {
+                                setGroups((pre) => {
+                                    return {...pre, "Direct Messages" : [...pre["Direct Messages"], tempUsername]}
+                                })
+                                dmUsersRef.current = [...dmUsersRef.current, tempUsername];
                             }
-                            else{
-                                if(!dmUsersRef.current.includes(tempUsername)) {
-                                    setGroups((pre) => {
-                                        return {...pre, "Direct Messages" : [...pre["Direct Messages"], tempUsername]}
-                                    })
-                                    dmUsersRef.current = [...dmUsersRef.current, tempUsername];
-                                }
-                                    
-                                const domElement = document.querySelector(`.${tempUsername}`)
+                            if (!sentByMe && user.current != tempUsername) {
+                                const domElement = document.querySelector(`[data-user="${CSS.escape(tempUsername)}"]`)
                                 if(domElement)
                                     domElement.classList.add("new-msg-notification");
                             }
@@ -233,8 +243,6 @@ export default function Chat(props) {
                         ws.current.close();
                     navigate("/signin")
                 }
-                
-                console.log(err)
                     }
                 }
                 ws.current.onerror = (e) => {
@@ -250,12 +258,17 @@ export default function Chat(props) {
 
         connect();
         function reconnect() {
-            setTimeout(connect, webreconInterval);
-            webreconInterval += 1000;
+            if(!isMounted)
+                return
+            reconnTimer = setTimeout(connect, webreconInterval);
+            webreconInterval = Math.min(webreconInterval + 1000, 15000);
         }
 
         return () => {
             isMounted = false
+            clearTimeout(reconnTimer)
+            ws.current.onclose = null
+            ws.current.close();
         }
     }, [])
     function removeInstructionsHeader() {
@@ -277,10 +290,10 @@ export default function Chat(props) {
         catch { }
     }
     function getGroups() {
-        setCurrentGroup(realm)
+        return setCurrentGroup(realm)
     }
     return (
-        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, setRealm, realmDetails, setCurrentGroup, setCurrGroup, currGroup, currGroupName, setCurrGroupName}}>
+        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, addDmMsg, ws, getGroups, setRealm, realmDetails, setRealmDetails,setCurrentGroup, setCurrGroup, currGroup, currGroupName, setCurrGroupName}}>
             <main className="chat-area nav-close-styles" onClick={clearClick}>
                 {props.chatInstructions ? <div className="instructions-overlay">
                     <div className="instructions">
@@ -304,7 +317,7 @@ export default function Chat(props) {
                         </div>
                     </div>
                 </div> : (<></>)}
-                {addArea && <AddGroup setAddArea={setAddArea} />}
+                {addArea && <AddGroup setAddArea={setAddArea} realm={realm} />}
                 {grpSettings && <GroupSettings realm={realm} group={currGroup} onClose={() => setSettings(false)} onDeleted={()=> {
                     setSettings(false)
                     navigate(`/chat/realms/${realm}`)
@@ -313,9 +326,7 @@ export default function Chat(props) {
                 <div className="chat-mainarea">
                     <ChatHeader liveCount={liveCount} realmRef={realmRef} realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user} setSettings={setSettings} />
                     <Routes>
-                        {
-                            groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)
-                        }
+                        <Route path="/u/:dmUser" element={<DmRoute/>} />
                         <Route path="/realms/:realm" element={<RealmPage/>} />
                         <Route path="/realms" element={<AllRealmsPage setCurrRealm={setRealm} setCurrGroup={setCurrGroup}/>} />
                         <Route path="/realms/:realmP/c/:groupKey" element={<ChannelRoute/>} />
@@ -331,19 +342,28 @@ function RealmPage(){
     const {realm} = useParams()
     const navigate = useNavigate()
     const {setCurrentGroup, setRealm, realmRef, setCurrGroup, setCurrGroupName} = useContext(ChatContext)
-
+    const [loading, setLoading] = useState(true)
     useEffect(()=> {
         async function move() {
+            setLoading(true)
             const grps = await setCurrentGroup(realm)
             setRealm(realm)
             setCurrGroup(realm)
             setCurrGroupName("")
             if (grps && grps.length > 0) {
                 navigate(`/chat/realms/${realm}/c/${grps[0].name}`, {replace: true})
+                return
             }
+            setLoading(false)
         }
         move()
     }, [realm])
+    if(loading)
+        return(
+            <div className="realm-empty">
+                Loading Groups...
+            </div>
+        )
     return (
         <div className="realm-empty">
             <p>This realm has no groups yet, you can create one from the sidebar.</p>
@@ -359,17 +379,25 @@ function ChannelRoute() {
     useEffect(()=> {
         async function setGrp() {
             let list = groups["Groups"]
+            let refetched = false
             if(realm !== realmP) {
                 list = await setCurrentGroup(realmP)
+                refetched = true
             }
-            const found = (list || []).find(grp => grp.name === groupKey)
-            if (found)
+            let found = (list || []).find(grp => grp.name === groupKey)
+            if (!found && !refetched) {
+                // The cached list can be stale, e.g. right after a group was created
+                list = await setCurrentGroup(realmP)
+                found = (list || []).find(grp => grp.name === groupKey)
+            }
+            if (found){
                 setGroup(found)
+                setFound(false)
+            }
             else
                 setFound(true)
         }
         setRealm(realmP);
-        setCurrentGroup(realmP);
         setGrp()
     }, [realmP, groupKey])
     if (notFound)
@@ -383,9 +411,16 @@ function ChannelRoute() {
     return group.grpType == "text" ? <Global key={`${group.name}-realm`} url={group.url} realm={group}/> : <Voice key={`${group.name}-realm`} url={group.url} realm={group} />
 
 }
+function DmRoute() {
+    // One route for every DM, so links work before the DM list has loaded
+    const {dmUser} = useParams()
+    return <Personal key={`${dmUser}-personal`} secondUser={dmUser} />
+}
 function DefaultRoot() {
     const {setRealm} = useContext(ChatContext);
-    setRealm("global");
+    useEffect(()=> {
+        setRealm("global");
+    })
     return (
         <Navigate to="/chat/realms/global" replace />
     )

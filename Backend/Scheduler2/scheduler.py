@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
-from database import session, grpMsgsT, grpsMsgsV
+from database import session, grpMsgsT, grpsMsgsV, Invite
 from sqlalchemy import delete
 import sys
 import signal
@@ -11,6 +11,7 @@ def del_job():
         db = session()
         db.execute(delete(grpMsgsT).where(grpMsgsT.expiry < datetime.now(timezone.utc)))
         db.execute(delete(grpsMsgsV).where(grpsMsgsV.expiry < datetime.now(timezone.utc)))
+        db.execute(delete(Invite).where(Invite.expiresAt < datetime.now(timezone.utc)))
         db.commit()
         db.close()
     except:

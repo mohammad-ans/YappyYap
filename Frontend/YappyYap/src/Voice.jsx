@@ -55,7 +55,7 @@ export default function Voice(props) {
             let dms = getDms();
             tempDM.current = tempUsername;
             await setDms(dms)
-            navigate(`/chat/u/${tempUsername}`)
+            navigate(`/chat/u/${encodeURIComponent(tempUsername)}`)
         }
         catch{
 
@@ -136,20 +136,39 @@ export default function Voice(props) {
         const interval1 = setInterval(getmsgs, 20000)
         msgRemoverInterval.current = setInterval(removeMsg, 1000);
         let webreconInterval  = 2000;
+        let reconnTimer = null;
         function connect() {
             // websocket.current = new WebSocket("wss://api.yappyyap.xyz/voice/ws")
             // websocket.current = new WebSocket(`wss://${props.url}/ws/${props.realm["name"]}`) 
             websocket.current = new WebSocket(`ws://${props.url}/ws/${props.realm["name"]}`) 
             websocket.current.binaryType = "arraybuffer"
             websocket.current.onopen = () => {
+                webreconInterval = 2000
                 getmsgs()
             }
-            websocket.current.onclose = () => {
-                if (websocket.current.readyState == 0 && isMounted)
+            websocket.current.onclose = (e) => {
+                if(e.code == 4403){
+                    // Not a member: stop reconnecting and polling, they need to join first
+                    clearInterval(interval1)
+                    setError("You are not a member of this group")
+                    setTrigger(pre => !pre)
+                    return
+                }
+                if (isMounted)
                     reconnect();
             }
             websocket.current.onmessage = (e) => {
                 try{
+                        if(typeof e.data == "string"){
+                            const msg = JSON.parse(e.data)
+                            if(msg.type == "ping")
+                                websocket.current.send(JSON.stringify({type: "pong"}))
+                            else if(msg.type == "error"){
+                                setError(msg.msg)
+                                setTrigger(t => !t)
+                            }
+                            return
+                        }
                         const msg = document.createElement("li");
                         // console.log(e)
                         const vw = new DataView(e.data);
@@ -197,25 +216,28 @@ export default function Voice(props) {
             }
             
         websocket.current.onerror = () => {
-            if (websocket.current.OPEN) {
+            if (websocket.current.readyState == WebSocket.OPEN) {
                 websocket.current.close();
             }
-            reconnect()
             console.warn("An error occured, websocket connection failed");
         }
         }
         connect();
     function reconnect() {
-        setTimeout(connect, webreconInterval);
-        webreconInterval += 1000;
+        if(!isMounted)
+            return
+        reconnTimer = setTimeout(connect, webreconInterval);
+        webreconInterval = Math.min(webreconInterval + 1000, 15000);
     }
         return () => {
             clearInterval(msgRemoverInterval.current);
             clearInterval(interval1);
             isMounted = false;
-            element.classList.remove("current-realm")
-            if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
-                websocket.current.close()
+            clearTimeout(reconnTimer)
+            websocket.current.onclose = null
+            websocket.current.close()
+            if(element)
+                element.classList.remove("current-realm")
         }
 
     }, [])
@@ -288,7 +310,11 @@ export default function Voice(props) {
         try{
             const element = e.currentTarget.children[1];
             dmSendOption.current = element;
-            dmSendOption.current.style.display = "inline";
+            if(element.style.display == "inline")
+                dmSendOption.current.style.display = "none";
+            else
+                dmSendOption.current.style.display = "inline";
+
             e.stopPropagation()
         }
         catch{}
