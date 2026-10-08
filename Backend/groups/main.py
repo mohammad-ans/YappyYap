@@ -345,6 +345,10 @@ def leave_group(id: str, group: str, db: Session = Depends(get_db), payload = De
 
 @app.get("/groups/{id}/numMembers")
 def get_members(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    mem = db.execute(select(database.RMembers).where((database.RMembers.username == username) & (database.RMembers.realm_id == id))).scalar_one_or_none()
+    if not mem:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You need to be a member of this realm first"}])
     count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == id)).scalar_one()
     return count
 
@@ -478,32 +482,6 @@ def get_groups(id: str, db: Session = Depends(get_db), payload = Depends(verify_
     channels_details = db.execute(select(database.Group).where((database.Group.realm_id == id) & ((database.Group.id.in_(channels)) | (database.Group.inviteType == "all")))).scalars().all()
     return channels_details
 
-@app.get("/groups")
-def return_groups(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
-    try:
-        groups = db.execute(select(database.Group)).scalars().all()
-        return groups
-    except:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])
-    
-@app.get("/groups/all/{username}")
-def return_groups(username : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
-    try:
-        tempGrps = select(database.Members.grpName).where(database.Members.name == username)
-        groups = db.execute(select(database.Group).where(database.Group.name.in_(tempGrps))).scalars().all()
-        return groups
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])
-    
-@app.get("/groups/{query}")
-def return_groups(query : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
-    try:
-        groups = db.execute(select(database.Group).where(database.Group.name.ilike(f"%{query}%")).limit(6)).scalars().all()
-        return groups
-    except:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])
-
 @app.delete("/realms/{id}/groups/{group}")
 def del_group(id : str, group: str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
@@ -548,6 +526,9 @@ def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = D
     
 @app.get("/realms/{id}/groups/{group}/members")
 def get_members(id: str, group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    if not check_mem(username, group, db):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You need to be a member of this group first"}])
     try:
         members = db.execute(select(database.Members.name.label("username"), database.Members.role).where((database.Members.grpId == group))).mappings().all()
         return members
@@ -581,13 +562,16 @@ def create_grp(id: str, data: database.GrpAdd, db: Session = Depends(get_db), pa
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You need to be member of realm to create group in it"}])
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid name, name cannot be empty"}])
     if data.minDuration > data.maxDuration or data.minDuration <= 0:
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid values of max and min durations"}])
     if data.inviteType not in ("all", "invite"):
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid invite type"}])
     if data.grpType not in ("text", "voice"):
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid group type"}])
-    if data.maxGrpSize <= 1 :
+    if data.maxGrpSize <= 1 or data.maxGrpSize > 100:
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Group size value must be between 2 and 100"}])
     grp = database.Group(realm_id=id, name=data.name, owner=username, liveCount=data.liveCount, anonymity=data.anonymity, maxGrpSize=data.maxGrpSize, maxDuration=data.maxDuration, minDuration=data.minDuration, grpType=data.grpType, inviteType=data.inviteType, description=data.description or "")
     db.add(grp)
@@ -700,6 +684,9 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
 
 @app.get("/getchatmsgs/{group}")
 async def send_messages(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    if not check_mem(username, group, db):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You need to be a member of this group first"}])
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
     msgs = db.execute(select(database.grpMsgsT).where((database.grpMsgsT.expiry > time) & (database.grpMsgsT.grpId == group) )).scalars().all()
     msgs_return = []
@@ -768,16 +755,16 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
         expiry_seconds = 0
         while True:
             try:
-                data = await asyncio.wait_for(user.receive(), timeout=30)
-            except asyncio.TimeoutError:
                 try:
-                    await user.send_json({"type": "ping"})
-                except:
-                    break
-                continue
-            if "bytes" in data:
-                time = datetime.now(timezone.utc)
-                try:
+                    data = await asyncio.wait_for(user.receive(), timeout=30)
+                except asyncio.TimeoutError:
+                    try:
+                        await user.send_json({"type": "ping"})
+                    except:
+                        break
+                    continue
+                if "bytes" in data:
+                    time = datetime.now(timezone.utc)
                     with NamedTemporaryFile(suffix=".webm", delete=False) as temp_input:
                         temp_input.write(data["bytes"])
                         temp_input.flush()
@@ -795,16 +782,16 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                         )
                         if voice_convert.returncode !=0:
                             await user.send_text("An error occured")
-                            break
+                            continue
                     with open(output_tmp.name, "rb") as return_file:
                         payload = return_file.read()
                         expiry = database.grpsMsgsV.get_expiry(expiry_seconds)
                         voicemsg = database.grpsMsgsV(
-                             username = senderName,
-                             msg = payload,
-                             time_sent = time,
-                             expiry = expiry,
-                             grpId = group
+                                username = senderName,
+                                msg = payload,
+                                time_sent = time,
+                                expiry = expiry,
+                                grpId = group
                         )
                         db.add(voicemsg)
                         db.commit()
@@ -815,45 +802,41 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
 
                         complete_payload = time_sent + expiry_time + username_length.to_bytes(4, "big") + username_payload + payload
                         await manager_voice.publish({"payload_b64": base64.b64encode(complete_payload).decode("ascii"), "group": group})
-                except WebSocketDisconnect:
-                    print("closed")
-                except Exception as e:
-                    print(e)
-                    try:
-                        await user.send_text("An error occured")
-                    except:
-                         pass
-                #     break
-                finally:
-                    os.remove(temp_input.name)
-                    os.remove(output_tmp.name)
+                        
+                        os.remove(temp_input.name)
+                        os.remove(output_tmp.name)
 
-            elif "text" in data:
-                js = loads(data["text"])
-                if js.get("type") == "pong":
-                    continue
-                if "anonymity" in js and js["anonymity"]:
-                    while True:
-                        senderName = generate_slug(2)
-                        response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
-                        if response_username.json()["msg"] == False:
-                            break
-                elif "anonymity" in js:
-                    senderName = username
-                expiry_seconds = int(js["expiry"])
-    except WebSocketDisconnect:
-        pass
-    except Exception as e:
-                    try:
-                        await user.send_text("An error occured")
-                    except:
-                         pass
+                elif "text" in data:
+                    js = loads(data["text"])
+                    if js.get("type") == "pong":
+                        continue
+                    if "anonymity" in js and js["anonymity"]:
+                        while True:
+                            senderName = generate_slug(2)
+                            response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
+                            if response_username.json()["msg"] == False:
+                                break
+                    elif "anonymity" in js:
+                        senderName = username
+                    expiry_seconds = int(js["expiry"])
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                os.remove(temp_input.name)
+                os.remove(output_tmp.name)
+                try:
+                    await user.send_text("An error occured")
+                except:
+                    pass
     finally:
          managerV.disconnect(username, group)
          await mark_online(manager_voice, f"groups:voice:online:{group}", username, False)
 
 @app.get("/voice/getmsgs/{group}")
 async def get_msgs(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    if not check_mem(username, group, db):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You need to be a member of this group first"}])
     time = datetime.now(timezone.utc) + timedelta(seconds=2)
     db_data = db.execute(select(database.grpsMsgsV).where((database.grpsMsgsV.expiry > time) & (database.grpsMsgsV.grpId == group) )).scalars().all()
     zip_file = io.BytesIO()

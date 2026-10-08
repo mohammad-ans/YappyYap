@@ -110,45 +110,45 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
     await mark_online(manager, username, True)
     try:
         while True:
-            
             try:
-                data = await asyncio.wait_for(user.receive_json(), timeout=30)
-            except asyncio.TimeoutError:
                 try:
-                    await user.send_json({"type": "ping"})
-                except:
-                    break
-                continue
-            if data.get("type") == "pong":
-                continue
-            if "anonymity" in data and data["anonymity"] == True:
-                while True:
-                    senderName = generate_slug(2)
-                    response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
-                    if response_username.json()["msg"] == False:
+                    data = await asyncio.wait_for(user.receive_json(), timeout=30)
+                except asyncio.TimeoutError:
+                    try:
+                        await user.send_json({"type": "ping"})
+                    except:
                         break
-            else:
-                senderName = username
-            seconds = int(data["expire"])
-            msg = data["msg"]
-            time = datetime.now(timezone.utc)
-            message = Msgs(
-                msg = msg,
-                username = senderName,
-                time_sent = time,
-                expiry = time + timedelta(seconds=seconds)
-            )
-            temp = Msg_return.from_orm(message).model_dump_json()
-            db.add(message)
-            db.commit()
-            await manager.publish({"payload": temp})
-    except WebSocketDisconnect:
-        pass
-    except Exception as e:
-        try:
-            await user.send_text("An error occured")
-        except:
-            pass
+                    continue
+                if data.get("type") == "pong":
+                    continue
+                if "anonymity" in data and data["anonymity"] == True:
+                    while True:
+                        senderName = generate_slug(2)
+                        response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
+                        if response_username.json()["msg"] == False:
+                            break
+                else:
+                    senderName = username
+                seconds = int(data["expire"])
+                msg = data["msg"]
+                time = datetime.now(timezone.utc)
+                message = Msgs(
+                    msg = msg,
+                    username = senderName,
+                    time_sent = time,
+                    expiry = time + timedelta(seconds=seconds)
+                )
+                temp = Msg_return.from_orm(message).model_dump_json()
+                db.add(message)
+                db.commit()
+                await manager.publish({"payload": temp})
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                try:
+                    await user.send_text("An error occured")
+                except:
+                    pass
     finally:
         if username in manager_local.connections:
             manager_local.disconnect(username)

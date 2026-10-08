@@ -116,16 +116,16 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
         expiry_seconds = 0
         while True:
             try:
-                 data = await asyncio.wait_for(user.receive(), 30)
-            except asyncio.TimeoutError:
-                 try:
-                    await user.send_json({"type": "ping"})
-                 except:
-                      break
-                 continue
-            if "bytes" in data:
-                time = datetime.now(timezone.utc)
                 try:
+                    data = await asyncio.wait_for(user.receive(), 30)
+                except asyncio.TimeoutError:
+                    try:
+                        await user.send_json({"type": "ping"})
+                    except:
+                        break
+                    continue
+                if "bytes" in data:
+                    time = datetime.now(timezone.utc)
                     with NamedTemporaryFile(suffix=".webm", delete=False) as temp_input:
                         temp_input.write(data["bytes"])
                         temp_input.flush()
@@ -143,7 +143,7 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
                         )
                         if voice_convert.returncode !=0:
                             await user.send_text("An error occured")
-                            break
+                            continue
                     with open(output_tmp.name, "rb") as return_file:
                         payload = return_file.read()
                         expiry = VoiceMsgs.get_expiry(expiry_seconds)
@@ -162,39 +162,31 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
 
                         complete_payload = time_sent + expiry_time + username_length.to_bytes(4, "big") + username_payload + payload
                         await manager.publish({"payload_b64": base64.b64encode(complete_payload).decode("ascii")})
-                except WebSocketDisconnect:
-                    raise
-                except Exception as e:
-                    try:
-                        await user.send_text("An error occured")
-                    except:
-                         pass
-                #     break
-                finally:
                     os.remove(temp_input.name)
                     os.remove(output_tmp.name)
 
-            elif "text" in data:
-                js = loads(data["text"])
-                if js.get("type") == "pong":
-                    continue
-                if "anonymity" in js:
-                    while True:
-                        senderName = generate_slug(2)
-                        response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
-                        if response_username.json()["msg"] == False:
-                            break
-                else:
-                    senderName = username
-                expiry_seconds = int(js["expiry"])
-    except WebSocketDisconnect:
-         print("closed")
-    except Exception as e:
-        print(e)
-        try:
-            await user.send_text("An error occured")
-        except:
-                pass
+                elif "text" in data:
+                    js = loads(data["text"])
+                    if js.get("type") == "pong":
+                        continue
+                    if "anonymity" in js and js["anonymity"]:
+                        while True:
+                            senderName = generate_slug(2)
+                            response_username = await client.get(f"http://auth:8000/userCheck/{senderName}")
+                            if response_username.json()["msg"] == False:
+                                break
+                    else:
+                        senderName = username
+                    expiry_seconds = int(js["expiry"])
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                os.remove(temp_input.name)
+                os.remove(output_tmp.name)
+                try:
+                    await user.send_text("An error occured")
+                except:
+                    pass
     finally:
          manager_local.disconnect(username)
          await mark_online(manager, username, False)
