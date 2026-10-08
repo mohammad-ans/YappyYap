@@ -19,7 +19,6 @@ export default function Personal(props){
     const navigate = useNavigate()
     const startDuration = useRef(false);
     const axios = useAxios();
-    const anonymity = useRef(null)
     useEffect(() => {
         textArea.current.style.height = "auto";
         if (textArea.current.scrollHeight < 400) {
@@ -32,7 +31,7 @@ export default function Personal(props){
     useEffect(() => {
         realmRef.current = "dms";
         user.current = props.secondUser;
-        const element = document.querySelector(`.m${user.current}`);
+        const element = document.querySelector(`.m${CSS.escape(user.current)}`);
         element.classList.remove("new-msg-notification");
         props.setRealm("dms")
         element.classList.add("current-realm");
@@ -239,7 +238,7 @@ export default function Personal(props){
     function startDurationHandler() {
         let xTravel;
         const element = document.querySelector(".anonymity-off");
-        if (anonymity.current) {
+        if (startDuration.current) {
             xTravel = 0;
             element.classList.remove("anonymity-on");
         }

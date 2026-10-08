@@ -3,6 +3,7 @@ import useAxios from "../hooks/useAxios";
 import "./AddGroup.css"
 import useChatAuth from "../hooks/useChatAuth";
 import { ChatContext } from "./ChatContext";
+import { useNavigate } from "react-router-dom";
 export default function AddGroup(props){
     const [name, setName] = useState("");
     const [grpType, setGrpType] = useState("text");
@@ -17,6 +18,7 @@ export default function AddGroup(props){
     const {setError, setTrigger} = useChatAuth();
     const {getGroups} = useContext(ChatContext)
     const axios = useAxios()
+    const navigate = useNavigate()
     async function addGroup(e) {
         e.preventDefault();
         try{
@@ -35,6 +37,8 @@ export default function AddGroup(props){
             })
             getGroups();
             setError("Successfully Done");
+            props.setAddArea(false)
+            navigate(`/chat/realms/${props.realm}/c/${response.data.id}`)
         }
         catch(err){
             if(err.response.status == 406)
@@ -53,7 +57,7 @@ export default function AddGroup(props){
         <div className="add-groupoverlay">
                 <form onSubmit={addGroup} className="group-add">
                 <p className="cancel-cross" onClick={removeGroupArea}>X</p>
-                <h2>Add your Realm</h2>
+                <h2>Add your Group</h2>
                 <input type="text" placeholder="Enter a unique Group Name" value={name} onChange={e => setName(e.target.value)} required/>
                 <input type="text" placeholder="Enter group description" value={description} onChange={e=> setDescription(e.target.value)}/>
                 <input type="number" value={grpSize} min={2} max={100} placeholder="Maximum size of Group" onChange={e => setSize(e.target.value)} required/>
@@ -75,7 +79,7 @@ export default function AddGroup(props){
                     <option value={true}>Online Count enabled</option>
                     <option value={false}>Online Count disabled</option>
                 </select>
-                <button type="submit">Add Realm</button>
+                <button type="submit">Add Group</button>
                 </form>
         </div>
     )

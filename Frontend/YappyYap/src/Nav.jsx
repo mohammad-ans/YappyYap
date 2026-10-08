@@ -43,25 +43,22 @@ export default function Nav(props) {
             setnavOpen((n)=>!n);
         }
     }
-    document.querySelectorAll(".navbar a").forEach(element => {
-        element.addEventListener("click",() => {
-            if (navOpen){
-                func();
-            }
-        })
-    })
+    function onClose() {
+        if(navOpen)
+            func()
+    }
     return (
         <nav className="navbar-header main-nav-close">
             <div className="navbar">
 
-                <Link to="/"><img src={logo} alt="YappyYap" /></Link>
+                <Link to="/" onClick={onClose}><img src={logo} alt="YappyYap" /></Link>
                 
                 <button className="menubar" onClick={() => {func(); animating ? hoverLeave(): hoverEnter();}} onMouseEnter={hoverEnter} onMouseLeave={hoverLeave}><span className="hoverEff"></span><span style={{ fontSize: "0.8rem" }}>Menu</span><span className="ham">≡</span> <span className="cross">X</span> </button>
                 <ul className="navbar-items">
-                    <li><Link to="/">Home</Link></li>
-                    <li><Link to="/about">About</Link></li>
-                    <li><Link to="/chat">Chat</Link></li>
-                    <li className="nav-last-el-manage">{logged ? (<Link to="account">My Account</Link>) : (<><Link to="signin" >SignIn </Link><span>|</span><Link to="signup"> SignUp</Link></>)}</li>
+                    <li><Link to="/" onClick={onClose}>Home</Link></li>
+                    <li><Link to="/about" onClick={onClose}>About</Link></li>
+                    <li><Link to="/chat" onClick={onClose}>Chat</Link></li>
+                    <li className="nav-last-el-manage">{logged ? (<Link to="account" onClick={onClose}>My Account</Link>) : (<><Link to="signin" onClick={onClose}>SignIn </Link><span>|</span><Link to="signup" onClick={onClose}> SignUp</Link></>)}</li>
                 </ul>
             </div>
             <hr className="nav-hr"/>

@@ -84,7 +84,7 @@ def update_realm(id: str, data: database.RealmUpdate, db: Session = Depends(get_
     priviliged = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & ((database.RMembers.role == "admin") | (database.RMembers.role == "owner")))).scalar_one_or_none()
     if not priviliged:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owners and admins can update realm settings"}])
-    if data.name is not None:
+    if data.name is not None and data.name != "":
         realm.name = data.name
     if data.description is not None:
         realm.description = data.description
@@ -346,8 +346,7 @@ def leave_group(id: str, group: str, db: Session = Depends(get_db), payload = De
 @app.get("/groups/{id}/numMembers")
 def get_members(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
-    mem = db.execute(select(database.RMembers).where((database.RMembers.username == username) & (database.RMembers.realm_id == id))).scalar_one_or_none()
-    if not mem:
+    if not check_mem(username, id, db):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You need to be a member of this realm first"}])
     count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == id)).scalar_one()
     return count
@@ -485,7 +484,7 @@ def get_groups(id: str, db: Session = Depends(get_db), payload = Depends(verify_
 @app.delete("/realms/{id}/groups/{group}")
 def del_group(id : str, group: str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
-    realm_owner = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & (database.RMembers.role.in_("admin", "owner")))).scalar_one_or_none()
+    realm_owner = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & (database.RMembers.role.in_(["admin", "owner"])))).scalar_one_or_none()
     owner = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username) & (database.Members.role.in_(["admin", "owner"])))).scalar_one_or_none()
     if not owner and not realm_owner:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You are not allowed to delete the group"}])
@@ -562,6 +561,9 @@ def create_grp(id: str, data: database.GrpAdd, db: Session = Depends(get_db), pa
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You need to be member of realm to create group in it"}])
+    grp_exists = db.execute(select(database.Group).where((database.Group.realm_id == id) & (func.lower(database.Group.name) == name.lower()))).scalar_one_or_none()
+    if grp_exists:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "A group with this name exists already in this realm"}])
     name = data.name.strip()
     if not name:
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid name, name cannot be empty"}])
@@ -573,7 +575,7 @@ def create_grp(id: str, data: database.GrpAdd, db: Session = Depends(get_db), pa
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid group type"}])
     if data.maxGrpSize <= 1 or data.maxGrpSize > 100:
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Group size value must be between 2 and 100"}])
-    grp = database.Group(realm_id=id, name=data.name, owner=username, liveCount=data.liveCount, anonymity=data.anonymity, maxGrpSize=data.maxGrpSize, maxDuration=data.maxDuration, minDuration=data.minDuration, grpType=data.grpType, inviteType=data.inviteType, description=data.description or "")
+    grp = database.Group(realm_id=id, name=name, owner=username, liveCount=data.liveCount, anonymity=data.anonymity, maxGrpSize=data.maxGrpSize, maxDuration=data.maxDuration, minDuration=data.minDuration, grpType=data.grpType, inviteType=data.inviteType, description=data.description or "")
     db.add(grp)
     db.flush()
     db.add(database.Members(name=username, grpId=grp.id, role="owner"))

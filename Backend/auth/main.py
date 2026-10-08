@@ -109,6 +109,8 @@ async def signup(data : Email_signup, db : Session = Depends(get_db)):
         db.add(pending_user_data)
     try:
         email_response = await send_otp(data.email, random_otp)
+        if email_response >= 300 or email_response < 200:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=[{"msg": "Service not available. Try Again."}])
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=[{"msg" : "Service not available. Try Again."}])
     # already_exists = db.query(OTP_entry).filter_by(email = data.email).update({"otp":random_otp})
@@ -172,6 +174,8 @@ async def signin(data : Email_signin, db : Session = Depends(get_db)):
     already_exists = db.execute(select(OTP_entry).where(OTP_entry.email == data.email)).scalar_one_or_none()
     try:
         email_response = await send_otp(data.email, random_otp)
+        if email_response >= 300 or email_response < 200:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=[{"msg": "Service not available. Try Again."}])
     except:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=[{"msg" : "Service not available. Try Later."}])
     if already_exists:

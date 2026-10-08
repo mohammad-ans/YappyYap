@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 # import auth, websocket, voicewebsoc, components
 import os
-from auth import verify_session_token
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 from database import session, Contact_us, Contact_us_data, NewsLetter, BugsReport

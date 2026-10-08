@@ -13,12 +13,13 @@ export default function Global(props) {
     const [italic, setItalic] = useState(false);
     const [strike, setStrike] = useState(false);
     const [optionsOpen, setOptionsOpen] = useState(false);
-    const [yapDuration, setYapDuration] = useState(10);
+    const [yapDuration, setYapDuration] = useState(props.realm.minDuration);
     const { setError, setTrigger } = useChatAuth();
     const {realmType, dmSendOption, liveCount, setRealm, tempDM, getDms, setDms, setCurrGroup, setCurrGroupName} = useContext(ChatContext);
     const {username} = useChatAuth();
     const navigate = useNavigate()
     const anonymity = useRef(false);
+    const timerRef = useRef(null)
     useEffect(() => {
         textArea.current.style.height = "auto";
         if (textArea.current.scrollHeight < 400) {
@@ -120,9 +121,12 @@ export default function Global(props) {
                 getMessages()
             }
             ws.current.onclose = () => {
-                if (isMounted) {
-                    reconnect();
+                if(e.code == 4403){
+                    setError("You are not a member of this group")
+                    setTrigger(pre => !pre)
                 }
+                if (isMounted)
+                    reconnect();
             }
             ws.current.onmessage = (e) => {
                 try {
@@ -172,14 +176,15 @@ export default function Global(props) {
         function reconnect() {
             if(!isMounted)
                 return
-            setTimeout(connect, webreconInterval);
+            timerRef.current = setTimeout(connect, webreconInterval);
             webreconInterval = Math.min(webreconInterval + 1000, 15000);
         }
 
         return () => {
             isMounted = false;
-            if (ws.current && ws.current.readyState == WebSocket.OPEN)
-                ws.current.close();
+            ws.current.onclose = null
+            ws.current.close();
+            clearTimeout(timerRef)
             clearInterval(interval1);
             clearInterval(interval2);
             clearInterval(interval3);

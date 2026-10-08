@@ -225,7 +225,7 @@ export default function Chat(props) {
                                     dmUsersRef.current = [...dmUsersRef.current, tempUsername];
                                 }
                                     
-                                const domElement = document.querySelector(`.m${tempUsername}`)
+                                const domElement = document.querySelector(`.m${CSS.escape(tempUsername)}`)
                                 if(domElement)
                                     domElement.classList.add("new-msg-notification");
                             }
@@ -259,15 +259,15 @@ export default function Chat(props) {
         function reconnect() {
             if(!isMounted)
                 return
-            setTimeout(connect, webreconInterval);
+            reconnTimer = setTimeout(connect, webreconInterval);
             webreconInterval = Math.min(webreconInterval + 1000, 15000);
         }
 
         return () => {
             isMounted = false
             clearTimeout(reconnTimer)
-            if (ws.current && ws.current.readyState == WebSocket.OPEN)
-                ws.current.close();
+            ws.current.onclose = null
+            ws.current.close();
         }
     }, [])
     function removeInstructionsHeader() {

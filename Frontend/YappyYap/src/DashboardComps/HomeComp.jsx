@@ -19,11 +19,7 @@ export default function HomeComp() {
             payload.append("file", file_ref.current.files[0]);
             payload.append("heading", heading);
             payload.append("content", content);
-            const response = await axios.post("https://dashboard.yappyyap.xyz/homecomps", payload, {
-                headers : {
-                    "Content-Type" : "multipart/formd-data"
-                }
-            });
+            const response = await axios.post("https://dashboard.yappyyap.xyz/homecomps", payload);
             setError(response.data.msg);
             setTrigger(t => !t);
             setCompsCheck(c => !c);

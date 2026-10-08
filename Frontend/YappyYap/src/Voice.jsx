@@ -147,6 +147,10 @@ export default function Voice(props) {
                 getmsgs()
             }
             websocket.current.onclose = () => {
+                if(e.code == 4403){
+                    setError("You are not a member of this group")
+                    setTrigger(pre => !pre)
+                }
                 if (isMounted)
                     reconnect();
             }
@@ -222,11 +226,11 @@ export default function Voice(props) {
             clearInterval(msgRemoverInterval.current);
             clearInterval(interval1);
             isMounted = false;
-            clearInterval(reconnTimer)
+            clearTimeout(reconnTimer)
+            websocket.current.onclose = null
+            websocket.current.close()
             if(element)
                 element.classList.remove("current-realm")
-            if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
-                websocket.current.close()
         }
 
     }, [])

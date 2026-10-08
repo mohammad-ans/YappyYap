@@ -31,6 +31,10 @@ export default function About() {
             })
         });
     }, [contents])
+    if(loading)
+        return (
+            <div>Loading...</div>
+    )
     return (
         <section>
             <div className="about-heading">

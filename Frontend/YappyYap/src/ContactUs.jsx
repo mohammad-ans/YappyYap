@@ -4,13 +4,13 @@ import { Link } from "react-router-dom"
 import useAxios from "../hooks/useAxios";
 import useChatAuth from "../hooks/useChatAuth";
 export default function ContactUs(props) {
-    const issueRef = useRef("");
+    const issueRef = useRef(null);
     const axios = useAxios();
     const {setError, setTrigger} = useChatAuth();
     async function contactusSubmit(e) {
         e.preventDefault();
         try{
-            let content = issueRef.current;
+            let content = issueRef.current.value;
             if (props.selectOption == "NewsLetter"){
                 content = props.footerEmail;
             }
@@ -23,9 +23,8 @@ export default function ContactUs(props) {
             setTrigger(t => !t);
         }
         catch(e){
-            console.log(e)
-            if (e.msg) {
-                setError(e.msg)
+            if (e.response && e.response.data) {
+                setError(e.response.data.detail[0].msg)
             }
             else{
                 setError("An error occured");
