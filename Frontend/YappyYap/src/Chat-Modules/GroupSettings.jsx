@@ -16,6 +16,7 @@ export default function GroupSettings(props) {
     const [transferTarget, setTarget] = useState(null)
     const [inviteUsername, setInviteUsername] = useState("")
     const [inviteLink, setInviteLink] = useState(null)
+    const [invites, setInvites] = useState([])
     const [leaveConfirm, setLeaveConfirm] = useState(null)
     const [removeTarget, setRemove] = useState(null)
     const colorRef = useRef("red")
@@ -28,6 +29,8 @@ export default function GroupSettings(props) {
             setDetails(details.data)
             setDescription(details.data.description || "")
             setMembers(members.data)
+            if (details.data.role == "admin" || details.data.role == "owner")
+                await loadInvites()
         }
         catch(err) {
             if(err.response && err.response.data)
@@ -37,6 +40,31 @@ export default function GroupSettings(props) {
         }
         finally{
             setLoading(false)
+        }
+    }
+    async function loadInvites() {
+        try{
+            const res = await axios.get(`http://localhost:8004/realms/${props.realm}/groups/${props.group}/invites`)
+            setInvites(res.data)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            else
+                showStatus("Could not load pending invites")
+        }
+    }
+    async function cancelInvite(token, invitedUser) {
+        try{
+            await axios.post(`http://localhost:8004/invites/${token}/cancel`)
+            setInvites(pre => pre.filter(invite => invite.token != token))
+            showStatus(`Cancelled invite for ${invitedUser}`, false)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            else
+                showStatus("Could not cancel the invite")
         }
     }
     useEffect(()=> {
@@ -159,6 +187,7 @@ export default function GroupSettings(props) {
             const link = `${window.location.origin}/invite/${res.data.token}`
             setInviteLink(link)
             setInviteUsername("")
+            loadInvites()
             const delivered = sendInviteDM(target, `#${details.name}`, link)
             showStatus(delivered ? `Invite sent to ${target} as a DM, they can also use the link below`: `Invite created for ${target}, could not DM it automatically, so copy the link below and send it manually.`, false)
         }
@@ -257,6 +286,18 @@ export default function GroupSettings(props) {
                             <button onClick={copyLastInvite}>Copy</button>
                         </div>
                     )}
+                    <h3>Pending invites ({invites.length})</h3>
+                    <ul className="group-members-list pending-invites">
+                        {invites.map(invite => <li key={invite.token} className="group-member">
+                            <div className="member-details">
+                            <span className="group-member-name">{invite.username}</span>
+                            <span className="group-member-role">by {invite.invitedBy}{invite.expiresAt ? `, expires ${new Date(invite.expiresAt).toLocaleString()}` : ""}</span>
+                            </div>
+                            <span className="group-member-settings">
+                                <button onClick={() => cancelInvite(invite.token, invite.username)}>Cancel</button>
+                            </span>
+                        </li>)}
+                    </ul>
                 </div>
                 }
                 <div className="single-setting">

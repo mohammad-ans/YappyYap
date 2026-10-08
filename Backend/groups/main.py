@@ -148,6 +148,69 @@ def add_mem(id: str, data: database.Username, db: Session = Depends(get_db), pay
     db.commit()
     return {"msg": "Success"}
 
+def is_realm_admin(db: Session, realm_id: str, username: str):
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == realm_id) & (database.RMembers.username == username))).scalar_one_or_none()
+    return bool(member and member.role in ("admin", "owner"))
+
+def is_group_admin(db: Session, realm_id: str, group_id: str, username: str):
+    # Realm admins/owners manage every group in the realm, group admins/owners their own group
+    if is_realm_admin(db, realm_id, username):
+        return True
+    grp_member = db.execute(select(database.Members).where((database.Members.grpId == group_id) & (database.Members.name == username))).scalar_one_or_none()
+    return bool(grp_member and grp_member.role in ("admin", "owner"))
+
+def pending_invites(realm_id: str, group_id: str | None = None):
+    # Invites that can still be redeemed: not used, not cancelled, not expired
+    now = datetime.now(timezone.utc)
+    query = select(database.Invite).where(
+        (database.Invite.realm_id == realm_id) & (database.Invite.used == False) & (database.Invite.canceled == False)
+        & ((database.Invite.expiresAt == None) | (database.Invite.expiresAt > now)))
+    if group_id:
+        return query.where((database.Invite.scope == "group") & (database.Invite.grpId == group_id))
+    return query.where(database.Invite.scope == "realm")
+
+def reuse_pending_invite(db: Session, query, username: str, expires_in_hours: int):
+    # Inviting someone who already has a pending invite refreshes it instead of making a duplicate
+    existing = db.execute(query.where(database.Invite.username == username)).scalars().first()
+    if not existing:
+        return None
+    existing.expiresAt = datetime.now(timezone.utc) + timedelta(hours=expires_in_hours)
+    db.commit()
+    db.refresh(existing)
+    return existing
+
+def invite_info(invite: database.Invite):
+    return {"token": invite.token, "username": invite.username, "invitedBy": invite.invitedBy, "createdAt": invite.createdAt, "expiresAt": invite.expiresAt}
+
+@app.get("/realms/{id}/invites")
+def realm_invites(id: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    if not is_realm_admin(db, id, payload["username"]):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Only realm admins and owner can see invites"}])
+    invites = db.execute(pending_invites(id).order_by(database.Invite.createdAt.desc())).scalars().all()
+    return [invite_info(invite) for invite in invites]
+
+@app.get("/realms/{id}/groups/{group}/invites")
+def group_invites(id: str, group: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    if not is_group_admin(db, id, group, payload["username"]):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Only admins and owner can see invites"}])
+    invites = db.execute(pending_invites(id, group).order_by(database.Invite.createdAt.desc())).scalars().all()
+    return [invite_info(invite) for invite in invites]
+
+@app.post("/invites/{token}/cancel")
+def cancel_invite(token: str, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    invite = db.execute(select(database.Invite).where(database.Invite.token == token)).scalar_one_or_none()
+    if not invite:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Invite not found"}])
+    allowed = is_realm_admin(db, invite.realm_id, username) if invite.scope == "realm" else is_group_admin(db, invite.realm_id, invite.grpId, username)
+    if not allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You are not allowed to cancel this invite"}])
+    if invite.used:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=[{"msg": "Invite has already been used"}])
+    invite.canceled = True
+    db.commit()
+    return {"msg": "Success"}
+
 @app.post("/invites/realm/{id}")
 def invite_realm(id: str, data: database.InviteCreate, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
@@ -158,6 +221,9 @@ def invite_realm(id: str, data: database.InviteCreate, db: Session = Depends(get
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == data.username))).scalar_one_or_none()
     if member:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "User is already in the realm"}])
+    existing = reuse_pending_invite(db, pending_invites(id), data.username, data.expiresInHours)
+    if existing:
+        return existing
     invite = database.Invite(realm_id=id, grpId=None, invitedBy=username, username=data.username, 
                              expiresAt= datetime.now(timezone.utc) + timedelta(hours=data.expiresInHours), scope="realm")
     db.add(invite)
@@ -290,6 +356,9 @@ def invite_user(id: str, group: str, data: database.InviteCreate, db: Session = 
     count = db.execute(select(func.count()).select_from(database.Members).where(database.Members.grpId == group)).scalar_one()
     if count >= grp.maxGrpSize:
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Max channel size reached"}])
+    existing = reuse_pending_invite(db, pending_invites(id, group), data.username, data.expiresInHours)
+    if existing:
+        return existing
     invite = database.Invite(
         scope = "group", realm_id = id, grpId = group, invitedBy = username, username = data.username, expiresAt = datetime.now(timezone.utc) + timedelta(hours=data.expiresInHours)
     )

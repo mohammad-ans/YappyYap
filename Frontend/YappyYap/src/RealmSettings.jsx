@@ -18,6 +18,7 @@ export default function RealmSettings(props) {
     const [transferUser, setTransferUser] = useState(null)
     const [inviteUser, setInviteUser] = useState("")
     const [inviteLink, setInviteLink] = useState(null)
+    const [invites, setInvites] = useState([])
     const [inviteType, setInviteType] = useState("");
     const [addUser, setAddUser] = useState("")
     const [leave, setLeave]  = useState(false);
@@ -33,6 +34,8 @@ export default function RealmSettings(props) {
             setName(details.data.name)
             setDescription(details.data.description || "")
             setInviteType(details.data.inviteType)
+            if (details.data.role == "owner" || details.data.role == "admin")
+                await loadInvites()
         }
         catch(err) {
             if(err.response && err.response.data)
@@ -42,6 +45,31 @@ export default function RealmSettings(props) {
         }
         finally{
             setLoading(false)
+        }
+    }
+    async function loadInvites() {
+        try{
+            const res = await axios.get(`http://localhost:8004/realms/${props.realm}/invites`)
+            setInvites(res.data)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            else
+                showStatus("Could not load pending invites")
+        }
+    }
+    async function cancelInvite(token, invitedUser) {
+        try{
+            await axios.post(`http://localhost:8004/invites/${token}/cancel`)
+            setInvites(pre => pre.filter(invite => invite.token != token))
+            showStatus(`Cancelled invite for ${invitedUser}`, false)
+        }
+        catch(err) {
+            if(err.response && err.response.data)
+                showStatus(err.response.data.detail[0].msg)
+            else
+                showStatus("Could not cancel the invite")
         }
     }
     useEffect(()=> {
@@ -92,6 +120,7 @@ export default function RealmSettings(props) {
             const link = `${window.location.origin}/invite/${res.data.token}`
             setInviteLink(link)
             setInviteUser("")
+            loadInvites()
             const flag = sendInviteDm(user, details.name, link)
             showStatus(flag ? `Invite sent to ${user} as DM` :`Invite created for ${user}, could not dm so copy it and manually send them`, false)
         }
@@ -303,6 +332,20 @@ export default function RealmSettings(props) {
                                 <button onClick={copyLink}>Copy</button>
                             </div>
                         )}
+                        <h3>Pending invites - {invites.length}</h3>
+                        <ul className="realm-settings-members pending-invites">
+                            {invites.map(invite => (
+                                <li key={invite.token} className="realm-member">
+                                    <p className="member-details">
+                                        <span className="realm-member-name">{invite.username}</span>
+                                        <span className="realm-member-role">by {invite.invitedBy}{invite.expiresAt ? `, expires ${new Date(invite.expiresAt).toLocaleString()}` : ""}</span>
+                                    </p>
+                                    <span className="realm-member-actions">
+                                        <button onClick={() => cancelInvite(invite.token, invite.username)}>Cancel</button>
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 )}
                 <div className="realm-setting">
