@@ -1,10 +1,10 @@
-import {useState} from "react"
+import {useEffect, useState} from "react"
 import { Link, useNavigate } from "react-router-dom"
 import useAxios from "../hooks/useAxios"
 import Onfire from "./OnFire"
 import "./SignIn.css"
 import useChatAuth from "../hooks/useChatAuth"
-import AddUsername from "./AddUsername"
+import { saveNextFromUrl, saveOtpEmail } from "./authRedirect"
 
 export default function SignIn(props) {
     const [email, setEmail] = useState("");
@@ -12,6 +12,9 @@ export default function SignIn(props) {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const axios = useAxios();
+    useEffect(()=>{
+        saveNextFromUrl()
+    }, [])
     async function sendOtp(e){
         setLoading(true);
         e.preventDefault()
@@ -22,6 +25,7 @@ export default function SignIn(props) {
             })
             if (resp.data.msg == "Success"){
                 props.setEmail(email);
+                saveOtpEmail(email);
                 navigate("otp");
                 setError("OTP Sent")
             }

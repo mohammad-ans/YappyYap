@@ -3,7 +3,10 @@ import useAxios from "../hooks/useAxios";
 import { useNavigate } from "react-router-dom";
 import useChatAuth from "../hooks/useChatAuth";
 import "./otpform.css"
+import { clearOtpEmail, getOtpEmail, takeNext } from "./authRedirect";
 export default function OTPForm(props) {
+    // props.email is lost on refresh, the copy in sessionStorage is not
+    const email = props.email || getOtpEmail();
     const navigate = useNavigate();
     const {setTrigger} = useChatAuth();
     const {setError} = useChatAuth();
@@ -17,14 +20,15 @@ export default function OTPForm(props) {
         try {
             // const response = await axios.post(`http://localhost:8001${props.link}`, {
             const response = await axios.post(`https://auth.yappyyap.xyz${props.link}`, {
-                email: props.email,
+                email: email,
                 otp: otp
             })
             if (response.data.msg == "Success") {
                 setError("Successfuly Logged In");
                 setLogged(true);
                 setUsername(response.data.username);
-                navigate("/chat")
+                clearOtpEmail();
+                navigate(takeNext())
             }
         }
         catch (err) {

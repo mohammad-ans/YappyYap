@@ -1,6 +1,7 @@
 import useAxios from "../hooks/useAxios";
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
+import { takeNext } from "./authRedirect";
 export default function Onfire(props) {
     const {setError, setLogged, setUsername, setTrigger} = useChatAuth();    
     const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function Onfire(props) {
                 setError("Successfuly Logged In");
                 setUsername(response.data.username);
                 setLogged(true);
-                navigate("/chat");
+                navigate(takeNext());
             }
         }
         catch{
