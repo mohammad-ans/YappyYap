@@ -385,12 +385,8 @@ async def auth_callback(request : Request, db : Session = Depends(get_db)):
         print(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=[{"msg" : "Could not verify identity"}])
     
-class GoogleUsername(BaseModel):
-    username: str
-
 @app.post("/add/google")
-async def add_user_google(data: GoogleUsername, response: Response, db: Session = Depends(get_db), temp_token : Annotated[str | None, Cookie()] = None):
-    # Finishes a Google sign up: the temp token from /auth/google holds the verified email
+async def add_user_google(data, response: Response, db: Session = Depends(get_db), temp_token : Annotated[str | None, Cookie()] = None):
     if not temp_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Google sign up expired, continue with Google again"}])
     try:
