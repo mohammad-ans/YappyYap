@@ -55,7 +55,7 @@ export default function Voice(props) {
             let dms = getDms();
             tempDM.current = tempUsername;
             await setDms(dms)
-            navigate(`/chat/u/${tempUsername}`)
+            navigate(`/chat/u/${encodeURIComponent(tempUsername)}`)
         }
         catch{
 

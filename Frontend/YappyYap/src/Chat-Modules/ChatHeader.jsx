@@ -12,18 +12,19 @@ export default function ChatHeader(props) {
     const [displayname, setDisplay] = useState("");
     const navigate = useNavigate();
     const {realmType, realm, currGroup, currGroupName, realmDetails} = useContext(ChatContext);
-    const isGrp = realm && currGroup !== realm && currGroup !== "dms"
+    const isDm = currGroup == "dms"
+    const isGrp = realm && currGroup !== realm && !isDm
     const realmGlobal = !realm || realm == "global";
     const getOnline = useCallback(async ()=> {
         try{
-            if(!isGrp)
+            if(!isGrp && !isDm)
                 return;
             let response;
             const membersEl = document.querySelector(".members");
             if (membersEl)
                 membersEl.style.display = "none";
-            if (currGroup == "dms"){
-                response = await axios.get(`http://localhost:8005/${props.user.current}`);
+            if (isDm){
+                response = await axios.get(`http://localhost:8005/livecount/${encodeURIComponent(currGroupName)}`);
                 // response = await axios.get(`https://chat.yappyyap.xyz/livecount/${props.user.current}`);
             }else{
                 let initialPath;
@@ -55,13 +56,13 @@ export default function ChatHeader(props) {
                 if(err.status == 403)
                     navigate("/signin")
         }
-    }, [isGrp, currGroup])
+    }, [isGrp, isDm, currGroup, currGroupName])
     useEffect(()=>{
         let theme = localStorage.getItem("theme");
         if(theme)
             document.documentElement.setAttribute("data-theme", theme);
         let onlineInterval;
-        if(isGrp){
+        if(isGrp || isDm){
             getOnline()
             onlineInterval = setInterval(getOnline, 4000);
         }
@@ -72,14 +73,14 @@ export default function ChatHeader(props) {
         }
     }, [getOnline])
     useEffect(()=>{
-        if(props.realm == "dms")
-            setDisplay(pre => `Personal Msg: ${props.user.current}`)
+        if(isDm)
+            setDisplay(pre => `Personal Msg: ${currGroupName}`)
         else if(isGrp && currGroupName)
             setDisplay(pre => currGroupName.toUpperCase())
         else
             setDisplay(pre => ((realmDetails && realmDetails.name) || props.realm || "").toUpperCase())
 
-    }, [props.realm, isGrp, currGroupName, realmDetails])
+    }, [props.realm, isGrp, isDm, currGroupName, realmDetails])
     function changeTheme(e) {
         let temp = e.target.value;
         localStorage.setItem("theme", temp);
@@ -117,6 +118,11 @@ export default function ChatHeader(props) {
                 </div>
                 {isGrp && props.liveCount.current && <div className="online-count">
                 {realm != "global" && <div className="members">{`${members} Members`}</div>}
+                        <div className="online-count-dot">
+                        </div>
+                        <span>{online}</span>
+                </div>}
+                {isDm && <div className="online-count">
                         <div className="online-count-dot">
                         </div>
                         <span>{online}</span>

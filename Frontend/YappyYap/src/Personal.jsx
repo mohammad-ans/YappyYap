@@ -14,7 +14,7 @@ export default function Personal(props){
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [yapDuration, setYapDuration] = useState(10);
     const {setError, setTrigger, username} = useChatAuth();
-    const {getDms, setDms, dmMsgs, ws, realmRef, user, tempDM, getGroups} = useContext(ChatContext)
+    const {getDms, setDms, dmMsgs, addDmMsg, ws, realmRef, user, tempDM, setCurrGroup, setCurrGroupName} = useContext(ChatContext)
     const parentMsgs = useRef();
     const navigate = useNavigate()
     const startDuration = useRef(false);
@@ -31,18 +31,40 @@ export default function Personal(props){
     useEffect(() => {
         realmRef.current = "dms";
         user.current = props.secondUser;
-        const element = document.querySelector(`.m${CSS.escape(user.current)}`);
-        element.classList.remove("new-msg-notification");
-        props.setRealm("dms")
-        element.classList.add("current-realm");
-        async function setMessages () {
+        // The realm is kept as is so the sidebar keeps working, "dms" marks the open chat as a DM
+        setCurrGroup("dms");
+        setCurrGroupName(props.secondUser);
+        // Make sure this user shows up in the sidebar even if there are no messages with them yet
+        tempDM.current = props.secondUser;
+        setDms(getDms());
+        const interval2 = setInterval(()=>msgDisplay(2), 1000);
+        const interval3 = setInterval(()=>msgDisplay(-2), 1000);
+
+        return ()=> {
+            clearInterval(interval2);
+            clearInterval(interval3);
+            const element = document.querySelector(`[data-user="${CSS.escape(props.secondUser)}"]`);
+            if (element)
+                element.classList.remove("current-realm");
+            user.current = "";
+            tempDM.current = "";
+            setDms(getDms());
+        }
+    }, [])
+    useEffect(() => {
+        // The sidebar entry may only render after the DM list loads
+        const element = document.querySelector(`[data-user="${CSS.escape(props.secondUser)}"]`);
+        if (element) {
+            element.classList.remove("new-msg-notification");
+            element.classList.add("current-realm");
+        }
+    })
+    useEffect(() => {
+        // Rendered from state so messages received while away (and sent ones) are shown
+        function setMessages () {
             try{
-                setDms(getDms());
-                if(!dmMsgs[props.secondUser]){
-                    return;
-                }
-                const response = dmMsgs[props.secondUser];
-                const parent_element = document.querySelector(".msgs");
+                const response = dmMsgs[props.secondUser] || [];
+                const parent_element = parentMsgs.current;
                 parent_element.innerHTML = "";
                 response.forEach(element => {
                     // msg = data["msg"],
@@ -86,17 +108,7 @@ export default function Personal(props){
             }
         }
         setMessages()
-        const interval2 = setInterval(()=>msgDisplay(2), 1000);
-        const interval3 = setInterval(()=>msgDisplay(-2), 1000);
-        
-        return ()=> {
-            clearInterval(interval2);
-            clearInterval(interval3);
-            element.classList.remove("current-realm");
-            tempDM.current = "";
-            setDms(getDms());
-        }
-    }, [])
+    }, [dmMsgs[props.secondUser]])
     function optionsAnimation() {
         if (optionsOpen) {
             gsap.to(".chat-message-style-buttons", {
@@ -159,14 +171,13 @@ export default function Personal(props){
                 "duration" : duration
             }
             ws.current.send(JSON.stringify(message));
-            let time = new Date();
-            let expiry = new Date(time.getTime() + duration * 1000);
-            time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"})
-            let new_element = document.createElement("li");
-            expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
-            new_element.classList.add(expiry, "chat-message-block");
-            new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${username}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${tempMsg}</p></span>`)
-            parentMsgs.current.append(new_element);
+            addDmMsg(props.secondUser, {
+                "msg": tempMsg,
+                "defaultExpiration": null,
+                "duration": duration,
+                "sent": true,
+                "sentTime": new Date().toISOString()
+            })
         }
         
         textArea.current.value = "";

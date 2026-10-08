@@ -11,7 +11,6 @@ import AddGroup from "./AddGroup"
 import useAxios from "../hooks/useAxios"
 import Personal from "./Personal"
 import { ChatContext } from "./ChatContext"
-import default_image from "./assets/default_img.png"
 import AllRealmsPage from "./AllRealmsPage"
 import GroupSettings from "./Chat-Modules/GroupSettings"
 
@@ -29,7 +28,7 @@ export default function Chat(props) {
     const [groups, setGroups] = useState({"Direct Messages": [], "Groups": []})
     // const [groups, setGroups] = useState()
     const dmUsersRef = useRef([]);
-    const [dmMsgs, setDmMsgs] = useState([]);
+    const [dmMsgs, setDmMsgs] = useState({});
     // const [notifications, setNotifications] = useState([]);
     const user = useRef("");
     const dmSendOption = useRef();
@@ -157,9 +156,12 @@ export default function Chat(props) {
                 }
         }
     }
+    function addDmMsg(otherUser, message) {
+        setDmMsgs(pre => ({...pre, [otherUser]: [...(pre[otherUser] || []), message]}))
+    }
     async function setDms(dmns) {
 
-        let dms = await dmns;
+        let dms = (await dmns) || [];
         if (tempDM.current != "" && !(dms.includes(tempDM.current))){
             
             dms.push(tempDM.current)
@@ -198,34 +200,31 @@ export default function Chat(props) {
                             ws.current.send(JSON.stringify({type: "pong"}))
                             return
                         }
+                        if(element.type == "error") {
+                            setError(element.msg)
+                            setTrigger(t => !t)
+                            return
+                        }
                         if(element.sender == usernameRef.current)
                             return
                         if ("sender" in element) {
                             let tempUsername = element["sender"];
-                            if (window.location.pathname == `/chat/u/${tempUsername}`) {
-                                const parent_element = document.querySelector(".msgs");
-                                let time = new Date(element["sentTime"]);
-                                let expiry = new Date(element.defaultExpiration);
-                                
-                                if (expiry - new Date() > 500) {
-                                    let text = element.msg;
-                                    time = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                                    let new_element = document.createElement("li");
-                                    expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
-                                    new_element.classList.add(expiry, "chat-message-block")
-                                    new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${tempUsername}</h3> <p class="timestamp">${time}</p></span><p class="chat-message">${text}</p></span>`)
-                                    parent_element.append(new_element);
-                                }
+                            // Store it so the DM page shows it now or whenever it is opened later
+                            addDmMsg(tempUsername, {
+                                "msg": element.msg,
+                                "defaultExpiration": element.defaultExpiration,
+                                "duration": element.duration,
+                                "sent": false,
+                                "sentTime": element.sentTime
+                            })
+                            if(!dmUsersRef.current.includes(tempUsername)) {
+                                setGroups((pre) => {
+                                    return {...pre, "Direct Messages" : [...pre["Direct Messages"], tempUsername]}
+                                })
+                                dmUsersRef.current = [...dmUsersRef.current, tempUsername];
                             }
-                            else{
-                                if(!dmUsersRef.current.includes(tempUsername)) {
-                                    setGroups((pre) => {
-                                        return {...pre, "Direct Messages" : [...pre["Direct Messages"], tempUsername]}
-                                    })
-                                    dmUsersRef.current = [...dmUsersRef.current, tempUsername];
-                                }
-                                    
-                                const domElement = document.querySelector(`.m${CSS.escape(tempUsername)}`)
+                            if (user.current != tempUsername) {
+                                const domElement = document.querySelector(`[data-user="${CSS.escape(tempUsername)}"]`)
                                 if(domElement)
                                     domElement.classList.add("new-msg-notification");
                             }
@@ -292,7 +291,7 @@ export default function Chat(props) {
         return setCurrentGroup(realm)
     }
     return (
-        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, setRealm, realmDetails, setRealmDetails,setCurrentGroup, setCurrGroup, currGroup, currGroupName, setCurrGroupName}}>
+        <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, addDmMsg, ws, getGroups, setRealm, realmDetails, setRealmDetails,setCurrentGroup, setCurrGroup, currGroup, currGroupName, setCurrGroupName}}>
             <main className="chat-area nav-close-styles" onClick={clearClick}>
                 {props.chatInstructions ? <div className="instructions-overlay">
                     <div className="instructions">
@@ -325,9 +324,7 @@ export default function Chat(props) {
                 <div className="chat-mainarea">
                     <ChatHeader liveCount={liveCount} realmRef={realmRef} realm={realm} navOpen={navOpen} setNavopen={setNavopen} theme={theme} setTheme={setTheme} user={user} setSettings={setSettings} />
                     <Routes>
-                        {
-                            groups["Direct Messages"].map(element => <Route path={`/u/${element}`} element={<Personal key={`${element}-personal`} setRealm={setRealm} secondUser={element} ws={ws} />} />)
-                        }
+                        <Route path="/u/:dmUser" element={<DmRoute/>} />
                         <Route path="/realms/:realm" element={<RealmPage/>} />
                         <Route path="/realms" element={<AllRealmsPage setCurrRealm={setRealm} setCurrGroup={setCurrGroup}/>} />
                         <Route path="/realms/:realmP/c/:groupKey" element={<ChannelRoute/>} />
@@ -411,6 +408,11 @@ function ChannelRoute() {
         </div>)
     return group.grpType == "text" ? <Global key={`${group.name}-realm`} url={group.url} realm={group}/> : <Voice key={`${group.name}-realm`} url={group.url} realm={group} />
 
+}
+function DmRoute() {
+    // One route for every DM, so links work before the DM list has loaded
+    const {dmUser} = useParams()
+    return <Personal key={`${dmUser}-personal`} secondUser={dmUser} />
 }
 function DefaultRoot() {
     const {setRealm} = useContext(ChatContext);
