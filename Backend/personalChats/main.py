@@ -70,26 +70,28 @@ def personalMsgs(db : Session = Depends(get_db), payload = Depends(verify_sessio
     user = payload["username"]
     msgs = []
     try:
+        # Unread messages start their timer only when the receiver fetches them
         db.execute(update(database.PersonalMsgs).where(
-            ((database.PersonalMsgs.sender == user) | (database.PersonalMsgs.receiver == user))
+            (database.PersonalMsgs.receiver == user)
             & (database.PersonalMsgs.defaultExpiration == None)
         ).values(defaultExpiration = (func.now() + text("duration * interval '1 second'"))))
 
         db.execute(update(database.GroupInvite).where(
-            ((database.GroupInvite.sender == user) | (database.GroupInvite.receiver == user))
+            (database.GroupInvite.receiver == user)
             & (database.GroupInvite.defaultExpiration == None)
         ).values(defaultExpiration = (func.now() + text("duration * interval '1 second'"))))
 
         db.commit()
 
         curr_time = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=1)
+        # Sent messages the receiver has not opened yet have no expiry and are still shown to the sender
         msgs = db.execute(select(database.PersonalMsgs).where(
             ((database.PersonalMsgs.sender == user) | (database.PersonalMsgs.receiver == user))
-            & (database.PersonalMsgs.defaultExpiration > curr_time)
+            & ((database.PersonalMsgs.defaultExpiration > curr_time) | (database.PersonalMsgs.defaultExpiration == None))
             )).scalars().all()
         invites = db.execute(select(database.GroupInvite).where(
             ((database.GroupInvite.sender == user) | (database.GroupInvite.receiver == user))
-            & (database.GroupInvite.defaultExpiration > curr_time)
+            & ((database.GroupInvite.defaultExpiration > curr_time) | (database.GroupInvite.defaultExpiration == None))
             )).scalars().all()
         msgs.extend(invites)
     except Exception as e:
@@ -99,11 +101,18 @@ def personalMsgs(db : Session = Depends(get_db), payload = Depends(verify_sessio
 
 async def user_online(username):
     if manager.redis is None:
-        return username in manager_local.connections
+        return manager_local.is_connected(username)
     try:
         return bool(await manager.redis.sismember("personalchats:online" ,username))
     except:
-        return username in manager_local.connections
+        return manager_local.is_connected(username)
+
+async def user_exists(username: str):
+    try:
+        response = await client.get(f"http://auth:8000/userCheck/{username}")
+        return response.json()["msg"] == True
+    except:
+        return False
 
 async def mark_online(username: str, online: bool):
     if manager.redis is None:
@@ -117,26 +126,32 @@ async def mark_online(username: str, online: bool):
         pass
 
 class ConnectionManager:
+    # A user can have several tabs open, so each username maps to a set of sockets
     def __init__(self):
-        self.connections : dict[str, WebSocket] = {}
+        self.connections : dict[str, set[WebSocket]] = {}
     def add_connection(self, websocket : WebSocket, username : str):
-        self.connections[username] = websocket
-    def disconnect(self, username : str):
-      if username in self.connections:
-        del self.connections[username]
+        self.connections.setdefault(username, set()).add(websocket)
+    def disconnect(self, websocket : WebSocket, username : str):
+        sockets = self.connections.get(username)
+        if sockets is None:
+            return
+        sockets.discard(websocket)
+        if not sockets:
+            del self.connections[username]
+    def is_connected(self, username : str):
+        return username in self.connections
     async def send_message(self, message, username):
-        ws = self.connections.get(username)
-        try:
-            await self.connections[username].send_text(message)
-            return True
-        except:
-            return False
+        sent = False
+        for ws in list(self.connections.get(username, ())):
+            try:
+                await ws.send_text(message)
+                sent = True
+            except:
+                self.disconnect(ws, username)
+        return sent
 
-
-
-
-    
 manager_local = ConnectionManager()
+client = httpx.AsyncClient(timeout=5.0)
 
 async def dm_event(data: dict):
     for user in (data["sender"], data["receiver"]):
@@ -165,6 +180,9 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                 continue
             if "recipient" in data:
                 secondUser = data["recipient"]
+                if secondUser == username or not await user_exists(secondUser):
+                    await user.send_json({"type": "error", "msg": f"User {secondUser} does not exist"})
+                    continue
                 timeCurr = datetime.datetime.now(datetime.timezone.utc)
                 defaultExpiration = data["defaultExpiration"]
                 
@@ -205,9 +223,9 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
     except Exception as e:
         print(e)
     finally:
-        if username in manager_local.connections:
-            manager_local.disconnect(username)
-        await mark_online(username, False)
+        manager_local.disconnect(user, username)
+        if not manager_local.is_connected(username):
+            await mark_online(username, False)
 
 
 @app.get("/livecount/{user}")

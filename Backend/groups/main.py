@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from json import loads
 from struct import pack
 from subprocess import run, PIPE
-from tempfile import NamedTemporaryFile
+from tempfile import TemporaryDirectory
 from dotenv import load_dotenv
 import ws_manger
 from contextlib import asynccontextmanager
@@ -484,6 +484,9 @@ def get_groups(id: str, db: Session = Depends(get_db), payload = Depends(verify_
 @app.delete("/realms/{id}/groups/{group}")
 def del_group(id : str, group: str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
+    grp = db.execute(select(database.Group).where((database.Group.realm_id == id) & (database.Group.id == group))).scalar_one_or_none()
+    if not grp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     realm_owner = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & (database.RMembers.role.in_(["admin", "owner"])))).scalar_one_or_none()
     owner = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username) & (database.Members.role.in_(["admin", "owner"])))).scalar_one_or_none()
     if not owner and not realm_owner:
@@ -561,12 +564,12 @@ def create_grp(id: str, data: database.GrpAdd, db: Session = Depends(get_db), pa
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You need to be member of realm to create group in it"}])
-    grp_exists = db.execute(select(database.Group).where((database.Group.realm_id == id) & (func.lower(database.Group.name) == name.lower()))).scalar_one_or_none()
-    if grp_exists:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "A group with this name exists already in this realm"}])
     name = data.name.strip()
     if not name:
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid name, name cannot be empty"}])
+    grp_exists = db.execute(select(database.Group).where((database.Group.realm_id == id) & (func.lower(database.Group.name) == name.lower()))).scalar_one_or_none()
+    if grp_exists:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "A group with this name exists already in this realm"}])
     if data.minDuration > data.maxDuration or data.minDuration <= 0:
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid values of max and min durations"}])
     if data.inviteType not in ("all", "invite"):
@@ -590,20 +593,28 @@ def check_mem(username: str, id: str, db: Session):
 
 
 class ConnectionManager:
+    # Keyed by socket so the same user can have several tabs open on one group
     def __init__(self):
-        self.connections : dict[tuple[str, str], WebSocket] = {}
+        self.connections : dict[int, tuple[str, str, WebSocket]] = {}
     def add_connection(self, websocket : WebSocket, username : str, grpName : str):
-        self.connections[(username, grpName)] = websocket
-    def disconnect(self, username : str, grpName : str):
-      if (username, grpName) in self.connections:
-        del self.connections[(username, grpName)]
-    async def send_message(self, message : database.Msg_return, grpName : str):
-        for user, ws in list(self.connections.items()):
+        self.connections[id(websocket)] = (username, grpName, websocket)
+    def disconnect(self, websocket : WebSocket):
+        self.connections.pop(id(websocket), None)
+    def is_connected(self, username : str, grpName : str):
+        return any(user == username and grp == grpName for user, grp, _ in self.connections.values())
+    def count(self, grpName : str):
+        return len({user for user, grp, _ in self.connections.values() if grp == grpName})
+    async def send_message(self, message, grpName : str, binary : bool = False):
+        for key, (user, grp, ws) in list(self.connections.items()):
+            if grp != grpName:
+                continue
             try:
-                if user[1] == grpName:
+                if binary:
+                    await ws.send_bytes(message)
+                else:
                     await ws.send_text(message)
             except:
-                self.connections.pop(user)
+                self.connections.pop(key, None)
 
 manager = ConnectionManager()
 async def on_txt_event(data):
@@ -679,10 +690,11 @@ async def websoc(group : str, user : WebSocket, db : Session = Depends(get_db), 
                 try:
                     await user.send_text("An error occured")
                 except:
-                    pass
+                    break
     finally:
-        manager.disconnect(username, group)
-        await mark_online(manager_text, f"groups:text:online:{group}", username, False)
+        manager.disconnect(user)
+        if not manager.is_connected(username, group):
+            await mark_online(manager_text, f"groups:text:online:{group}", username, False)
 
 @app.get("/getchatmsgs/{group}")
 async def send_messages(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -707,37 +719,39 @@ async def total_active(group : str, payload = Depends(verify_session_token)):
             return {"msg": "Sucess","total": count}
         except:
             pass
-    count = 0
-    for user in manager.connections:
-        if user[1] == group:
-            count += 1
     return {
         "msg" : "Success",
-        "total": count
+        "total": manager.count(group)
     }
 
 
 
-class Connection_ManagerVoice:
-    def __init__(self):
-        self.connections : dict[tuple[str, str], WebSocket] = {}
-    def add_connection(self, websocket : WebSocket, username : str, grpName : str):
-        self.connections[(username, grpName)] = websocket
-    def disconnect(self, username : str, grpName : str):
-      if (username, grpName) in self.connections:
-        del self.connections[(username, grpName)]
-    async def send_message(self, message, grpName : str):
-        for user, ws in list(self.connections.items()):
-            try:
-                if user[1] == grpName:
-                    await ws.send_bytes(message)
-            except:
-                self.connections.pop(user)
-
-managerV = Connection_ManagerVoice()
+managerV = ConnectionManager()
 
 async def on_voice_event(data: dict):
-    await managerV.send_message(base64.b64decode(data["payload_b64"]), data["group"])
+    await managerV.send_message(base64.b64decode(data["payload_b64"]), data["group"], binary=True)
+
+async def convert_voice(raw: bytes):
+    # Applies the voice filter; temp files are always cleaned up, returns None if ffmpeg fails
+    with TemporaryDirectory() as tmp:
+        input_path = os.path.join(tmp, "input.webm")
+        output_path = os.path.join(tmp, "output.webm")
+        with open(input_path, "wb") as f:
+            f.write(raw)
+        voice_convert = await asyncio.to_thread(run, [
+            'ffmpeg',
+            '-y',
+            '-i', input_path,
+            '-af', "asetrate=55000,atempo=0.85,afftfilt=real='hypot(re,im)*sin(65)',tremolo=f=50,adynamicsmooth=sensitivity=2.5:basefreq=10000",
+            output_path
+        ],
+        stdout=PIPE,
+        stderr=PIPE
+        )
+        if voice_convert.returncode != 0:
+            return None
+        with open(output_path, "rb") as f:
+            return f.read()
 
 manager_voice = ws_manger.RedisWs(grp="groups:voice", on_event=on_voice_event)
 
@@ -765,50 +779,33 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
                     except:
                         break
                     continue
-                if "bytes" in data:
+                if data["type"] == "websocket.disconnect":
+                    break
+                if data.get("bytes") is not None:
                     time = datetime.now(timezone.utc)
-                    with NamedTemporaryFile(suffix=".webm", delete=False) as temp_input:
-                        temp_input.write(data["bytes"])
-                        temp_input.flush()
-                        output_tmp = NamedTemporaryFile(suffix=".webm", delete=False)
-                        output_tmp.close()
-                        voice_convert = await asyncio.to_thread(run, [
-                            'ffmpeg',
-                            '-y',
-                            '-i', temp_input.name,
-                            '-af', "asetrate=55000,atempo=0.85,afftfilt=real='hypot(re,im)*sin(65)',tremolo=f=50,adynamicsmooth=sensitivity=2.5:basefreq=10000",
-                            output_tmp.name
-                        ],
-                        stdout=PIPE,
-                        stderr=PIPE
-                        )
-                        if voice_convert.returncode !=0:
-                            await user.send_text({"type": "error", "msg": "An error occured"})
-                            continue
-                    with open(output_tmp.name, "rb") as return_file:
-                        payload = return_file.read()
-                        expiry = database.grpsMsgsV.get_expiry(expiry_seconds)
-                        voicemsg = database.grpsMsgsV(
-                                username = senderName,
-                                msg = payload,
-                                time_sent = time,
-                                expiry = expiry,
-                                grpId = group
-                        )
-                        db.add(voicemsg)
-                        db.commit()
-                        username_payload = senderName.encode("utf-8")
-                        username_length = len(username_payload)
-                        time_sent = pack(">d", time.timestamp())
-                        expiry_time = pack(">d", expiry.timestamp())
+                    audio = await convert_voice(data["bytes"])
+                    if audio is None:
+                        await user.send_json({"type": "error", "msg": "Voice message could not be processed"})
+                        continue
+                    expiry = database.grpsMsgsV.get_expiry(expiry_seconds)
+                    voicemsg = database.grpsMsgsV(
+                            username = senderName,
+                            msg = audio,
+                            time_sent = time,
+                            expiry = expiry,
+                            grpId = group
+                    )
+                    db.add(voicemsg)
+                    db.commit()
+                    username_payload = senderName.encode("utf-8")
+                    username_length = len(username_payload)
+                    time_sent = pack(">d", time.timestamp())
+                    expiry_time = pack(">d", expiry.timestamp())
 
-                        complete_payload = time_sent + expiry_time + username_length.to_bytes(4, "big") + username_payload + payload
-                        await manager_voice.publish({"payload_b64": base64.b64encode(complete_payload).decode("ascii"), "group": group})
-                        
-                    os.remove(temp_input.name)
-                    os.remove(output_tmp.name)
+                    complete_payload = time_sent + expiry_time + username_length.to_bytes(4, "big") + username_payload + audio
+                    await manager_voice.publish({"payload_b64": base64.b64encode(complete_payload).decode("ascii"), "group": group})
 
-                elif "text" in data:
+                elif data.get("text") is not None:
                     js = loads(data["text"])
                     if js.get("type") == "pong":
                         continue
@@ -824,15 +821,14 @@ async def voice_conn(group : str, user: WebSocket, payload = Depends(verify_sess
             except WebSocketDisconnect:
                 break
             except Exception as e:
-                os.remove(temp_input.name)
-                os.remove(output_tmp.name)
                 try:
-                    await user.send_text("An error occured")
+                    await user.send_json({"type": "error", "msg": "An error occured"})
                 except:
-                    pass
+                    break
     finally:
-         managerV.disconnect(username, group)
-         await mark_online(manager_voice, f"groups:voice:online:{group}", username, False)
+         managerV.disconnect(user)
+         if not managerV.is_connected(username, group):
+             await mark_online(manager_voice, f"groups:voice:online:{group}", username, False)
 
 @app.get("/voice/getmsgs/{group}")
 async def get_msgs(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -860,11 +856,7 @@ async def total_active(group : str, payload = Depends(verify_session_token)):
             return {"msg": "Success", "total": count}
         except:
             pass
-    count = 0
-    for user in managerV.connections:
-        if user[1] == group:
-            count += 1
     return {
         "msg" : "Success",
-        "total": count
+        "total": managerV.count(group)
     }

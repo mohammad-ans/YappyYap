@@ -68,19 +68,23 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
  
 
 class ConnectionManager:
+    # Keyed by socket so the same user can have several tabs open
     def __init__(self):
-        self.connections : dict[str, WebSocket] = {}
+        self.connections : dict[int, tuple[str, WebSocket]] = {}
     def add_connection(self, websocket : WebSocket, username : str):
-        self.connections[username] = websocket
-    def disconnect(self, username : str):
-      if username in self.connections:
-        del self.connections[username]
+        self.connections[id(websocket)] = (username, websocket)
+    def disconnect(self, websocket : WebSocket):
+        self.connections.pop(id(websocket), None)
+    def is_connected(self, username : str):
+        return any(user == username for user, _ in self.connections.values())
+    def count(self):
+        return len({user for user, _ in self.connections.values()})
     async def send_message(self, message : Msg_return):
-        try:
-            for user, ws in list(self.connections.items()):
+        for key, (user, ws) in list(self.connections.items()):
+            try:
                 await ws.send_text(message)
-        except:
-            self.connections.pop(user)
+            except:
+                self.connections.pop(key, None)
 
 manager_local = ConnectionManager()
 
@@ -148,11 +152,11 @@ async def websoc(user : WebSocket, db : Session = Depends(get_db), payload = Dep
                 try:
                     await user.send_text("An error occured")
                 except:
-                    pass
+                    break
     finally:
-        if username in manager_local.connections:
-            manager_local.disconnect(username)
-        await mark_online(manager, username, False)
+        manager_local.disconnect(user)
+        if not manager_local.is_connected(username):
+            await mark_online(manager, username, False)
 
 # async def send_messages(db : Session = Depends(get_db)):
 @app.get("/getchatmsgs/global-text")
@@ -177,5 +181,5 @@ async def total_active(payload = Depends(verify_session_token)):
             pass
     return {
         "msg" : "Success",
-        "total":len(manager_local.connections)
+        "total": manager_local.count()
     }

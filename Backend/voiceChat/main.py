@@ -3,7 +3,7 @@ from database import session, VoiceMsgs, Base, engine
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
 from sqlalchemy import select
-from tempfile import NamedTemporaryFile
+from tempfile import TemporaryDirectory
 from subprocess import run, PIPE
 from fastapi.responses import StreamingResponse
 import io
@@ -74,21 +74,47 @@ async def verify_session_token(session_token: Annotated[str | None, Cookie()] = 
      
 
 class Connection_Manager:
+    # Keyed by socket so the same user can have several tabs open
     def __init__(self):
-        self.active_connections : dict[str, WebSocket] = {}
+        self.active_connections : dict[int, tuple[str, WebSocket]] = {}
     def add_connection(self, websocket : WebSocket, username  : str):
-        self.active_connections[username] = websocket
-    def disconnect(self, username : str):
-         if username in self.active_connections:
-              del self.active_connections[username]
+        self.active_connections[id(websocket)] = (username, websocket)
+    def disconnect(self, websocket : WebSocket):
+        self.active_connections.pop(id(websocket), None)
+    def is_connected(self, username : str):
+        return any(user == username for user, _ in self.active_connections.values())
+    def count(self):
+        return len({user for user, _ in self.active_connections.values()})
     async def send_message(self, message):
-        try:
-            for user, ws in list(self.active_connections.items()):
+        for key, (user, ws) in list(self.active_connections.items()):
+            try:
                 await ws.send_bytes(message)
-        except:
-            self.active_connections.pop(user)
+            except:
+                self.active_connections.pop(key, None)
 
 manager_local = Connection_Manager()
+
+async def convert_voice(raw: bytes):
+    # Applies the voice filter; temp files are always cleaned up, returns None if ffmpeg fails
+    with TemporaryDirectory() as tmp:
+        input_path = os.path.join(tmp, "input.webm")
+        output_path = os.path.join(tmp, "output.webm")
+        with open(input_path, "wb") as f:
+            f.write(raw)
+        voice_convert = await asyncio.to_thread(run, [
+            'ffmpeg',
+            '-y',
+            '-i', input_path,
+            '-af', "asetrate=55000,atempo=0.85,afftfilt=real='hypot(re,im)*sin(65)',tremolo=f=50,adynamicsmooth=sensitivity=2.5:basefreq=10000",
+            output_path
+        ],
+        stdout=PIPE,
+        stderr=PIPE
+        )
+        if voice_convert.returncode != 0:
+            return None
+        with open(output_path, "rb") as f:
+            return f.read()
 async def on_event(data):
      await manager_local.send_message(base64.b64decode(data["payload_b64"]))
 
@@ -124,48 +150,32 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
                     except:
                         break
                     continue
-                if "bytes" in data:
+                if data["type"] == "websocket.disconnect":
+                    break
+                if data.get("bytes") is not None:
                     time = datetime.now(timezone.utc)
-                    with NamedTemporaryFile(suffix=".webm", delete=False) as temp_input:
-                        temp_input.write(data["bytes"])
-                        temp_input.flush()
-                        output_tmp = NamedTemporaryFile(suffix=".webm", delete=False)
-                        output_tmp.close()
-                        voice_convert = await asyncio.to_thread(run, [
-                            'ffmpeg',
-                            '-y',
-                            '-i', temp_input.name,
-                            '-af', "asetrate=55000,atempo=0.85,afftfilt=real='hypot(re,im)*sin(65)',tremolo=f=50,adynamicsmooth=sensitivity=2.5:basefreq=10000",
-                            output_tmp.name
-                        ],
-                        stdout=PIPE,
-                        stderr=PIPE
-                        )
-                        if voice_convert.returncode !=0:
-                            await user.send_text("An error occured")
-                            continue
-                    with open(output_tmp.name, "rb") as return_file:
-                        payload = return_file.read()
-                        expiry = VoiceMsgs.get_expiry(expiry_seconds)
-                        voicemsg = VoiceMsgs(
-                             username = senderName,
-                             msg = payload,
-                             time_sent = time,
-                             expiry = expiry
-                        )
-                        db.add(voicemsg)
-                        db.commit()
-                        username_payload = senderName.encode("utf-8")
-                        username_length = len(username_payload)
-                        time_sent = pack(">d", time.timestamp())
-                        expiry_time = pack(">d", expiry.timestamp())
+                    audio = await convert_voice(data["bytes"])
+                    if audio is None:
+                        await user.send_json({"type": "error", "msg": "Voice message could not be processed"})
+                        continue
+                    expiry = VoiceMsgs.get_expiry(expiry_seconds)
+                    voicemsg = VoiceMsgs(
+                         username = senderName,
+                         msg = audio,
+                         time_sent = time,
+                         expiry = expiry
+                    )
+                    db.add(voicemsg)
+                    db.commit()
+                    username_payload = senderName.encode("utf-8")
+                    username_length = len(username_payload)
+                    time_sent = pack(">d", time.timestamp())
+                    expiry_time = pack(">d", expiry.timestamp())
 
-                        complete_payload = time_sent + expiry_time + username_length.to_bytes(4, "big") + username_payload + payload
-                        await manager.publish({"payload_b64": base64.b64encode(complete_payload).decode("ascii")})
-                    os.remove(temp_input.name)
-                    os.remove(output_tmp.name)
+                    complete_payload = time_sent + expiry_time + username_length.to_bytes(4, "big") + username_payload + audio
+                    await manager.publish({"payload_b64": base64.b64encode(complete_payload).decode("ascii")})
 
-                elif "text" in data:
+                elif data.get("text") is not None:
                     js = loads(data["text"])
                     if js.get("type") == "pong":
                         continue
@@ -181,15 +191,14 @@ async def voice_conn(user: WebSocket, payload = Depends(verify_session_token), d
             except WebSocketDisconnect:
                 break
             except Exception as e:
-                os.remove(temp_input.name)
-                os.remove(output_tmp.name)
                 try:
-                    await user.send_text("An error occured")
+                    await user.send_json({"type": "error", "msg": "An error occured"})
                 except:
-                    pass
+                    break
     finally:
-         manager_local.disconnect(username)
-         await mark_online(manager, username, False)
+         manager_local.disconnect(user)
+         if not manager_local.is_connected(username):
+             await mark_online(manager, username, False)
 
 @app.get("/voice/getmsgs/global-voice")
 async def get_msgs(db : Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -230,5 +239,5 @@ async def total_active(payload = Depends(verify_session_token)):
             pass
     return {
         "msg" : "Success",
-        "total":len(manager_local.active_connections)
+        "total": manager_local.count()
     }
