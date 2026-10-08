@@ -73,12 +73,10 @@ export default function TypeArea(props) {
                             data = [];
                         }
                         catch (e) {
-                            console.log(e)
                         }
                     }
                 }
                 catch(e){
-                    console.log(e)
                 }
             }
             else{

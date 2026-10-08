@@ -42,15 +42,9 @@ export default function ChatSideBar(props) {
         props.setAddArea(true);
     }
     function goToRealms(e) {
+        // A realm's own page just redirects to its first channel, so going "back" means the realms list
         e.stopPropagation()
-        let a = "";
-        console.log(currGroup)
-        console.log(a ? realm.charAt(0) : realm.slice(1))
-        console.log(a ? realm.slice(1) : realm.charAt(0) )
-        if(realm && realm != currGroup)
-            navigate(`/chat/realms/${realm}`)
-        else
-            navigate("/chat/realms")
+        navigate("/chat/realms")
     }
     useEffect(()=>{
         async function search() {

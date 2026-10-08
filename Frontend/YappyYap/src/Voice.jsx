@@ -220,7 +220,6 @@ export default function Voice(props) {
             if (websocket.current.readyState == WebSocket.OPEN) {
                 websocket.current.close();
             }
-            console.warn("An error occured, websocket connection failed");
         }
         }
         connect();

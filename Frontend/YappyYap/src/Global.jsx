@@ -106,7 +106,6 @@ export default function Global(props) {
                     if(err.status == 403)
                         navigate("/signin")
                 }
-                console.warn("Connection to server failed")
             }
         }
         const interval1 = setInterval(getMessages, 20000)
@@ -166,14 +165,12 @@ export default function Global(props) {
                     }
                 }
                 catch (error) {
-                    console.warn("Error occured in the message");
                 }
             }
             ws.current.onerror = (e) => {
                 if (ws.current && ws.current.readyState == WebSocket.OPEN) {
                     ws.current.close();
                 }
-                console.warn("An error occured");
             }
         }
         connect();

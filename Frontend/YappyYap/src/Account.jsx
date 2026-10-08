@@ -27,7 +27,6 @@ export default function Account() {
             catch(e){
                 setError("Credentials Loading Failed. Login Expired")
                 setTrigger(t => !t);
-                console.log(e)
             }
         }
         getUserDetails();
@@ -90,7 +89,6 @@ export default function Account() {
             }));
         }
         catch(e){
-            console.log(e)
         }
     }
     return(

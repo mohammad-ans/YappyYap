@@ -31,7 +31,6 @@ export default function Deployments() {
                 return;
             }
             const deployment = deployments[0];
-            console.log(deployment)
             setData({
                 "msg" : "Good",
                 "Status" : `${deployment.readyState}`,
