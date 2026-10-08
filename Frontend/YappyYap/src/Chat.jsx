@@ -300,13 +300,14 @@ export default function Chat(props) {
                     <div className="instructions">
                         <button className="instruction-cross" onClick={removeInstructionsHeader}>X</button>
                         <ul>
-                            <li><span className="red-imp">Note:</span> The options feature for different text styles is under development and rn only shows animation.</li>
-                            <li>There is an anonymity feature to even hide your current name.</li>
-                            <li>Permanent users get 30 min login sessions while guest 5 minutes.</li>
-                            <li>You will have to sign in again after this time period for true anonymity.</li>
-                            <li>The message gets deleted after the n seconds specified.</li>
-                            <li>Filters are applied on voice so that no one can recognize you.</li>
-                            <li>We really advise to take a look at these detailed features <a href="https://github.com/mohammad-ans/YappyYap/blob/main/README.md" target="_blank">Learn more</a></li>
+                            <li><span className="red-imp">Note:</span> The text style options (B, I, S) are still under development and rn only show an animation.</li>
+                            <li>Realms are like separate spaces with groups inside. Global is open for everyone, other realms you join or get invited to.</li>
+                            <li>Turn on anonymity and your messages go out under a random name instead of yours.</li>
+                            <li>Every message gets deleted after the seconds you pick, from the chat and from our database too.</li>
+                            <li>Filters are applied on voice so that no one can recognize you. Voice is still in beta so it can be a bit slow.</li>
+                            <li>In DMs, with Start Duration on the timer starts right away, with it off it starts once the other person comes online.</li>
+                            <li>Permanent users get 30 min login sessions while guests get 5 minutes, after that you sign in again for true anonymity.</li>
+                            <li>We really advise to take a look at these detailed features <a href="https://github.com/mohammad-ans/YappyYap/blob/main/readme.md" target="_blank">Learn more</a></li>
                         </ul>
                         <div className="default-theme-set">
                             <p>Select default theme</p>
