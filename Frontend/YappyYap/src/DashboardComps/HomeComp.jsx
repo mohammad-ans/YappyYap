@@ -5,6 +5,7 @@ import useAxios from "../../hooks/useAxios";
 import useChatAuth from "../../hooks/useChatAuth";
 import useHomeComps from "../../hooks/useHomeComps";
 import Delete from "./../assets/Delete"
+import { DASHBOARD_URL } from "../config";
 export default function HomeComp() {
     const [heading, setHeading] = useState("");
     const [content, setContent] = useState("");
@@ -19,7 +20,7 @@ export default function HomeComp() {
             payload.append("file", file_ref.current.files[0]);
             payload.append("heading", heading);
             payload.append("content", content);
-            const response = await axios.post("https://dashboard.yappyyap.xyz/homecomps", payload);
+            const response = await axios.post(`${DASHBOARD_URL}/homecomps`, payload);
             setError(response.data.msg);
             setTrigger(t => !t);
             setCompsCheck(c => !c);
@@ -32,7 +33,7 @@ export default function HomeComp() {
     async function deleteComp(e) {
         const data = e.currentTarget.dataset.key;
         try{
-            const response = await axios.post("https://dashboard.yappyyap.xyz/delete/homecomps", {
+            const response = await axios.post(`${DASHBOARD_URL}/delete/homecomps`, {
                 heading : data
             });
             setError(response.data.msg)

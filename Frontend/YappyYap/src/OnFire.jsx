@@ -2,13 +2,14 @@ import useAxios from "../hooks/useAxios";
 import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import { takeNext } from "./authRedirect";
+import { AUTH_URL } from "./config";
 export default function Onfire(props) {
     const {setError, setLogged, setUsername, setTrigger} = useChatAuth();    
     const navigate = useNavigate();
     const axios = useAxios()
     async function guestLogin() {
         try{
-            const response = await axios.get("https://auth.yappyyap.xyz/guestlogin");
+            const response = await axios.get(`${AUTH_URL}/guestlogin`);
             if (response.data.msg == "Success"){
                 setError("Successfuly Logged In");
                 setUsername(response.data.username);

@@ -1,5 +1,6 @@
 import { useContext, createContext, useState, useEffect } from "react";
 import useAxios from "./useAxios";
+import { AUTH_URL } from "../src/config";
 const DashboardAuth = createContext();
 export default function useDashAuth(){
     return useContext(DashboardAuth)
@@ -11,7 +12,7 @@ export function DashboardAuthProvider({children}){
         async function adminCheck() {
             try{
                 const axios = useAxios();
-                const response = await axios.get("http://localhost:8001" + "/admincheck");
+                const response = await axios.get(`${AUTH_URL}` + "/admincheck");
                 // const response = await axios.get("https://auth.yappyyap.xyz/admincheck");
                 if (response.data.msg == "Success") {
                     setIsAdmin(true);

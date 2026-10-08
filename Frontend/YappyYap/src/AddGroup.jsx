@@ -4,6 +4,7 @@ import "./AddGroup.css"
 import useChatAuth from "../hooks/useChatAuth";
 import { ChatContext } from "./ChatContext";
 import { useNavigate } from "react-router-dom";
+import { GROUPS_URL } from "./config";
 export default function AddGroup(props){
     const [name, setName] = useState("");
     const [grpType, setGrpType] = useState("text");
@@ -22,7 +23,7 @@ export default function AddGroup(props){
     async function addGroup(e) {
         e.preventDefault();
         try{
-            const response = await axios.post(`http://localhost:8004/realms/${props.realm}/groups`, {
+            const response = await axios.post(`${GROUPS_URL}/realms/${props.realm}/groups`, {
             // const response = await axios.post("https://groups.yappyyap.xyz/addgroup", {
                 name : name,
                 description: description,

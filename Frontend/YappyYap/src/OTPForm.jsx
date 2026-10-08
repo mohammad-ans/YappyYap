@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import useChatAuth from "../hooks/useChatAuth";
 import "./otpform.css"
 import { clearOtpEmail, getOtpEmail, takeNext } from "./authRedirect";
+import { AUTH_URL } from "./config";
 export default function OTPForm(props) {
     // props.email is lost on refresh, the copy in sessionStorage is not
     const email = props.email || getOtpEmail();
@@ -19,7 +20,7 @@ export default function OTPForm(props) {
         const axios = useAxios();
         try {
             // const response = await axios.post(`http://localhost:8001${props.link}`, {
-            const response = await axios.post(`https://auth.yappyyap.xyz${props.link}`, {
+            const response = await axios.post(`${AUTH_URL}${props.link}`, {
                 email: email,
                 otp: otp
             })

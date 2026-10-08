@@ -3,6 +3,7 @@ import useChatAuth from "../hooks/useChatAuth"
 import "./RealmSettings.css"
 import axios from "axios";
 import { ChatContext } from "./ChatContext";
+import { GROUPS_URL } from "./config";
 export default function RealmSettings(props) {
     const {username} = useChatAuth()
     const {ws, setRealmDetails} = useContext(ChatContext)
@@ -27,8 +28,8 @@ export default function RealmSettings(props) {
     async function load() {
         setLoading(true)
         try{
-            const details = await axios.get(`http://localhost:8004/realms/${props.realm}`)
-            const members = await axios.get(`http://localhost:8004/realms/${props.realm}/members`)
+            const details = await axios.get(`${GROUPS_URL}/realms/${props.realm}`)
+            const members = await axios.get(`${GROUPS_URL}/realms/${props.realm}/members`)
             setMembers(members.data)
             setDetails(details.data)
             setName(details.data.name)
@@ -49,7 +50,7 @@ export default function RealmSettings(props) {
     }
     async function loadInvites() {
         try{
-            const res = await axios.get(`http://localhost:8004/realms/${props.realm}/invites`)
+            const res = await axios.get(`${GROUPS_URL}/realms/${props.realm}/invites`)
             setInvites(res.data)
         }
         catch(err) {
@@ -61,7 +62,7 @@ export default function RealmSettings(props) {
     }
     async function cancelInvite(token, invitedUser) {
         try{
-            await axios.post(`http://localhost:8004/invites/${token}/cancel`)
+            await axios.post(`${GROUPS_URL}/invites/${token}/cancel`)
             setInvites(pre => pre.filter(invite => invite.token != token))
             showStatus(`Cancelled invite for ${invitedUser}`, false)
         }
@@ -92,7 +93,7 @@ export default function RealmSettings(props) {
         if(!user)
             return
         try{
-            await axios.post(`http://localhost:8004/realms/${props.realm}/members/add`, {
+            await axios.post(`${GROUPS_URL}/realms/${props.realm}/members/add`, {
                 username: user
             })
             showStatus(`Added ${user} to the realm`, false)
@@ -114,7 +115,7 @@ export default function RealmSettings(props) {
         if(!user)
             return
         try{
-            const res = await axios.post(`http://localhost:8004/invites/realm/${props.realm}`, {
+            const res = await axios.post(`${GROUPS_URL}/invites/realm/${props.realm}`, {
                 username: user
             })
             const link = `${window.location.origin}/invite/${res.data.token}`
@@ -134,7 +135,7 @@ export default function RealmSettings(props) {
 
     async function delRealm() {
         try{
-            await axios.delete(`http://localhost:8004/realms/${props.realm}`)
+            await axios.delete(`${GROUPS_URL}/realms/${props.realm}`)
             props.onDelete()
         }
         catch(err) {
@@ -150,7 +151,7 @@ export default function RealmSettings(props) {
 
     async function leaveRealm() {
         try{
-            await axios.post(`http://localhost:8004/realms/${props.realm}/leave`)
+            await axios.post(`${GROUPS_URL}/realms/${props.realm}/leave`)
             props.onDelete()
         }
         catch(err) {
@@ -166,7 +167,7 @@ export default function RealmSettings(props) {
 
     async function promote(name) {
         try{
-            await axios.patch(`http://localhost:8004/realms/${props.realm}/members`, {name: name, role: "admin"})
+            await axios.patch(`${GROUPS_URL}/realms/${props.realm}/members`, {name: name, role: "admin"})
             setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "admin"}: mem))
             showStatus(`Promoted ${name} to admin`, false)
         }
@@ -180,7 +181,7 @@ export default function RealmSettings(props) {
 
     async function demote(name) {
         try{
-            await axios.patch(`http://localhost:8004/realms/${props.realm}/members`, {name: name, role: "member"})
+            await axios.patch(`${GROUPS_URL}/realms/${props.realm}/members`, {name: name, role: "member"})
             setMembers(pre => pre.map(mem => mem.username == name ? {...mem, role: "member"}: mem))
             showStatus(`Demoted ${name} to member`, false)
         }
@@ -196,7 +197,7 @@ export default function RealmSettings(props) {
         if(!transferUser)
             return
         try{
-            await axios.post(`http://localhost:8004/realms/${props.realm}/make-owner`, {
+            await axios.post(`${GROUPS_URL}/realms/${props.realm}/make-owner`, {
                 username: transferUser
             })
             showStatus(`${transferUser} is now the new owner`, false)
@@ -218,7 +219,7 @@ export default function RealmSettings(props) {
         if(!removeUser)
             return
         try{
-            await axios.post(`http://localhost:8004/realms/${props.realm}/members/${removeUser}/remove`)
+            await axios.post(`${GROUPS_URL}/realms/${props.realm}/members/${removeUser}/remove`)
             setMembers(pre => pre.filter(mem => mem.username != removeUser))
             setRealmDetails(pre => {return {...pre, "members": pre["members"] - 1}})
             showStatus(`Removed user ${removeUser} from realm`, false)
@@ -256,7 +257,7 @@ export default function RealmSettings(props) {
 
     async function updateRealm(data) {
         try{
-            await axios.patch(`http://localhost:8004/realms/${props.realm}`, data)
+            await axios.patch(`${GROUPS_URL}/realms/${props.realm}`, data)
             showStatus(`Updated ${Object.keys(data).join(" and ")} of realm successfully`, false)
             setRealmDetails(pre => {return {...pre, ...data}})
         }

@@ -1,9 +1,9 @@
 import axios from "axios"
+import { API_URL } from "../src/config"
 
 export default function useAxios(){
     return axios.create({
-        // baseURL : "http://localhost:8000/",
-        baseURL: "https://api.yappyyap.online",
+        baseURL: API_URL,
         withCredentials: true,
     })
 }

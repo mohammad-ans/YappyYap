@@ -5,6 +5,7 @@ import { ChatContext } from "../ChatContext";
 import useAxios from "../../hooks/useAxios";
 import useChatAuth from "../../hooks/useChatAuth";
 import RealmSettings from "../RealmSettings";
+import { AUTH_URL, GROUPS_URL } from "../config";
 
 export default function ChatSideBar(props) {
     const [query, setQuery] = useState("");
@@ -55,20 +56,13 @@ export default function ChatSideBar(props) {
         async function search() {
             try{
                 let response;
-                if(query == ""){
+                // Group search filters the realm's own group list (groupResults), only user search hits the server
+                if(query == "" || searchBy){
                     setSearchResults([]);
                     return;
                 }
-                if(searchBy){
-                    response = await axios.get(`http://localhost:8004/groups/${query}`)
-                    // response = await axios.get(`https://groups.yappyyap.xyz/groups/${query}`)
-                    setSearchResults(response.data)
-                }
-                else{
-                    response = await axios.get(`http://localhost:8001/search/obj/${query}`)
-                    // response = await axios.get(`https://auth.yappyyap.xyz/search/obj/${query}`)
-                    setSearchResults(response.data)
-                }
+                response = await axios.get(`${AUTH_URL}/search/obj/${query}`)
+                setSearchResults(response.data)
             }
             catch(err){
     
@@ -97,7 +91,7 @@ export default function ChatSideBar(props) {
         e.stopPropagation()
         e.preventDefault()
         try{
-            await axios.post(`http://localhost:8004/realms/${realm}/groups/${el.groupId}/join`)
+            await axios.post(`${GROUPS_URL}/realms/${realm}/groups/${el.groupId}/join`)
         }
         catch(err) {
             if(err.response && err.response.status !== 409) {
