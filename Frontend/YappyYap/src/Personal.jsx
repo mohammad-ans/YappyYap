@@ -65,22 +65,12 @@ export default function Personal(props){
                         expiry = new Date(time.getTime() + element.duration * 1000);
                     
                     if (expiry - new Date() > 500){
-                        let tempMsg;
-                        if(element.group) {
-                            tempMsg = `<button class="group-invite" data-group="${element.group}">Join ${element.group}-realm</button>`
-                            
-                        }
-                        else{
-                            tempMsg = `<p class="chat-message">${element.msg}</p>`
-                        }
+                        let tempMsg = `<p class="chat-message">${element.msg}</p>`
                         time = time.toLocaleTimeString([], {hour : "2-digit", minute : "2-digit"})
                         let new_element = document.createElement("li");
                         expiry = expiry.toString().replace(/\s+/g, "-").replace(/[:+().]/g, "-");
                         new_element.classList.add(expiry, "chat-message-block")
                         new_element.innerHTML = (`<img src=${default_image} alt="user" class="chat-message-img" /><span><span class="chat-message-header"><h3 class="username">${tempUsername}</h3> <p class="timestamp">${time}</p></span>${tempMsg}</span>`)
-                        const tempElement = new_element.querySelector(".group-invite");
-                        if(tempElement)
-                            tempElement.addEventListener("click", joinGroup)
                         parent_element.append(new_element);
                     }
                 });
@@ -108,25 +98,6 @@ export default function Personal(props){
             setDms(getDms());
         }
     }, [])
-    async function joinGroup(e){
-        let group = e.target.dataset.group;
-        try{
-            // const response = await axios.get(`https://groups.yappyyap.xyz/addmem/${group}`);
-            const response = await axios.get(`http://localhost:8004/addmem/${group}`);
-            e.target.innerText = "Joined";
-            getGroups();
-        }
-        catch(err) {
-            if(err.response.status == 406){
-                setError(err.response.data.detail[0].msg);
-                setTrigger(pre => !pre);
-            }
-            else{
-                e.target.innerText = "Could not join";
-            }
-        }
-    }
-    // const [msgs, setMsgs] = useState(Array());
     function optionsAnimation() {
         if (optionsOpen) {
             gsap.to(".chat-message-style-buttons", {

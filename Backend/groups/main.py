@@ -139,12 +139,16 @@ def invite_realm(id: str, data: database.InviteCreate, db: Session = Depends(get
 @app.post("/realms/{id}/make-owner")
 def make_owner(id: str, data: database.Username, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
+    realm = db.execute(select(database.Realm).where(database.Realm.id == id)).scalar_one_or_none()
+    if not realm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Realm not found"}])
     owner = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & (database.RMembers.role == "owner"))).scalar_one_or_none()
     if not owner:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Only realm owner can change ownership of realm"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == data.username))).scalar_one_or_none()
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "User must be a member of realm first to make them owner"}])
+    realm.owner = member.username
     owner.role = "admin"
     member.role = "owner"
     db.commit()
@@ -248,7 +252,7 @@ def invite_user(id: str, group: str, data: database.InviteCreate, db: Session = 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     grp_member = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username))).scalar_one_or_none()
-    if not (member and (member.role != "admin" or member.role != "admin")) and not (grp_member and (grp_member.role != "admin" or grp_member.role != "owner")):
+    if not (member and member.role in ("admin", "admin")) or not (grp_member and grp_member.role in ("admin", "owner")):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="You are not allowed to invite users")
     invited = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == data.username))).scalar_one_or_none()
     if invited:
@@ -500,42 +504,23 @@ def return_groups(query : str, db : Session = Depends(get_db), payload = Depends
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])
 
-@app.delete("/delete/{groupname}")
-def del_group(groupname : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
+@app.delete("/realms/{id}/groups/{group}")
+def del_group(id : str, group: str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
-    owner = db.execute(select(database.Members).where((database.Members.grpName == groupname) & (database.Members.name == username) & (database.Members.role == "admin"))).scalar_one_or_none()
-    if not owner:
+    realm_owner = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username) & (database.RMembers.role.in_("admin", "owner"))))
+    owner = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == username) & (database.Members.role.in_("admin", "owner")))).scalar_one_or_none()
+    if not owner and not realm_owner:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You are not allowed to delete the group"}])
     try:
-        db.execute(delete(database.Members).where(database.Members.grpName == groupname))
-        exists = db.execute(select(database.Group).where(database.Group.name == groupname)).scalars().one_or_none()
-        if not exists:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg" : "Group does not exists"}])
-        db.delete(exists)
+        db.execute(delete(database.grpMsgsT).where(database.grpMsgsT.grpId == group))
+        db.execute(delete(database.grpsMsgsV).where(database.grpsMsgsV.grpId == group))
+        db.execute(delete(database.Members).where(database.Members.grpId == group))
+        db.execute(delete(database.Invite).where(database.Invite.grpId == group))
+        db.execute(delete(database.Group).where(database.Group.id == group))
         db.commit()
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Group could not be deleted"}])
     return {"msg" : "Success"}
-
-@app.get("/addmem/{group}")
-def add_mem(group : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
-    username = payload["username"]
-    try:
-        already_exists = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpName == group))).scalar_one_or_none()
-        if already_exists:
-            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg" : "Already joined"}])
-
-        member = database.Members(
-            name = username,
-            grpName = group
-        )
-        db.add(member)
-        db.commit()
-    except HTTPException:
-        raise
-    except:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "User could not be added"}])
-
     
 @app.post("/realms/{id}/groups/{group}/members/remove")
 def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
@@ -545,12 +530,12 @@ def remove_mem(id: str, group: str, data: database.RemoveMember, db: Session = D
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg": "Channel not found"}])
     member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
     grp_member = db.execute(select(database.Members).where((database.Members.name == username) & (database.Members.grpId == group))).scalar_one_or_none()
-    if not (member and (member.role == "admin" or member.role == "owner")) and not (grp_member and (grp_member.role == "admin" or grp_member.role == "owner")):
+    if not (member and (member.role == "admin" or member.role == "owner")) or not (grp_member and (grp_member.role == "admin" or grp_member.role == "owner")):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You are not allowed to remove members"}])
     user_del = db.execute(select(database.Members).where((database.Members.grpId == group) & (database.Members.name == data.username))).scalar_one_or_none()
     if not user_del:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=[{"msg" : "User not found"}])
-    if user_del.role == "admin" and (member.role == "admin" or grp_member.role == "admin"):
+    if user_del.role == "admin" and ((member and member.role == "admin") or (grp_member and grp_member.role == "admin")):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Admin cannot remove an admin"}])
     if user_del.role == "owner":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "You cannot remove owner"}])
