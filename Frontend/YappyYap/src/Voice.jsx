@@ -146,10 +146,13 @@ export default function Voice(props) {
                 webreconInterval = 2000
                 getmsgs()
             }
-            websocket.current.onclose = () => {
+            websocket.current.onclose = (e) => {
                 if(e.code == 4403){
+                    // Not a member: stop reconnecting and polling, they need to join first
+                    clearInterval(interval1)
                     setError("You are not a member of this group")
                     setTrigger(pre => !pre)
+                    return
                 }
                 if (isMounted)
                     reconnect();
@@ -160,6 +163,10 @@ export default function Voice(props) {
                             const msg = JSON.parse(e.data)
                             if(msg.type == "ping")
                                 websocket.current.send(JSON.stringify({type: "pong"}))
+                            else if(msg.type == "error"){
+                                setError(msg.msg)
+                                setTrigger(t => !t)
+                            }
                             return
                         }
                         const msg = document.createElement("li");

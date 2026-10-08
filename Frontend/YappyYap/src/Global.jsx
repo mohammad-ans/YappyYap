@@ -120,10 +120,13 @@ export default function Global(props) {
                 webreconInterval = 2000
                 getMessages()
             }
-            ws.current.onclose = () => {
+            ws.current.onclose = (e) => {
                 if(e.code == 4403){
+                    // Not a member: stop reconnecting and polling, they need to join first
+                    clearInterval(interval1)
                     setError("You are not a member of this group")
                     setTrigger(pre => !pre)
+                    return
                 }
                 if (isMounted)
                     reconnect();

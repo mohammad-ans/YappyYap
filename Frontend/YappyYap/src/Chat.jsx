@@ -289,7 +289,7 @@ export default function Chat(props) {
         catch { }
     }
     function getGroups() {
-        setCurrentGroup(realm)
+        return setCurrentGroup(realm)
     }
     return (
         <ChatContext.Provider value={{ realmType, liveCount, groups, setRealm, navOpen, setNavopen, setAddArea, realm, theme, setTheme, dmSendOption, tempDM, getDms, setGroups, setDms, user, realmRef, dmMsgs, ws, getGroups, setRealm, realmDetails, setRealmDetails,setCurrentGroup, setCurrGroup, currGroup, currGroupName, setCurrGroupName}}>
@@ -343,8 +343,7 @@ function RealmPage(){
     const {realm} = useParams()
     const navigate = useNavigate()
     const {setCurrentGroup, setRealm, realmRef, setCurrGroup, setCurrGroupName} = useContext(ChatContext)
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState("")
+    const [loading, setLoading] = useState(true)
     useEffect(()=> {
         async function move() {
             setLoading(true)
@@ -354,10 +353,11 @@ function RealmPage(){
             setCurrGroupName("")
             if (grps && grps.length > 0) {
                 navigate(`/chat/realms/${realm}/c/${grps[0].name}`, {replace: true})
+                return
             }
+            setLoading(false)
         }
         move()
-        setLoading(false)
     }, [realm])
     if(loading)
         return(
@@ -380,10 +380,17 @@ function ChannelRoute() {
     useEffect(()=> {
         async function setGrp() {
             let list = groups["Groups"]
+            let refetched = false
             if(realm !== realmP) {
                 list = await setCurrentGroup(realmP)
+                refetched = true
             }
-            const found = (list || []).find(grp => grp.name === groupKey)
+            let found = (list || []).find(grp => grp.name === groupKey)
+            if (!found && !refetched) {
+                // The cached list can be stale, e.g. right after a group was created
+                list = await setCurrentGroup(realmP)
+                found = (list || []).find(grp => grp.name === groupKey)
+            }
             if (found){
                 setGroup(found)
                 setFound(false)

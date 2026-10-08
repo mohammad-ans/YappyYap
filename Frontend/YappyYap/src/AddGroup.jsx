@@ -35,7 +35,7 @@ export default function AddGroup(props){
                 grpType : grpType,
                 inviteType : inviteType
             })
-            getGroups();
+            await getGroups();
             setError("Successfully Done");
             props.setAddArea(false)
             navigate(`/chat/realms/${props.realm}/c/${response.data.id}`)
