@@ -34,7 +34,7 @@ class Group(Base):
     __tablename__ = "groups"
     realm_id = Column(String , ForeignKey("realms.id")) 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String, unique=True)
+    name = Column(String)
     owner = Column(String)
     liveCount = Column(Boolean, default=True)
     anyonymity = Column(Boolean, default=False)

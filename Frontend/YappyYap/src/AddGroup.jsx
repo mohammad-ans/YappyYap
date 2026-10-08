@@ -20,7 +20,7 @@ export default function AddGroup(props){
     async function addGroup(e) {
         e.preventDefault();
         try{
-            const response = await axios.post("http://localhost:8004/addgroup", {
+            const response = await axios.post(`http://localhost:8004/realms/${props.realm}/groups`, {
             // const response = await axios.post("https://groups.yappyyap.xyz/addgroup", {
                 name : name,
                 description: description,
@@ -56,7 +56,7 @@ export default function AddGroup(props){
                 <h2>Add your Realm</h2>
                 <input type="text" placeholder="Enter a unique Group Name" value={name} onChange={e => setName(e.target.value)} required/>
                 <input type="text" placeholder="Enter group description" value={description} onChange={e=> setDescription(e.target.value)}/>
-                <input type="number" value={grpSize} min={1} max={100} placeholder="Maximum size of Group" onChange={e => setSize(e.target.value)} required/>
+                <input type="number" value={grpSize} min={2} max={100} placeholder="Maximum size of Group" onChange={e => setSize(e.target.value)} required/>
                 <input type="number" value={minDuration} min={10} max={250} placeholder="Minimum Duration of message(10, 250)" onChange={e => setMinDuration(e.target.value)} required/>
                 <input type="number" value={maxDuration} min={minDuration ? Number(minDuration) + 10 : 50} max={300} placeholder="Maximum duration of message(minDuration + 10, 240)" onChange={e => setMaxDuration(e.target.value)} required/>
                 <select value={grpType} onChange={e => setGrpType(e.target.value)}>

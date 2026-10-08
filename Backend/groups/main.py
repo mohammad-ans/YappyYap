@@ -500,44 +500,6 @@ def return_groups(query : str, db : Session = Depends(get_db), payload = Depends
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Could not Fetch groups"}])
 
-@app.post("/addgroup")
-def add_group(grpData : database.GrpAdd, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
-    username = payload["username"]
-    if grpData.minDuration >= grpData.maxDuration:
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg": "min duration must be less than max duration"}])
-    try:
-        already_exists = db.execute(select(database.Group.name, database.Group.owner).where((database.Group.name == grpData.name) | (database.Group.owner == username ))).mappings().one_or_none()
-        if already_exists:
-            if already_exists.name == grpData.name:
-                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg" : "A realm with this name already exists."}])
-            else:
-                raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=[{"msg" : f"You already own one realm {already_exists.name}"}])
-        db_data = database.Group(
-            name = grpData.name,
-            description = grpData.description,
-            owner = grpData.owner,
-            liveCount = grpData.liveCount,
-            anyonymity = grpData.anonymity,
-            maxGrpSize = grpData.maxGrpSize,
-            maxDuration = grpData.maxDuration,
-            minDuration = grpData.minDuration,
-            grpType = grpData.grpType,
-            inviteType = grpData.inviteType
-        )
-        db.add(db_data)
-        member_data = database.Members(
-            name = grpData.owner,
-            grpName = grpData.name,
-            role = "owner"
-        )
-        db.add(member_data)
-        db.commit()
-        return {"msg" : "Success"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg" : "Group Not Added"}])
-    
 @app.delete("/delete/{groupname}")
 def del_group(groupname : str, db : Session = Depends(get_db), payload = Depends(verify_session_token)):
     username = payload["username"]
@@ -627,6 +589,27 @@ def update_group(id: str, group: str, data: database.GrpUpdate, db: Session = De
     except:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=[{"msg": "Could not update channel"}])
     return {"msg": "Success", "details": "Realm updated"}
+
+@app.post("/realms/{id}/groups")
+def create_grp(id: str, data: database.GrpAdd, db: Session = Depends(get_db), payload = Depends(verify_session_token)):
+    username = payload["username"]
+    member = db.execute(select(database.RMembers).where((database.RMembers.realm_id == id) & (database.RMembers.username == username))).scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "You need to be member of realm to create group in it"}])
+    if data.minDuration > data.maxDuration or data.minDuration <= 0:
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid values of max and min durations"}])
+    if data.inviteType not in ("all", "invite"):
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid invite type"}])
+    if data.grpType not in ("text", "voice"):
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Invalid group type"}])
+    if data.maxGrpSize <= 1 :
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=[{"msg": "Group size value must be between 2 and 100"}])
+    grp = database.Group(realm_id=id, name=data.name, owner=username, liveCount=data.liveCount, anyonymity=data.anonymity, maxGrpSize=data.maxGrpSize, maxDuration=data.maxDuration, minDuration=data.minDuration, grpType=data.grpType, inviteType=data.inviteType, description=data.description or "")
+    db.add(grp)
+    db.flush()
+    db.add(database.Members(name=username, grpId=grp.id, role="owner"))
+    db.commit()
+    return {"msg": "Success", "id": grp.id}
 
 class ConnectionManager:
     def __init__(self):
