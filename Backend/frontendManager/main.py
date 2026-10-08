@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, Request, Form, Depends
+from fastapi import FastAPI, UploadFile, Request, Form, Depends, Cookie, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Annotated
@@ -6,10 +6,40 @@ from database import Base, Home_comp, About_comp, session, engine
 from sqlalchemy import select
 from io import BytesIO
 from pydantic import BaseModel
-import zipfile
+import zipfile, os, jwt
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
+load_dotenv()
 app = FastAPI()
+
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
+ALGORITHM = "HS256"
+
+async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
+    payload = {"username" : "NA", "type" : "admin", "exp" : 0}
+    return payload
+
+# async def verify_session_token(session_token: Annotated[str | None, Cookie()] = None):
+#     if not session_token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "No session found."}])
+#     try:
+#         payload = jwt.decode(session_token, PRIVATE_KEY, ALGORITHM)
+#         if not payload:
+#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Payload not found"}])
+#         if not payload["username"]:
+#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Username Not found"}])
+#     except jwt.InvalidTokenError:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg": "Invalid Token"}])
+#     except jwt.ExpiredSignatureError:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=[{"msg" : "Expired Token"}])
+#     return payload
+
+async def require_admin(payload = Depends(verify_session_token)):
+    # Only admins may change what the home and about pages show
+    if payload.get("type") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=[{"msg": "Only admins can change page content"}])
+    return payload
 
 origins=[
     "http://localhost:5173",
@@ -38,7 +68,7 @@ class AboutCompData(BaseModel):
     content : str
 
 @app.post("/aboutcomps")
-async def about_comps(data : AboutCompData, db : Session = Depends(get_db)):
+async def about_comps(data : AboutCompData, db : Session = Depends(get_db), admin = Depends(require_admin)):
     already_exists = db.execute(select(About_comp).where(About_comp.content == data.content)).scalar_one_or_none()
     if already_exists:
         return {
@@ -60,7 +90,7 @@ async def get_about_comps(db : Session = Depends(get_db)):
     return {"msg" : "Success", "content" : payload}
 
 @app.post("/delete/aboutcomps")
-async def del_about_comps(data : AboutCompData, db : Session = Depends(get_db)):
+async def del_about_comps(data : AboutCompData, db : Session = Depends(get_db), admin = Depends(require_admin)):
     data_tuple = db.execute(select(About_comp).where(About_comp.content == data.content)).scalar_one_or_none()
     if data_tuple:
         db.delete(data_tuple)
@@ -69,7 +99,7 @@ async def del_about_comps(data : AboutCompData, db : Session = Depends(get_db)):
     return {"msg" : "No row detected"}
 
 @app.post("/homecomps")
-async def home_comps(heading : Annotated[str,Form()], content : Annotated[str, Form()], file : Annotated[UploadFile, Form()], db : Session = Depends(get_db)):
+async def home_comps(heading : Annotated[str,Form()], content : Annotated[str, Form()], file : Annotated[UploadFile, Form()], db : Session = Depends(get_db), admin = Depends(require_admin)):
     bytes_data = await file.read()
     already_exists = db.execute(select(Home_comp).where(Home_comp.heading == heading)).scalar_one_or_none()
     if already_exists:
@@ -89,7 +119,7 @@ async def home_comps(heading : Annotated[str,Form()], content : Annotated[str, F
     return {"msg" : "Success"}
 
 @app.post("/delete/homecomps")
-async def del_home_comp(data : Criteria,db : Session = Depends(get_db)):
+async def del_home_comp(data : Criteria,db : Session = Depends(get_db), admin = Depends(require_admin)):
     data_tuple = db.execute(select(Home_comp).where(Home_comp.heading == data.heading)).scalar_one_or_none()
     if data_tuple:
         db.delete(data_tuple)

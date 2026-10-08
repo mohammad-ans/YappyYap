@@ -6,13 +6,14 @@ export default function Deployments() {
     const [loading, setLoading] = useState(false);
     const [option, setOption] = useState("recent");
     const [data, setData] = useState({"msg" : "Loading..."});
-    async function getLatestDeployment() {
+    // The option is passed in because state set in the same click is not updated yet
+    async function getLatestDeployment(selected = option) {
         setLoading(true);
         const parameters = {
             projectId: "yappy-yap",
             limit: 1,
         }
-        if (option === "production") {
+        if (selected === "production") {
             parameters["target"] = "production"
         }
         try {
@@ -70,8 +71,8 @@ export default function Deployments() {
                         </div>
                     ): (<p className="error-msg">{data.msg}</p>)}
                     <div className="dashboard-buttons">
-                        <button className="dashboard-buttons-one" onClick={ (e)=> {setOption("production"); setData({"msg" : "Loading..."}); getLatestDeployment(e)}} disabled={loading}>Current Deployment</button>
-                        <button className="dashboard-buttons-two" onClick={ (e)=> {setOption("recent"); setData({"msg" : "Loading..."}); getLatestDeployment(e)}} disabled={loading}>Latest Deployment</button>
+                        <button className="dashboard-buttons-one" onClick={ ()=> {setOption("production"); setData({"msg" : "Loading..."}); getLatestDeployment("production")}} disabled={loading}>Current Deployment</button>
+                        <button className="dashboard-buttons-two" onClick={ ()=> {setOption("recent"); setData({"msg" : "Loading..."}); getLatestDeployment("recent")}} disabled={loading}>Latest Deployment</button>
                     </div>
                 </div>
                 {/* <div className="railway dashboard-box">
