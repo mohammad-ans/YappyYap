@@ -12,6 +12,8 @@ import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import {ChatContext} from "./ChatContext";
 import { toWs } from "./config";
+import { checkSession } from "../hooks/useAxios";
+import { errMsg } from "./errMsg";
 export default function Voice(props) {
     const duration = useRef(0);
     const moveBarAnimation = useRef(new Map())
@@ -74,12 +76,24 @@ export default function Voice(props) {
         if (element)
             element.classList.add("current-realm")
         const axios = useAxios();
+        let lastWsMsgAt = 0
         async function getmsgs() {
+            if (!isMounted)
+                return
+            const started = Date.now()
             try{
                 // const response = await axios.get(`https://${props.url}/getmsgs/${props.realm["name"]}`, {
                 const response = await axios.get(`${props.url}/getmsgs/${props.realm["name"]}`, {
                     responseType : "arraybuffer"
                 })
+                // Rebuilding the list would cut off audio that is playing, so wait for the next poll
+                if ([...document.querySelectorAll("audio.audio-play")].some(a => !a.paused))
+                    return
+                if (lastWsMsgAt > started) {
+                    // A live message arrived while this request was in flight; rebuilding now would wipe it
+                    setTimeout(getmsgs, 1500)
+                    return
+                }
                 const zip = new Uint8Array(response.data)
                 const files = unzipSync(zip)
                 document.querySelector(".msgs").innerHTML = "";
@@ -124,7 +138,7 @@ export default function Voice(props) {
             }
             catch(err){
                 if((err.response) && (err.response.data)){
-                    setError(pre => err.response.data.detail[0].msg);
+                    setError(pre => errMsg(err));
                     setTrigger(t => !t);
                     if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
                         websocket.current.close();
@@ -155,8 +169,10 @@ export default function Voice(props) {
                     setTrigger(pre => !pre)
                     return
                 }
-                if (isMounted)
+                if (isMounted) {
+                    checkSession();
                     reconnect();
+                }
             }
             websocket.current.onmessage = (e) => {
                 try{
@@ -170,6 +186,7 @@ export default function Voice(props) {
                             }
                             return
                         }
+                        lastWsMsgAt = Date.now()
                         const msg = document.createElement("li");
                         // console.log(e)
                         const vw = new DataView(e.data);
@@ -205,7 +222,7 @@ export default function Voice(props) {
                     }
                 catch(err){
                     if(err.response && err.response.data) {
-                            setError(pre => err.response.data.detail[0].msg);
+                            setError(pre => errMsg(err));
                             setTrigger(t => !t);
                             if(websocket.current && websocket.current.readyState == WebSocket.OPEN)
                                 websocket.current.close();
@@ -234,8 +251,12 @@ export default function Voice(props) {
             clearInterval(interval1);
             isMounted = false;
             clearTimeout(reconnTimer)
-            websocket.current.onclose = null
-            websocket.current.close()
+            const s = websocket.current
+            s.onclose = null
+            if (s.readyState === WebSocket.OPEN)
+                s.close()
+            else if (s.readyState === WebSocket.CONNECTING)
+                s.onopen = () => s.close()
             if(element)
                 element.classList.remove("current-realm")
         }

@@ -14,6 +14,8 @@ import { ChatContext } from "./ChatContext"
 import AllRealmsPage from "./AllRealmsPage"
 import GroupSettings from "./Chat-Modules/GroupSettings"
 import { DM_URL, GROUPS_URL, TEXTCHAT_URL, VOICECHAT_URL, toWs } from "./config";
+import { checkSession } from "../hooks/useAxios";
+import { errMsg } from "./errMsg";
 
 export default function Chat(props) {
     const { username } = useChatAuth();
@@ -71,7 +73,7 @@ export default function Chat(props) {
         }
         catch(err){
             if (err.response && err.response.data) {
-                setError(pre => err.response.data.detail[0].msg)
+                setError(pre => errMsg(err))
                 setTrigger(t => !t)
             }
             return []
@@ -150,7 +152,7 @@ export default function Chat(props) {
         }
         catch (err) {
                 if (err.response && err.response.data) {
-                    setError(pre => err.response.data.detail[0].msg);
+                    setError(pre => errMsg(err));
                     setTrigger(t => !t);
                     if (ws.current && ws.current.readyState == WebSocket.OPEN)
                         ws.current.close();
@@ -191,6 +193,7 @@ export default function Chat(props) {
                 }
                 ws.current.onclose = () => {
                     if (isMounted) {
+                        checkSession();
                         reconnect();
                     }
 
@@ -238,7 +241,7 @@ export default function Chat(props) {
                     }
                     catch (err) {
                 if (err.response && err.response.data) {
-                    setError(pre => err.response.data.detail[0].msg);
+                    setError(pre => errMsg(err));
                     setTrigger(t => !t);
                     if (ws.current && ws.current.readyState == WebSocket.OPEN)
                         ws.current.close();
@@ -268,8 +271,12 @@ export default function Chat(props) {
         return () => {
             isMounted = false
             clearTimeout(reconnTimer)
-            ws.current.onclose = null
-            ws.current.close();
+            const s = ws.current
+            s.onclose = null
+            if (s.readyState === WebSocket.OPEN)
+                s.close()
+            else if (s.readyState === WebSocket.CONNECTING)
+                s.onopen = () => s.close()
         }
     }, [])
     function removeInstructionsHeader() {

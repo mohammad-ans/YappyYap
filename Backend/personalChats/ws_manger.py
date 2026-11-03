@@ -69,9 +69,15 @@ class RedisWs:
                 pass
 
     async def publish(self, payload: dict):
-        if self.redis is None:
-            return
+        if self.redis is not None:
+            try:
+                await self.redis.publish(self.grp, json.dumps(payload, default=str))
+                return
+            except Exception as e:
+                print(f"redis publish failed on {self.grp}, delivering locally: {e}")
+        # Redis is down or unreachable: still deliver to the sockets connected to this instance
+        # (round-tripped through json so on_event gets the same shape the listener would give it)
         try:
-            await self.redis.publish(self.grp, json.dumps(payload, default=str))
-        except:
+            await self.on_event(json.loads(json.dumps(payload, default=str)))
+        except Exception:
             pass

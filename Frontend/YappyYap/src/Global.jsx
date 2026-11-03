@@ -6,6 +6,8 @@ import useChatAuth from "../hooks/useChatAuth";
 import { useNavigate } from "react-router-dom";
 import {ChatContext} from "./ChatContext";
 import { toWs } from "./config";
+import { checkSession } from "../hooks/useAxios";
+import { errMsg } from "./errMsg";
 export default function Global(props) {
     const [msg, setMsg] = useState("");
     const textArea = useRef();
@@ -60,10 +62,19 @@ export default function Global(props) {
         if (element)
             element.classList.add("current-realm");
         const axios = useAxios()
+        let lastWsMsgAt = 0
         async function getMessages() {
+            if (!isMounted)
+                return
+            const started = Date.now()
             try {
                 // const messages = await axios.get(`https://${props.url}/getchatmsgs/${props.realm["name"]}`)
                 const messages = await axios.get(`${props.url}/getchatmsgs/${props.realm["name"]}`)
+                if (lastWsMsgAt > started) {
+                    // A live message arrived while this request was in flight; rebuilding now would wipe it
+                    setTimeout(getMessages, 1500)
+                    return
+                }
                 if (messages.data.msg == "Success") {
                     const response = messages.data.msgs;
                     const parent_element = document.querySelector(".msgs");
@@ -99,7 +110,7 @@ export default function Global(props) {
             }
             catch (err) {
                 if (err.response && err.response.data) {
-                    setError(pre => err.response.data.detail[0].msg);
+                    setError(pre => errMsg(err));
                     setTrigger(t => !t);
                     if (ws.current && ws.current.readyState == WebSocket.OPEN)
                         ws.current.close();
@@ -128,8 +139,10 @@ export default function Global(props) {
                     setTrigger(pre => !pre)
                     return
                 }
-                if (isMounted)
+                if (isMounted) {
+                    checkSession();
                     reconnect();
+                }
             }
             ws.current.onmessage = (e) => {
                 try {
@@ -139,6 +152,7 @@ export default function Global(props) {
                         ws.current.send(JSON.stringify({type: "pong"}))
                         return
                     }
+                    lastWsMsgAt = Date.now()
                     let time = new Date(res.time_sent);
                     let expiry = new Date(res.expiry);
 
@@ -183,8 +197,12 @@ export default function Global(props) {
 
         return () => {
             isMounted = false;
-            ws.current.onclose = null
-            ws.current.close();
+            const s = ws.current
+            s.onclose = null
+            if (s.readyState === WebSocket.OPEN)
+                s.close()
+            else if (s.readyState === WebSocket.CONNECTING)
+                s.onopen = () => s.close()
             clearTimeout(timerRef.current)
             clearInterval(interval1);
             clearInterval(interval2);

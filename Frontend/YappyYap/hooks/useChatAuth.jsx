@@ -1,5 +1,5 @@
 import { useContext, createContext, useState, useEffect, useRef } from "react";
-import useAxios from "./useAxios";
+import useAxios, { SESSION_EXPIRED } from "./useAxios";
 import { AUTH_URL } from "../src/config";
 const ChatAuth = createContext()
 export default function useChatAuth() {
@@ -11,6 +11,21 @@ export function ChatAuthProvider({children}){
     const [loading, setLoading] = useState(true);
     const [errorMsg, setError] = useState("Welcome to our page");
     const [errorMsgAnimation, setTrigger] = useState(false);
+    const loggedRef = useRef(false);
+    loggedRef.current = logged;
+    useEffect(()=>{
+        // A request or socket found the session dead: log out locally so protected pages redirect and their sockets close
+        const onExpired = () => {
+            if (!loggedRef.current)
+                return
+            setLogged(false)
+            setUsername("")
+            setError("Your session expired, please sign in again")
+            setTrigger(t => !t)
+        }
+        window.addEventListener(SESSION_EXPIRED, onExpired)
+        return () => window.removeEventListener(SESSION_EXPIRED, onExpired)
+    },[])
     useEffect(()=>{
         async function makereq() {
             const axios = useAxios();

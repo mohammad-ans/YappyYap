@@ -20,6 +20,9 @@ export default function ChatHeader(props) {
         try{
             if(!isGrp && !isDm)
                 return;
+            // No channel selected yet: skip, otherwise the request goes to groups//numMembers and 404s
+            if(!isDm && !currGroup)
+                return;
             let response;
             const membersEl = document.querySelector(".members");
             if (membersEl)
