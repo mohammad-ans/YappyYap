@@ -63,7 +63,14 @@ Well my next step is to create a desktop version of it so stay tuned.
  - Redis manager is setted in each microservice that handle msgs. Although in production I deployed only one instance for each but they can be scaled to multiple instances and then redis manager is used for communication between different instances.
 
 ## Usage of AI
- - The below ai usage was before this current month development. Currently all the work done by AI is also commited by claude as contributor except one commit to help me normalize my group and realm variables which I specified was done by using claude. No other ai usage as far as I can remember.
+ - The below ai usage was before this current month development. Currently all the work done by AI is also commited by claude as contributor except one commit to help me normalize my group and realm variables which I specified was done by using claude. No other ai usage as far as I can remember. **In detail:**
+
+- Rushed features include which I used claude to make: invite management, input validation and permission fixes
+- Bug fixes are from websocket connection, DM routing, group management(two variable names got mixed by me in a lot of pages), navigation.
+- Claude was used to replace all local urls to production urls that I provided.
+- I also used it to flag errors, but I solved those myself, it just tested the application.
+
+**Usage of AI before**
  - AI was used to very least extent and even then when I used it I made sure that I try something different than what AI assumes the solution to be in an effort to make this project as least AI slop as possible.
 
 ## Running your instance
